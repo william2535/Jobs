@@ -13,11 +13,7 @@ export default defineConfig({
         const files = [
           "./",
           "./index.html",
-          "./manifest.webmanifest",
-          "./icon.svg",
-          "./icon-192.png",
-          "./icon-512.png",
-          "./demo.zonesketch.json",
+          ...readdirSync("public").map((name) => "./" + name),
           ...Object.keys(bundle).map((p) => "./" + p),
         ];
         const version = createHash("sha256")

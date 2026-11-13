@@ -1,0 +1,17 @@
+Zone Sketch engine geometry extracts
+Copyright © 2026 Will Flood. All rights reserved.
+
+This component retains the proprietary licence in zonesketch-LICENSE.txt.
+It is not open-source or relicensed by inclusion in Jobs.
+
+Source: https://github.com/william2535/FIRE-ZONE-PLAN-APP
+Commit: dca2eff063f52a9980c2aed255879a65cc579379
+File: index.html
+Functions: clamp (1731), lerp (1952), proj (1953), segmentIntersection (2014),
+pointInPoly (2119), cbPlanToBoard (2710), cbBoardToPlan (2711),
+cbEditProjectToSegment (2774). Circuit constants: line 2593.
+
+The function bodies are unchanged. ES-module exports and isolated constants
+were added for integration. Only these geometry helpers are reused; the full
+Zone Sketch application, renderer, symbol artwork and workflows are not bundled.
+Jobs' importer remains an independently implemented data reader.

@@ -1,5 +1,7 @@
+import { validateWorkflow } from "./job-workflow.js";
+
 export const PACKAGE_FORMAT = "JobsPackage";
-export const PACKAGE_VERSION = 1;
+export const PACKAGE_VERSION = 2;
 export const RESULT_STATES = [
   "Not tested",
   "Satisfactory",
@@ -8,6 +10,7 @@ export const RESULT_STATES = [
   "Not applicable",
 ];
 export const MAX_PACKAGE_BYTES = 100 * 1024 * 1024;
+export const MAX_EXPANDED_BYTES = 256 * 1024 * 1024;
 
 const clone = (value) => structuredClone(value);
 const fail = (message) => {
@@ -73,6 +76,14 @@ function drawing(value, path) {
   string(value.id, `${path}.id`);
   if (typeof value.revision !== "string" && typeof value.revision !== "number")
     fail(`${path}.revision is required.`);
+  if (value.basedOnDrawingId != null)
+    string(value.basedOnDrawingId, `${path}.basedOnDrawingId`);
+  for (const key of ["editChanges", "editWarnings"]) {
+    if (value[key] != null) {
+      array(value[key], `${path}.${key}`);
+      value[key].forEach((item) => string(item, `${path}.${key} entry`, false));
+    }
+  }
   array(value.floors, `${path}.floors`);
   const floors = unique(value.floors, `${path}.floors`);
   for (const floor of value.floors) {
@@ -103,70 +114,12 @@ function drawing(value, path) {
   }
 }
 
-/** Parse and fully validate before any caller changes local state. Unknown fields are retained. */
-export function validateJobPackage(input) {
-  if (typeof input === "string") {
-    if (new TextEncoder().encode(input).length > MAX_PACKAGE_BYTES)
-      fail("file is larger than 100 MiB.");
-    try {
-      input = JSON.parse(input);
-    } catch {
-      fail("file is not valid JSON.");
-    }
-  }
-  object(input, "root");
-  if (input.format !== PACKAGE_FORMAT || input.version !== PACKAGE_VERSION)
-    fail("unsupported format or version.");
-  object(input.site, "site");
-  object(input.job, "job");
-  const { site, job } = input;
-  string(site.id, "site.id");
-  string(site.name, "site.name");
-  if (site.address != null) string(site.address, "site.address", false);
-  if (site.sourceKeys != null) {
-    array(site.sourceKeys, "site.sourceKeys");
-    site.sourceKeys.forEach((key) => string(key, "site.sourceKeys entry"));
-  }
-  if (site.importedMetadata != null) {
-    array(site.importedMetadata, "site.importedMetadata");
-    for (const item of site.importedMetadata) {
-      object(item, "site.importedMetadata entry");
-      string(item.fingerprint, "site.importedMetadata.fingerprint");
-      object(item.site, "site.importedMetadata.site");
-      string(item.site.name, "site.importedMetadata.site.name");
-      if (item.site.address != null) string(item.site.address, "site.importedMetadata.site.address", false);
-    }
-  }
-  array(site.drawings, "site.drawings");
-  unique(site.drawings, "site.drawings");
-  site.drawings.forEach((value, index) =>
-    drawing(value, `site.drawings[${index}]`),
-  );
-  string(job.id, "job.id");
-  if (job.siteId !== site.id) fail("job references another site.");
-  const selected = site.drawings.find((value) => value.id === job.drawingId);
-  if (!selected) fail("job references a missing drawing.");
-  if (!Number.isSafeInteger(job.revision) || job.revision < 1)
-    fail("job.revision must be a positive integer.");
-  for (const field of [
-    "system",
-    "workType",
-    "scope",
-    "instructions",
-    "engineer",
-    "status",
-  ])
-    string(job[field], `job.${field}`, false);
-  for (const field of ["createdAt", "updatedAt"]) {
-    string(job[field], `job.${field}`);
-    if (!Number.isFinite(Date.parse(job[field])))
-      fail(`job.${field} must be a date.`);
-  }
-  array(job.results, "job.results");
-  unique(job.results, "job.results");
+function resultRecords(values, selected, path) {
+  array(values, path);
+  unique(values, path);
   const assetIds = new Set(selected.assets.map((asset) => asset.id));
   const resultsFor = new Set();
-  for (const result of job.results) {
+  for (const result of values) {
     if (!assetIds.has(result.assetId))
       fail("result references a missing asset.");
     if (resultsFor.has(result.assetId))
@@ -202,8 +155,335 @@ export function validateJobPackage(input) {
   }
   if (resultsFor.size !== assetIds.size)
     fail("each asset must have a result, initially Not tested.");
+}
+
+// Bound structure and expanded media without serializing repeated images into one huge string.
+function measuredBytes(value, limit) {
+  let bytes = 0,
+    nodes = 0;
+  const lengths = new Map(),
+    ancestors = new Set();
+  const addString = (text) => {
+    let length = lengths.get(text);
+    if (length === undefined) {
+      length = embeddedImage(text)
+        ? text.length + 2
+        : new TextEncoder().encode(JSON.stringify(text)).length;
+      lengths.set(text, length);
+    }
+    bytes += length;
+  };
+  const walk = (item, depth = 0) => {
+    if (depth > 80 || ++nodes > 2000000)
+      fail("package structure is too complex.");
+    if (item === null) bytes += 4;
+    else if (typeof item === "string") addString(item);
+    else if (typeof item === "number") {
+      if (!Number.isFinite(item)) fail("non-finite number.");
+      bytes += String(item).length;
+    } else if (typeof item === "boolean") bytes += item ? 4 : 5;
+    else if (item && typeof item === "object") {
+      if (ancestors.has(item)) fail("cyclic object.");
+      ancestors.add(item);
+      bytes += 2;
+      if (Array.isArray(item)) {
+        for (const child of item) {
+          walk(child, depth + 1);
+          bytes++;
+        }
+      } else
+        for (const [key, child] of Object.entries(item)) {
+          if (child === undefined) continue;
+          addString(key);
+          bytes += 2;
+          walk(child, depth + 1);
+        }
+      ancestors.delete(item);
+    } else fail("unsupported non-JSON value.");
+    if (bytes > limit)
+      fail(
+        `package exceeds the ${Math.round(limit / 1024 / 1024)} MiB ${limit === MAX_EXPANDED_BYTES ? "expanded" : "file"} limit.`,
+      );
+  };
+  walk(value);
+  return bytes;
+}
+
+function unpackImages(input) {
+  array(input.attachments, "attachments");
+  array(input.attachmentRefs, "attachmentRefs");
+  unique(input.attachments, "attachments");
+  const pool = new Map();
+  for (const item of input.attachments) {
+    if (!/^image-[a-f0-9]{64}$/.test(item.id) || !embeddedImage(item.image))
+      fail("attachment must contain an identified embedded raster image.");
+    pool.set(item.id, item.image);
+  }
+  const expanded = {
+    format: PACKAGE_FORMAT,
+    version: 1,
+    site: clone(input.site),
+    job: clone(input.job),
+  };
+  if (input.packageId !== undefined) expanded.packageId = input.packageId;
+  const seenPaths = new Set(),
+    used = new Set();
+  let expansionBytes = measuredBytes(expanded, MAX_EXPANDED_BYTES);
+  for (const ref of input.attachmentRefs) {
+    object(ref, "attachment reference");
+    if (
+      !Array.isArray(ref.path) ||
+      ref.path.length < 2 ||
+      ref.path.length > 80 ||
+      !["site", "job"].includes(ref.path[0])
+    )
+      fail("invalid attachment path.");
+    if (!pool.has(ref.attachmentId))
+      fail("attachment reference points to missing media.");
+    const key = JSON.stringify(ref.path);
+    if (seenPaths.has(key)) fail("duplicate attachment path.");
+    seenPaths.add(key);
+    used.add(ref.attachmentId);
+    let target = expanded;
+    for (let i = 0; i < ref.path.length; i++) {
+      const part = ref.path[i];
+      if (
+        typeof part === "string" &&
+        ["__proto__", "prototype", "constructor"].includes(part)
+      )
+        fail("unsafe attachment path.");
+      if (
+        !target ||
+        typeof target !== "object" ||
+        (Array.isArray(target)
+          ? !Number.isSafeInteger(part) || part < 0 || part >= target.length
+          : typeof part !== "string")
+      )
+        fail("invalid attachment path segment.");
+      if (!Object.hasOwn(target, part)) fail("attachment path is missing.");
+      if (i === ref.path.length - 1) {
+        if (target[part] !== null)
+          fail("attachment path must target a null placeholder.");
+        const image = pool.get(ref.attachmentId);
+        expansionBytes += image.length - 2;
+        if (expansionBytes > MAX_EXPANDED_BYTES)
+          fail("package exceeds the 256 MiB expanded limit.");
+        target[part] = image;
+      } else target = target[part];
+    }
+  }
+  if (used.size !== pool.size)
+    fail("package contains unreferenced attachments.");
+  return expanded;
+}
+
+async function packImages(site, job) {
+  const attachments = [],
+    attachmentRefs = [],
+    byImage = new Map();
+  const collect = (value, path) => {
+    if (
+      typeof value === "string" &&
+      value.startsWith("data:image/") &&
+      !path.some((part) =>
+        ["__proto__", "prototype", "constructor"].includes(part),
+      ) &&
+      embeddedImage(value)
+    ) {
+      let entry = byImage.get(value);
+      if (!entry) {
+        entry = { image: value, id: null };
+        byImage.set(value, entry);
+        attachments.push(entry);
+      }
+      attachmentRefs.push({ path, entry });
+      return null;
+    }
+    if (Array.isArray(value))
+      return value.map((child, i) => collect(child, [...path, i]));
+    if (value && typeof value === "object") {
+      const result = {};
+      for (const [key, child] of Object.entries(value))
+        if (child !== undefined)
+          Object.defineProperty(result, key, {
+            value: collect(child, [...path, key]),
+            enumerable: true,
+            writable: true,
+            configurable: true,
+          });
+      return result;
+    }
+    return value;
+  };
+  const payload = {
+    format: PACKAGE_FORMAT,
+    version: PACKAGE_VERSION,
+    site: collect(site, ["site"]),
+    job: collect(job, ["job"]),
+  };
+  for (const item of attachments) item.id = `image-${await digest(item.image)}`;
+  payload.attachments = attachments;
+  payload.attachmentRefs = attachmentRefs.map((ref) => ({
+    path: ref.path,
+    attachmentId: ref.entry.id,
+  }));
+  return payload;
+}
+
+/** Parse and fully validate before any caller changes local state. Unknown fields are retained. */
+export function validateJobPackage(input) {
+  if (typeof input === "string") {
+    if (new TextEncoder().encode(input).length > MAX_PACKAGE_BYTES)
+      fail("file is larger than 100 MiB.");
+    try {
+      input = JSON.parse(input);
+    } catch {
+      fail("file is not valid JSON.");
+    }
+  }
+  object(input, "root");
+  if (
+    input.format !== PACKAGE_FORMAT ||
+    ![1, PACKAGE_VERSION].includes(input.version)
+  )
+    fail("unsupported format or version.");
+  if (input.version === PACKAGE_VERSION) {
+    measuredBytes(input, MAX_PACKAGE_BYTES);
+    input = unpackImages(input);
+  }
+  measuredBytes(input, MAX_EXPANDED_BYTES);
+  object(input.site, "site");
+  object(input.job, "job");
+  const { site, job } = input;
+  string(site.id, "site.id");
+  string(site.name, "site.name");
+  if (site.address != null) string(site.address, "site.address", false);
+  if (site.sourceKeys != null) {
+    array(site.sourceKeys, "site.sourceKeys");
+    site.sourceKeys.forEach((key) => string(key, "site.sourceKeys entry"));
+  }
+  if (site.importedMetadata != null) {
+    array(site.importedMetadata, "site.importedMetadata");
+    for (const item of site.importedMetadata) {
+      object(item, "site.importedMetadata entry");
+      string(item.fingerprint, "site.importedMetadata.fingerprint");
+      object(item.site, "site.importedMetadata.site");
+      string(item.site.name, "site.importedMetadata.site.name");
+      if (item.site.address != null)
+        string(item.site.address, "site.importedMetadata.site.address", false);
+    }
+  }
+  array(site.drawings, "site.drawings");
+  unique(site.drawings, "site.drawings");
+  site.drawings.forEach((value, index) =>
+    drawing(value, `site.drawings[${index}]`),
+  );
+  string(job.id, "job.id");
+  if (job.siteId !== site.id) fail("job references another site.");
+  const selected = site.drawings.find((value) => value.id === job.drawingId);
+  if (!selected) fail("job references a missing drawing.");
+  if (!Number.isSafeInteger(job.revision) || job.revision < 1)
+    fail("job.revision must be a positive integer.");
+  for (const field of [
+    "system",
+    "workType",
+    "scope",
+    "instructions",
+    "engineer",
+    "status",
+  ])
+    string(job[field], `job.${field}`, false);
+  for (const field of ["createdAt", "updatedAt"]) {
+    string(job[field], `job.${field}`);
+    if (!Number.isFinite(Date.parse(job[field])))
+      fail(`job.${field} must be a date.`);
+  }
+  resultRecords(job.results, selected, "job.results");
+  const drawings = new Map(site.drawings.map((value) => [value.id, value]));
+  for (const value of site.drawings)
+    if (value.basedOnDrawingId && !drawings.has(value.basedOnDrawingId))
+      fail("edited drawing references a missing base drawing.");
+  if (job.drawingChanges != null) {
+    array(job.drawingChanges, "job.drawingChanges");
+    unique(job.drawingChanges, "job.drawingChanges");
+    for (const change of job.drawingChanges) {
+      const from = drawings.get(change.fromDrawingId);
+      const to = drawings.get(change.toDrawingId);
+      if (!from || !to) fail("drawing change references a missing drawing.");
+      string(change.at, "drawing change date");
+      if (!Number.isFinite(Date.parse(change.at)))
+        fail("drawing change date is invalid.");
+      if (
+        !Number.isSafeInteger(change.previousJobRevision) ||
+        change.previousJobRevision < 1
+      )
+        fail("drawing change needs its previous job revision.");
+      resultRecords(
+        change.previousResults,
+        from,
+        "drawing change previousResults",
+      );
+      for (const [key, source] of [
+        ["addedAssetIds", to],
+        ["removedAssetIds", from],
+      ]) {
+        if (change[key] != null) {
+          array(change[key], `drawing change ${key}`);
+          if (
+            new Set(change[key]).size !== change[key].length ||
+            change[key].some(
+              (id) => !source.assets.some((asset) => asset.id === id),
+            )
+          )
+            fail(`drawing change ${key} has invalid asset references.`);
+        }
+      }
+    }
+  }
+  if (job.archivedResults != null) {
+    array(job.archivedResults, "job.archivedResults");
+    unique(job.archivedResults, "job.archivedResults");
+    for (const entry of job.archivedResults) {
+      const originalDrawing = drawings.get(entry.drawingId);
+      if (!originalDrawing)
+        fail("archived result references a missing drawing.");
+      object(entry.asset, "archived asset");
+      string(entry.asset.id, "archived asset.id");
+      if (
+        entry.assetId !== entry.asset.id ||
+        !originalDrawing.assets.some((asset) => asset.id === entry.assetId)
+      )
+        fail("archived asset references a missing source asset.");
+      string(entry.asset.type, "archived asset.type");
+      photos(entry.asset.photos || [], "archived asset photos");
+      if (
+        entry.changeId != null &&
+        !(job.drawingChanges || []).some(
+          (change) => change.id === entry.changeId,
+        )
+      )
+        fail("archived result references a missing drawing change.");
+      string(entry.removedAt, "archived result date");
+      if (!Number.isFinite(Date.parse(entry.removedAt)))
+        fail("archived result date is invalid.");
+      resultRecords(
+        [entry.result],
+        { assets: [entry.asset] },
+        "archived result",
+      );
+    }
+  }
+  let workflow;
+  if (job.workflow != null) {
+    try {
+      workflow = validateWorkflow(job.workflow);
+    } catch (error) {
+      fail(error.message);
+    }
+  }
   array(job.aiProposals || [], "job.aiProposals");
   const normalized = clone(input);
+  if (workflow !== undefined) normalized.job.workflow = workflow;
   normalized.site.address ??= "";
   normalized.site.sourceKeys ??= [];
   const normalizeDrawing = (value) => {
@@ -257,19 +537,15 @@ function cleanJob(job) {
 }
 
 export async function createJobPackage(site, job) {
-  const payload = validateJobPackage({
+  const normalized = validateJobPackage({
     format: PACKAGE_FORMAT,
-    version: PACKAGE_VERSION,
-    site: clone(site),
+    version: 1,
+    site,
     job: cleanJob(job),
   });
+  const payload = await packImages(normalized.site, normalized.job);
   payload.packageId = `package-${await digest(payload)}`;
-  if (
-    new TextEncoder().encode(JSON.stringify(payload)).length > MAX_PACKAGE_BYTES
-  )
-    throw new Error(
-      "Job package is larger than the 100 MiB import limit. Export fewer drawing revisions in a future version; keep this local record.",
-    );
+  measuredBytes(payload, MAX_PACKAGE_BYTES);
   return payload;
 }
 
@@ -285,6 +561,9 @@ function drawingContent(value) {
   const content = clone(value);
   delete content.id;
   delete content.sourceDrawingId;
+  if (content.sourceBasedOnDrawingId)
+    content.basedOnDrawingId = content.sourceBasedOnDrawingId;
+  delete content.sourceBasedOnDrawingId;
   const defaults = (drawing) => {
     drawing.issuedSnapshots ??= [];
     drawing.assets.forEach((asset) => {
@@ -298,14 +577,33 @@ function drawingContent(value) {
 
 export async function importJobPackage(state, input) {
   const imported = validateJobPackage(input);
-  const fingerprint = await digest({
-    site: imported.site,
-    job: cleanJob(imported.job),
-  });
+  const wire = typeof input === "string" ? JSON.parse(input) : input;
+  if (wire.version === PACKAGE_VERSION) {
+    for (const item of wire.attachments)
+      if (item.id !== `image-${await digest(item.image)}`)
+        fail("attachment content does not match its ID.");
+  }
+  // Fingerprint the canonical pooled representation to avoid serializing the same
+  // large image once per preserved drawing revision. v1 and v2 imports converge.
+  const fingerprint = `pooled:${await digest(await packImages(imported.site, cleanJob(imported.job)))}`;
+  let legacyFingerprint;
+  if (
+    wire.version === 1 &&
+    state.jobs.some((job) =>
+      job.importHistory?.some((value) => !value.startsWith("pooled:")),
+    )
+  ) {
+    legacyFingerprint = await digest({
+      site: imported.site,
+      job: cleanJob(imported.job),
+    });
+  }
   // Receipts remain with a local job even after further edits, so reopening the same
   // package never creates a second copy of that imported version.
   const remembered = state.jobs.find((job) =>
-    job.importHistory?.includes(fingerprint),
+    job.importHistory?.some(
+      (value) => value === fingerprint || value === legacyFingerprint,
+    ),
   );
   if (remembered)
     return {
@@ -325,6 +623,8 @@ export async function importJobPackage(state, input) {
   let site = localSite;
   let job = cleanJob(imported.job);
   let siteConflict = false;
+  const drawingMap = new Map();
+  const copiedDrawings = [];
   if (!site) {
     site = clone(imported.site);
     next.sites.push(site);
@@ -363,8 +663,11 @@ export async function importJobPackage(state, input) {
     ];
     for (const incoming of imported.site.drawings) {
       const current = site.drawings.find((value) => value.id === incoming.id);
-      if (!current) site.drawings.push(clone(incoming));
-      else if (drawingContent(current) !== drawingContent(incoming)) {
+      if (!current) {
+        const copy = clone(incoming);
+        site.drawings.push(copy);
+        copiedDrawings.push(copy);
+      } else if (drawingContent(current) !== drawingContent(incoming)) {
         siteConflict = true;
         const preserved = site.drawings.find(
           (value) =>
@@ -372,6 +675,7 @@ export async function importJobPackage(state, input) {
             drawingContent(value) === drawingContent(incoming),
         );
         if (preserved) {
+          drawingMap.set(incoming.id, preserved.id);
           if (job.drawingId === incoming.id) job.drawingId = preserved.id;
           continue;
         }
@@ -379,11 +683,37 @@ export async function importJobPackage(state, input) {
         copy.sourceDrawingId = copy.id;
         copy.id = unusedId(`${copy.id}:import:${fingerprint}`, site.drawings);
         site.drawings.push(copy);
+        copiedDrawings.push(copy);
+        drawingMap.set(incoming.id, copy.id);
         if (job.drawingId === incoming.id) job.drawingId = copy.id;
       }
     }
   }
-  if (sameJob && job.drawingId === existing.drawingId) {
+  for (const copy of copiedDrawings) {
+    if (drawingMap.has(copy.basedOnDrawingId)) {
+      copy.sourceBasedOnDrawingId ??= copy.basedOnDrawingId;
+      copy.basedOnDrawingId = drawingMap.get(copy.basedOnDrawingId);
+    }
+  }
+  for (const entry of job.archivedResults || []) {
+    if (drawingMap.has(entry.drawingId)) {
+      entry.sourceDrawingId ??= entry.drawingId;
+      entry.drawingId = drawingMap.get(entry.drawingId);
+    }
+  }
+  for (const change of job.drawingChanges || []) {
+    for (const key of ["fromDrawingId", "toDrawingId"]) {
+      if (drawingMap.has(change[key])) {
+        change[`source${key[0].toUpperCase()}${key.slice(1)}`] ??= change[key];
+        change[key] = drawingMap.get(change[key]);
+      }
+    }
+  }
+  if (
+    sameJob &&
+    job.drawingId === existing.drawingId &&
+    drawingMap.size === 0
+  ) {
     existing.importHistory = [...(existing.importHistory || []), fingerprint];
     return {
       state: next,

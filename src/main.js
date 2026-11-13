@@ -8,6 +8,12 @@ import {
 import { createJobPackage, importJobPackage } from "./packages.js";
 import { panelContext } from "./panel-context.js";
 import { renderPlan } from "./plan.js";
+import {
+  renderDrawingEditor,
+  buildEditableZoneSketch,
+} from "./drawing-editor.js";
+import { renderWorkflowSection, renderWorkflowReport } from "./job-workflow.js";
+import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, newJob, id, now, states } from "./model.js";
 const $ = (s) => document.querySelector(s),
   esc = (v) =>
@@ -31,6 +37,8 @@ let state = { sites: [], jobs: [] },
   deviceQuery = "",
   deviceState = "",
   devicePage = 0,
+  importTargetJob = null,
+  editorActive = false,
   review = null,
   saveLabel = "Opening local records…",
   offlineLabel = "Preparing offline use…",
@@ -145,9 +153,56 @@ function focusDevice() {
 }
 function resetDeviceBrowser() {
   selectedAsset = null;
+  editorActive = false;
   deviceQuery = "";
   deviceState = "";
   devicePage = 0;
+}
+function markDirty(value = true) {
+  dirty = value;
+  saveLabel = value ? "Unsaved changes" : "Saved on this device";
+  updateStatus();
+}
+async function saveWorkflow(updatedJob) {
+  if (operationPending) return false;
+  operationPending = true;
+  try {
+    const next = structuredClone(state);
+    const index = next.jobs.findIndex((j) => j.id === updatedJob.id);
+    if (index < 0) throw Error("This job is no longer available.");
+    next.jobs[index] = {
+      ...updatedJob,
+      revision: next.jobs[index].revision + 1,
+      updatedAt: now(),
+    };
+    if (await persist(next, "Job record saved on this device.")) {
+      render();
+      return true;
+    }
+    return false;
+  } finally {
+    operationPending = false;
+  }
+}
+async function saveDrawing(drawing) {
+  if (operationPending) return false;
+  operationPending = true;
+  try {
+    const next = applyDrawingToJob(state, activeJob, drawing);
+    if (
+      await persist(
+        next,
+        "Working drawing saved as a new revision. Earlier drawings and visit evidence were retained.",
+      )
+    ) {
+      editorActive = false;
+      render();
+      return true;
+    }
+    return false;
+  } finally {
+    operationPending = false;
+  }
 }
 function render() {
   const j = state.jobs.find((j) => j.id === activeJob),
@@ -194,7 +249,36 @@ function render() {
       event.target.value = selectedAsset;
       runTask(() => action("asset:" + nextId));
     };
-  if (page === "job" && tab === "Plan" && j) {
+  if (page === "job" && j && $("#workflow-root")) {
+    $("#workflow-root").append(
+      renderWorkflowSection(tab === "Job details" ? "Details" : tab, {
+        job: j,
+        site: s,
+        onSave: saveWorkflow,
+        onDirty: markDirty,
+        onNavigate: (destination) =>
+          runTask(() =>
+            action(
+              ["print", "export", "import-job-plan"].includes(destination)
+                ? destination
+                : "tab:" + destination,
+            ),
+          ),
+      }),
+    );
+  }
+  if (page === "job" && tab === "Plan" && j && editorActive) {
+    $("#drawing-editor-root").append(
+      renderDrawingEditor(drawingOf(s, j), {
+        siteId: s.id,
+        siteName: s.name,
+        onSave: saveDrawing,
+        onDirty: markDirty,
+        onCancel: () => runTask(() => action("cancel-drawing")),
+      }),
+    );
+  }
+  if (page === "job" && tab === "Plan" && j && !editorActive) {
     $("#plan-root").append(
       renderPlan(drawingOf(s, j), {
         onSelectAsset: (aid) => {
@@ -213,6 +297,7 @@ function render() {
         const r = await importZoneSketch(review.input, {
           siteId: review.target || undefined,
         });
+        alignImport(r, review.target);
         review = { ...review, ...r };
         render();
       } catch (e) {
@@ -268,16 +353,33 @@ function importReview() {
   const oldIds = new Set(old?.assets.map((a) => a.id));
   const newIds = new Set(d.assets.map((a) => a.id));
   const changes = old ? compareDrawings(old, d) : null;
-  return `<section class="page-title"><div><span class="eyebrow">IMPORT REVIEW</span><h1>${esc(r.site.name)}</h1><p>Review the source and its mapping before saving.</p></div></section><section class="panel"><label>Site mapping<select id="match-site"><option value="">Create another site</option>${state.sites.map((s) => `<option value="${esc(s.id)}" ${s.id === r.target ? "selected" : ""}>Update existing site: ${esc(s.name)}</option>`).join("")}</select></label><p class="muted">${r.target ? "Matched source floor IDs or your explicit selection." : "Zone Sketch exports have no permanent site ID. Choose an existing site if this drawing belongs to one."}</p><div class="metrics"><div><span>Floors</span><strong>${d.floors.length}</strong></div><div><span>Equipment</span><strong>${d.assets.length}</strong></div><div><span>Issued snapshots</span><strong>${d.issuedSnapshots.length}</strong></div></div><p>Drawing revision: <strong>${esc(d.revision || "Not supplied")}</strong></p>${old ? `<p>${changes.added.length} added · ${changes.removed.length} removed · ${changes.moved.length} moved · ${changes.changed.length} changed in the new drawing. Historical visits and drawings are retained.</p>` : ""}<details open><summary>Missing information and import notes</summary><ul>${r.warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>${changes ? `<details><summary>Review device changes</summary>${["added", "removed", "moved", "changed"].map((key) => `<p><strong>${key}:</strong> ${esc(changes[key].map((a) => a.reference || a.type).join(", ") || "None")}</p>`).join("")}</details>` : ""}<h3>Floors and devices</h3>${d.floors.map((f) => `<p><strong>${esc(f.name)}</strong> · ${d.assets.filter((a) => a.floorId === f.id).length} devices</p>`).join("")}<div class="actions">${button("Save site", "save-import", "primary")}${button("Cancel", "home")}</div></section>`;
+  return `<section class="page-title"><div><span class="eyebrow">IMPORT REVIEW</span><h1>${esc(r.site.name)}</h1><p>Review the source and its mapping before saving.</p></div></section><section class="panel"><label>Site mapping<select id="match-site" ${r.jobId ? "disabled" : ""}><option value="">Create another site</option>${state.sites.map((s) => `<option value="${esc(s.id)}" ${s.id === r.target ? "selected" : ""}>Update existing site: ${esc(s.name)}</option>`).join("")}</select></label><p class="muted">${r.target ? "Matched source floor IDs or your explicit selection." : "Zone Sketch exports have no permanent site ID. Choose an existing site if this drawing belongs to one."}</p><div class="metrics"><div><span>Floors</span><strong>${d.floors.length}</strong></div><div><span>Equipment</span><strong>${d.assets.length}</strong></div><div><span>Issued snapshots</span><strong>${d.issuedSnapshots.length}</strong></div></div><p>Drawing revision: <strong>${esc(d.revision || "Not supplied")}</strong></p>${old ? `<p>${changes.added.length} added · ${changes.removed.length} removed · ${changes.moved.length} moved · ${changes.changed.length} changed in the new drawing. Historical visits and drawings are retained.</p>` : ""}<details open><summary>Missing information and import notes</summary><ul>${r.warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>${changes ? `<details><summary>Review device changes</summary>${["added", "removed", "moved", "changed"].map((key) => `<p><strong>${key}:</strong> ${esc(changes[key].map((a) => a.reference || a.type).join(", ") || "None")}</p>`).join("")}</details>` : ""}<h3>Floors and devices</h3>${d.floors.map((f) => `<p><strong>${esc(f.name)}</strong> · ${d.assets.filter((a) => a.floorId === f.id).length} devices</p>`).join("")}<div class="actions">${r.jobId ? '<p class="muted">Apply to this job as a new working revision. Matching device results stay; removed-device results are archived.</p>' : ""}${button(r.jobId ? "Apply plan to job" : "Save site", "save-import", "primary")}${button("Cancel", "home")}</div></section>`;
 }
 function jobView(j, s) {
   if (!j || !s) return "";
   const d = drawingOf(s, j),
     tested = j.results.filter((r) => r.state !== "Not tested").length;
-  return `<section class="page-title job-title"><div><span class="eyebrow">${esc(j.workType)}</span><h1>${esc(s.name)}</h1><p>${esc(j.system)} · Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div>${badge(j.status)}</section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${drawingOf(s, j).source ? button("Original drawing", "source-export") : ""}</div></div><nav class="tabs" aria-label="Job sections">${["Job details", "Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${tab === "Job details" ? details(j) : tab === "Plan" ? '<div id="plan-root" class="panel"></div>' : tab === "Devices" ? devices(j, d) : results(j, d)}`;
-}
-function details(j) {
-  return `${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Source job: ${esc(j.sourceJobId)}. Both versions are listed in Saved jobs.</div>` : ""}<div class="two-column"><form class="panel" data-form="details"><h2>Job details</h2><div class="form-grid">${field("System reference", "system", j.system)}${field("Assigned engineer", "engineer", j.engineer)}${select("Work type", "workType", ["Fire alarm maintenance", "General fault or repair work"], j.workType)}${select("Status", "status", ["Open", "In progress", "Complete"], j.status)}</div><div class="record-secondary-grid">${area("Scope", "scope", j.scope)}${area("Instructions", "instructions", j.instructions)}</div>${area("Visit notes / condition left", "visitNotes", j.visitNotes)}<p class="muted">Completing a visit does not pass any equipment or assert compliance.</p><button class="primary">Save job details</button></form><section class="panel quiet-panel"><span class="eyebrow">PREPARED FOR THE NEXT CONNECTION</span><h2>Panel Pal context</h2><p>Export the selected system, equipment, drawing references and engineer-recorded evidence.</p><p><strong>FINDR adapter: future work.</strong> No AI connection is active. This contract is not a Panel Pal backup.</p>${button("Export Panel Pal context", "panel-export")}<hr><h3>Local records, portable evidence</h3><p>Export your job regularly. Browser storage can be cleared or evicted; an installed app still needs backups.</p><small>Job ID: ${esc(j.id)}</small></section></div>`;
+  const mainSection = ["Plan", "Devices", "Results"].includes(tab)
+    ? "Work"
+    : tab;
+  const sections = [
+    ["Job details", "Details"],
+    ["Work", "Work"],
+    ["Products", "Products"],
+    ["POs", "POs"],
+    ["Finalisation", "Finalisation"],
+  ];
+  const primary = `<nav class="job-main-nav" aria-label="Job workflow">${sections.map(([key, label]) => button(label, "tab:" + key, key === mainSection ? "active" : "")).join("")}</nav>`;
+  let content;
+  if (["Job details", "Work", "Products", "POs", "Finalisation"].includes(tab))
+    content = `<div id="workflow-root"></div>${tab === "Job details" ? `<aside class="integration-note"><span><strong>FINDR adapter: future work.</strong> Export context for the planned local connection.</span>${button("Export Panel Pal context", "panel-export")}</aside>` : ""}`;
+  else if (tab === "Plan")
+    content = editorActive
+      ? '<div id="drawing-editor-root"></div>'
+      : `<section class="plan-actions panel"><div><h2>Plans</h2><p>Working revision ${esc(d.revision || "Unlabelled")} · ${d.floors.length} floors</p></div><div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${d.kind === "issued" ? '<span class="muted">Issued record is read-only. Import a working drawing to edit.</span>' : button("Edit working drawing", "edit-drawing", "primary")}${button("Export editable drawing", "edited-source-export")}</div></section><div id="plan-root" class="panel"></div>`;
+  else if (tab === "Devices") content = devices(j, d);
+  else content = results(j, d);
+  return `<section class="page-title job-title"><div><span class="eyebrow">${esc(j.workflow?.details?.reference || j.workType)}</span><h1>${esc(j.workflow?.details?.title || s.name)}</h1><p>${esc(j.system)} · Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div>${badge(j.status)}</section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 const DEVICE_PAGE_SIZE = 8;
 function filteredDevices(j, d) {
@@ -295,6 +397,27 @@ function filteredDevices(j, d) {
     );
   });
 }
+function priorVisit(assetId, job) {
+  return state.jobs
+    .filter((other) => other.siteId === job.siteId && other.id !== job.id)
+    .flatMap((other) =>
+      other.results
+        .filter((r) => r.assetId === assetId && r.state !== "Not tested")
+        .map((result) => ({
+          state: result.state,
+          at:
+            typeof result.recordedAt === "string" &&
+            Number.isFinite(Date.parse(result.recordedAt))
+              ? result.recordedAt
+              : other.updatedAt,
+        })),
+    )
+    .sort((a, b) => b.at.localeCompare(a.at))[0];
+}
+function deviceHistoryLabel(asset, job) {
+  const previous = priorVisit(asset.id, job);
+  return `<small class="asset-identity">Asset ID: ${esc(asset.sourceId || asset.id.slice(0, 12))}</small>${previous ? `<small class="previous-result">Previous visit: ${esc(previous.state)} · ${esc(new Date(previous.at).toLocaleDateString())}</small>` : ""}`;
+}
 function deviceCards(j, d) {
   const found = filteredDevices(j, d);
   const pages = Math.max(1, Math.ceil(found.length / DEVICE_PAGE_SIZE));
@@ -304,7 +427,7 @@ function deviceCards(j, d) {
     (devicePage + 1) * DEVICE_PAGE_SIZE,
   );
   return `<p class="device-count" role="status">${found.length} of ${d.assets.length} devices${pages > 1 ? ` · Page ${devicePage + 1} of ${pages}` : ""}</p>
-    <div class="device-browser-grid">${visible.map((a) => `<button class="device-row" data-action="asset:${esc(a.id)}"><strong>${esc(a.reference || a.type)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small>${badge(j.results.find((r) => r.assetId === a.id)?.state || "Not tested")}</button>`).join("")}</div>
+    <div class="device-browser-grid">${visible.map((a) => `<button class="device-row" data-action="asset:${esc(a.id)}"><strong>${esc(a.reference || a.type)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small>${badge(j.results.find((r) => r.assetId === a.id)?.state || "Not tested")}${deviceHistoryLabel(a, j)}</button>`).join("")}</div>
     ${!found.length ? '<p class="empty">No devices match. Try another reference, floor or result.</p>' : ""}
     ${pages > 1 ? `<div class="device-pagination"><button data-action="device-page:${devicePage - 1}" ${devicePage === 0 ? "disabled" : ""}>Previous devices</button><span>Page ${devicePage + 1} / ${pages}</span><button data-action="device-page:${devicePage + 1}" ${devicePage === pages - 1 ? "disabled" : ""}>Next devices</button></div>` : ""}`;
 }
@@ -348,7 +471,9 @@ function results(j, d) {
       const a = d.assets.find((a) => a.id === r.assetId);
       return `<article class="result-record"><div class="section-head"><h3>${esc(a?.reference || a?.type)}</h3>${badge(r.state)}</div><p>${esc(r.observations || "No observations recorded.")}</p>${r.readings.map((x) => `<p>${esc(x.name)}: ${esc(x.value)} ${esc(x.unit)}</p>`).join("")}<p>${esc(r.notes)}</p>${r.defects ? `<p class="defect"><strong>Defect:</strong> ${esc(r.defects)}</p>` : ""}${photos(r.photos, "Visit photograph")}${button("Open device", "asset:" + r.assetId, "text-button")}</article>`;
     })
-    .join("")}</div></section>`;
+    .join(
+      "",
+    )}</div>${j.archivedResults?.length ? `<details class="archived-evidence"><summary>Earlier drawing evidence (${j.archivedResults.length} removed devices)</summary><p>These records belong to earlier drawings and are outside the current device count.</p>${j.archivedResults.map((item) => `<article class="result-record"><h3>${esc(item.asset.reference || item.asset.type)}</h3>${badge(item.result.state)}<p>${esc(item.result.observations)}</p><p>${esc(item.result.notes)}</p><p>${esc(item.result.defects)}</p>${item.result.readings.map((r) => `<p>${esc(r.name)}: ${esc(r.value)} ${esc(r.unit)}</p>`).join("")}${photos(item.result.photos, "Archived visit photograph")}<small>Drawing ${esc(item.drawingId)} · retained ${esc(item.removedAt)}</small></article>`).join("")}</details>` : ""}</section>`;
 }
 async function readText(file) {
   if (!file) throw Error("No file selected.");
@@ -363,17 +488,35 @@ async function readZone(file) {
     flash("Drawing import rejected: " + e.message, true);
   }
 }
-async function stageZone(input) {
+function alignImport(imported, siteId) {
+  const site = state.sites.find((site) => site.id === siteId);
+  if (site) {
+    imported.drawing = alignDrawingAssetsToSite(imported.drawing, site);
+    imported.site.drawings = [imported.drawing];
+  }
+  return imported;
+}
+async function stageZone(input, jobId = importTargetJob) {
   const keys = zoneSourceKeys(input),
     matches = state.sites.filter((s) =>
       (s.sourceKeys || []).some((k) => keys.includes(k)),
     );
-  const target = matches.length === 1 ? matches[0].id : "";
+  const targetJob = state.jobs.find((job) => job.id === jobId);
+  const target = targetJob
+    ? targetJob.siteId
+    : matches.length === 1
+      ? matches[0].id
+      : "";
   review = {
-    ...(await importZoneSketch(input, { siteId: target || undefined })),
+    ...alignImport(
+      await importZoneSketch(input, { siteId: target || undefined }),
+      target,
+    ),
     input,
     target,
+    jobId: targetJob?.id || null,
   };
+  importTargetJob = null;
   page = "review";
   error = "";
   message = "";
@@ -402,7 +545,15 @@ async function action(a) {
     return;
   }
   if (dirty) {
-    if (["export", "panel-export", "print", "source-export"].includes(a)) {
+    if (
+      [
+        "export",
+        "panel-export",
+        "print",
+        "source-export",
+        "edited-source-export",
+      ].includes(a)
+    ) {
       reportError("Save your changes before exporting or printing.");
       return;
     }
@@ -413,12 +564,35 @@ async function action(a) {
   if (a === "home" || a === "sites" || a === "create") {
     page = a;
     activeJob = null;
+    importTargetJob = null;
+    editorActive = false;
     message = "";
     error = "";
     render();
     return;
   }
-  if (a === "import-zone") return $("#zone-file").click();
+  if (a === "import-zone") {
+    importTargetJob = null;
+    return $("#zone-file").click();
+  }
+  if (a === "import-job-plan") {
+    importTargetJob = activeJob;
+    return $("#zone-file").click();
+  }
+  if (a === "edit-drawing") {
+    message = "";
+    error = "";
+    editorActive = true;
+    tab = "Plan";
+    render();
+    return;
+  }
+  if (a === "cancel-drawing") {
+    editorActive = false;
+    markDirty(false);
+    render();
+    return;
+  }
   if (a === "import-job") return $("#job-file").click();
   if (a === "demo")
     return stageZone(await (await fetch("./demo.zonesketch.json")).text());
@@ -439,6 +613,7 @@ async function action(a) {
     return;
   }
   if (a.startsWith("tab:")) {
+    editorActive = false;
     tab = a.slice(4);
     if (tab === "Devices") selectedAsset = null;
     render();
@@ -462,6 +637,29 @@ async function action(a) {
     const job = state.jobs.find((job) => job.id === activeJob);
     updateDeviceGrid(job, drawingOf(siteOf(job), job));
     scrollSection($("#device-grid-results"));
+    return;
+  }
+  if (a === "save-import" && review.jobId) {
+    const jobId = review.jobId;
+    const next = applyDrawingToJob(state, jobId, review.drawing);
+    const site = next.sites.find((s) => s.id === review.target);
+    site.sourceKeys = [
+      ...new Set([...(site.sourceKeys || []), ...review.site.sourceKeys]),
+    ];
+    if (
+      await persist(
+        next,
+        "Plan imported into this job. Earlier drawing revisions and results were retained.",
+      )
+    ) {
+      activeJob = jobId;
+      activeSite = null;
+      page = "job";
+      tab = "Plan";
+      editorActive = false;
+      review = null;
+      render();
+    }
     return;
   }
   if (a === "save-import") {
@@ -503,6 +701,11 @@ async function action(a) {
   }
   const j = state.jobs.find((j) => j.id === activeJob),
     s = j && siteOf(j);
+  if (a === "edited-source-export")
+    return download(
+      buildEditableZoneSketch(drawingOf(s, j), { siteName: s.name }),
+      "working-drawing.zonesketch.json",
+    );
   if (a === "source-export")
     return download(drawingOf(s, j).source, "original.zonesketch.json");
   if (a === "export")
@@ -655,6 +858,7 @@ function printReport(s, j) {
   const print = document.createElement("section");
   print.id = "print-report";
   print.innerHTML = `<h1>Draft service report</h1><p>Not a certificate of compliance. Engineer review required.</p><h2>${esc(s.name)}</h2><p>${esc(s.address)}</p><p>Job ${esc(j.id)} · revision ${j.revision} · drawing ${esc(d.revision)}</p><p>${esc(j.workType)} · ${esc(j.engineer || "Engineer not recorded")} · ${esc(j.status)}</p><h3>Scope</h3><p>${esc(j.scope)}</p><h3>Instructions</h3><p>${esc(j.instructions)}</p><h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>${results(j, d)}`;
+  print.insertBefore(renderWorkflowReport(j), print.querySelector(".panel"));
   document.body.append(print);
   window.print();
   print.remove();

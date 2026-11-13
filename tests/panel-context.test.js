@@ -51,3 +51,16 @@ test('unsatisfactory observation remains a recorded fault without a defect entry
   assert.equal(output.engineerEvidence.faults[0].observations, 'Repeated fault');
   assert.equal(output.engineerEvidence.faults[0].resultId, 'result-1');
 });
+
+test('editable work actions and visit notes remain separate from AI and internal office notes', () => {
+  const {site,job}=fixture();
+  job.workflow={details:{title:'Synthetic repair',reference:'JOB-1',internalNote:'PRIVATE OFFICE'},tasks:[{id:'task-1',title:'Investigate fault',complete:false}],finalisation:{technicianNote:'Observed intermittent fault',invoiceNote:'PRIVATE BILLING'}};
+  job.archivedResults=[{id:'archive-1',assetId:'removed-asset',result:{state:'Inaccessible'}}];
+  const context=panelContext(site,job);
+  assert.deepEqual(context.workRequested.actions,job.workflow.tasks);
+  assert.equal(context.engineerEvidence.technicianNote,'Observed intermittent fault');
+  assert.equal(context.engineerEvidence.archivedResults[0].result.state,'Inaccessible');
+  assert.equal(context.aiProposals[0].confirmed,false);
+  assert.ok(!JSON.stringify(context).includes('PRIVATE OFFICE'));
+  assert.ok(!JSON.stringify(context).includes('PRIVATE BILLING'));
+});

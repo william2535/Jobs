@@ -47,3 +47,5 @@ The default export includes every asset in the job's pinned drawing. An optional
 5. Keep all model suggestions in a proposal collection with provenance. Engineer confirmation must be an explicit action recording author, time and original proposal; suggestions cannot update saved Jobs results automatically.
 6. Use the existing local model/manual readiness checks. Do not silently switch to online inference, download models or grant consent. Browser origins have separate storage, so transfer requires an explicit import/adapter surface.
 7. Verify offline operation against the actual FINDR app, conflict behavior, corrections, large attachments, privacy and model-scope boundaries before displaying a connected state.
+
+Editable workflow extension: `workRequested` includes the entered reference/title, work actions and safety/service requirements. `engineerEvidence` includes visit/technician notes and drawing-change/removed-device history, clearly separate from current selected-device results and AI proposals. Supplier orders, internal office notes and invoice notes are not included by this extension.

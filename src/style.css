@@ -798,6 +798,347 @@ footer {
 #print-report {
   display: none;
 }
+/* Section cards and focused editing forms. */
+.workflow-module {
+  min-width: 0;
+}
+.workflow-module .wf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 16px;
+}
+.workflow-module .wf-card {
+  padding: 20px;
+  border: 1px solid var(--line, #ddd5c9);
+  border-radius: 9px;
+  background: var(--surface, #fcfaf7);
+  min-width: 0;
+}
+.workflow-module .wf-card h3 {
+  margin: 0 0 10px;
+}
+.workflow-module .wf-card p,
+.workflow-module dd {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.workflow-module dl {
+  margin: 0;
+}
+.workflow-module dt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #746b60);
+}
+.workflow-module dd {
+  margin: 0 0 12px;
+}
+.workflow-module .wf-block {
+  margin-top: 24px;
+}
+.workflow-module .wf-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.workflow-module .wf-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.workflow-module .wf-check input {
+  width: 22px;
+  min-height: 22px;
+  accent-color: var(--accent, #86664c);
+}
+.workflow-module .wf-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.workflow-module .wf-shortcuts button {
+  min-height: 84px;
+}
+.workflow-module .wf-editor {
+  scroll-margin-top: 110px;
+}
+.workflow-module .wf-error {
+  margin-bottom: 16px;
+}
+.workflow-module .wf-timeline {
+  margin-top: 20px;
+}
+.workflow-module .actions {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .workflow-module .wf-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .workflow-module .wf-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workflow-module .wf-card {
+    padding: 14px;
+  }
+  .workflow-module .wf-card .section-head {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+  .workflow-module .wf-shortcuts {
+    gap: 8px;
+  }
+  .workflow-module .wf-shortcuts button {
+    font-size: 12px;
+    padding: 9px;
+  }
+  .workflow-module h3 {
+    font-size: 14px;
+  }
+  .workflow-module .wf-card .actions {
+    display: grid;
+  }
+  .workflow-module .wf-card button {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .workflow-module .wf-card .badge {
+    white-space: normal;
+  }
+}
+/* Independent drawing editor layout. */
+.drawing-editor {
+  min-width: 0;
+}
+.edit-toolbar,
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.edit-toolbar button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.edit-toolbar button[aria-pressed="true"] {
+  background: var(--ink, #332f2b);
+  color: white;
+}
+.edit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr);
+  gap: 18px;
+  margin: 16px 0;
+}
+.edit-canvas-wrap {
+  overflow: auto;
+  max-height: 65vh;
+  min-height: 280px;
+  background: #fff;
+  border: 1px solid var(--line, #ddd5c9);
+  border-radius: 8px;
+}
+.edit-canvas {
+  display: block;
+  touch-action: pan-x pan-y;
+  min-width: 100%;
+}
+.edit-inspector {
+  padding: 18px;
+  border: 1px solid var(--line, #ddd5c9);
+  border-radius: 8px;
+  min-width: 0;
+}
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.edit-inspector h3 {
+  margin-top: 0;
+}
+.edit-floor-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.edit-bottom label {
+  flex: 1 1 210px;
+  min-width: 0;
+}
+.edit-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+.edit-object-picker {
+  margin: 14px 0;
+}
+.edit-canvas [role="button"] {
+  cursor: pointer;
+}
+.edit-warning {
+  color: #924b31;
+}
+.edit-error {
+  background: #fff0e8;
+  color: #91442e;
+  padding: 12px;
+  border-radius: 6px;
+}
+@media (max-width: 700px) {
+  .edit-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .edit-canvas-wrap {
+    max-height: 50vh;
+    min-height: 230px;
+  }
+  .edit-inspector {
+    padding: 14px;
+  }
+  .edit-toolbar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .edit-toolbar button {
+    padding: 9px 4px;
+  }
+  .edit-floor-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  .drawing-editor {
+    display: none;
+  }
+}
+.drawing-editor .edit-snap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.drawing-editor .edit-snap input {
+  width: 22px;
+  min-height: 22px;
+  accent-color: var(--accent);
+}
+.drawing-editor .edit-inspector {
+  background: var(--surface);
+}
+.drawing-editor .edit-actions {
+  margin-bottom: 10px;
+}
+.drawing-editor .edit-toolbar {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.drawing-editor .edit-toolbar button {
+  background: white;
+}
+.drawing-editor .edit-toolbar button[aria-pressed="true"] {
+  background: var(--rail);
+  color: white;
+}
+.drawing-editor .edit-bottom {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.drawing-editor .section-head {
+  flex-wrap: wrap;
+}
+.workflow-module .wf-editor .wf-form-grid > p {
+  align-self: center;
+  margin: 0;
+}
+.workflow-module .wf-form-grid > label:has(textarea) {
+  grid-column: 1 / -1;
+}
+.workflow-module .wf-card .actions button {
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .drawing-editor .edit-bottom > .edit-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .drawing-editor .edit-bottom button {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  .drawing-editor .edit-floor-fields > form {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .drawing-editor .edit-floor-fields > form button {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+  .workflow-module .wf-shortcuts button {
+    min-height: 72px;
+  }
+}
+/* Main visit workflow and compact drawing/device tools. */
+.job-main-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin: 20px 0 16px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.job-main-nav button {
+  min-width: 0;
+  min-height: 48px;
+  padding: 9px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.job-main-nav button.active,
+.job-main-nav button[aria-current="page"] {
+  color: #fff;
+  background: var(--rail);
+}
+.job-main-nav button:hover {
+  background: var(--subtle);
+  color: var(--ink);
+}
+.job-tools.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  border: 0;
+  margin-bottom: 20px;
+}
+.job-tools.tabs button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: var(--surface);
+  color: var(--ink-soft);
+}
+.job-tools.tabs button.active {
+  border-color: var(--accent);
+  background: var(--subtle);
+  color: var(--accent-dark);
+}
 @media (min-width: 1500px) {
   .device-browser-grid {
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -842,6 +1183,33 @@ footer {
   }
 }
 @media (max-width: 700px) {
+  .job-main-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    gap: 2px;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding: 5px 6px calc(5px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 18px #332f2b08;
+  }
+  .job-main-nav button {
+    min-height: 54px;
+    padding: 6px 2px;
+    font-size: 10.5px;
+  }
+  body:has(.job-main-nav) .workspace {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+  .job-tools.tabs {
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+
   .sidebar {
     position: static;
     width: auto;
@@ -1141,4 +1509,11 @@ footer {
 #reading-rows {
   display: grid;
   gap: 14px;
+}
+
+/* Focus on the drawing while editing; the site/save header and workflow bar stay available. */
+main:has(.drawing-editor) > .job-title,
+main:has(.drawing-editor) > .job-toolbar,
+main:has(.drawing-editor) > .job-tools {
+  display: none;
 }

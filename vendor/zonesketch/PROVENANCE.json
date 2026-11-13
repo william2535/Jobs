@@ -1,0 +1,54 @@
+{
+  "repository": "https://github.com/william2535/FIRE-ZONE-PLAN-APP",
+  "commit": "dca2eff063f52a9980c2aed255879a65cc579379",
+  "path": "index.html",
+  "licenseSha256": "67e37253ced833a52327d083e8fb460a7eacf879c95006f24c0dfe2b9edd96d9",
+  "exports": [
+    {
+      "line": 1731,
+      "name": "clamp",
+      "sourceLineSha256": "df9891477a7dd38044a42e0722257fa871285f3afb81152c571646577c750b2c"
+    },
+    {
+      "line": 1952,
+      "name": "lerp",
+      "sourceLineSha256": "4c352aae7af3fa67d78a84c0eb6407503161d1f108a9bbca156935b6b98657f7"
+    },
+    {
+      "line": 1953,
+      "name": "proj",
+      "sourceLineSha256": "cebe0401bf954d571543216a3c99341625230a9f2dbca63658fb96e230b3a192"
+    },
+    {
+      "line": 2014,
+      "name": "segmentIntersection",
+      "sourceLineSha256": "cbd674624312c4a61c06b384cdc46609aa67627be3a8bc8ce8b18b016071cf1d"
+    },
+    {
+      "line": 2119,
+      "name": "pointInPoly",
+      "sourceLineSha256": "e63fd0dff5d7592d6f0c97a5ef0e8d0cf8671740d408720d0c1bef8b7f67feac"
+    },
+    {
+      "line": 2710,
+      "name": "cbPlanToBoard",
+      "sourceLineSha256": "8d665f2db441eaec0ede21491eb53e850550b196f1e7139967ea427a28e21060"
+    },
+    {
+      "line": 2711,
+      "name": "cbBoardToPlan",
+      "sourceLineSha256": "84ec306cf21c8b27c8e9a7802bd3471ee9198f43c5480c7513b3f45f46ac4526"
+    },
+    {
+      "line": 2774,
+      "name": "cbEditProjectToSegment",
+      "sourceLineSha256": "00b0a5a57d63f279bff2ec5b9ffeb61ae653a2e098bd35c72e6a1c24503e4f27"
+    }
+  ],
+  "constants": {
+    "line": 2593,
+    "CB_INSET": 0.045,
+    "CB_SPAN": 0.91
+  },
+  "changes": "ES-module exports and isolated constants only; original function bodies unchanged."
+}

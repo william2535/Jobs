@@ -1,3 +1,5 @@
+import { cbBoardToPlan } from "../vendor/zonesketch/geometry.js";
+
 /** Read-only renderer for imported Zone Sketch data. Independently implemented. */
 const NS = "http://www.w3.org/2000/svg";
 const safeImage = (value) =>
@@ -314,10 +316,7 @@ export function renderPlan(
       for (const circuit of list(data.circuits)) {
         if (!circuit.bounds) continue;
         const b = circuit.bounds;
-        const restore = (p) => ({
-          x: b.x1 + ((p.x - 0.045) / 0.91) * (b.x2 - b.x1),
-          y: b.y1 + ((p.y - 0.045) / 0.91) * (b.y2 - b.y1),
-        });
+        const restore = (p) => cbBoardToPlan(p, b);
         for (const leg of list(circuit.legs))
           path(list(leg.points).filter(point).map(restore), {
             stroke: color(circuit.color),

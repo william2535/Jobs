@@ -10,7 +10,7 @@ import { importZoneSketch } from '../src/zone-import.js';
 
 const reference = process.env.ZONE_SKETCH_REFERENCE;
 if (!reference) throw new Error('Set ZONE_SKETCH_REFERENCE to an external Zone Sketch index.html.');
-const fixture = resolve('public/demo.zonesketch.json');
+const fixture = resolve(process.env.ZONE_SKETCH_INPUT || 'public/demo.zonesketch.json');
 const root = dirname(resolve(reference));
 const server = createServer(async (req, res) => {
   const filename = resolve(root, '.' + new URL(req.url, 'http://localhost').pathname);
@@ -38,7 +38,17 @@ try {
   const expected = JSON.parse(await readFile(fixture, 'utf8'));
   if (data.project.site !== expected.project.site) throw new Error(`Reexport was wrong site: ${data.project.site}`);
   const imported = await importZoneSketch(data);
-  if (imported.summary.devices !== 4 || imported.summary.issuedSnapshots !== 1 || imported.summary.photos < 1) throw new Error(`Mapping failed: ${JSON.stringify(imported.summary)}`);
+  const expectedDevices = expected.project.floors.flatMap(floor => floor.data.symbols).filter(symbol => symbol.type !== 'you').length;
+  if (imported.summary.devices !== expectedDevices || imported.summary.issuedSnapshots !== (expected.project.issuedAsFits || []).length) throw new Error(`Mapping failed: ${JSON.stringify(imported.summary)}`);
+  for (const floor of expected.project.floors) {
+    const actual = data.project.floors.find(value => value.id === floor.id);
+    if (!actual) throw new Error('Official reexport lost a floor.');
+    for (const symbol of floor.data.symbols) {
+      const found = actual.data.symbols.find(value => value.id === symbol.id);
+      if (!found || found.type !== symbol.type || found.x !== symbol.x || found.y !== symbol.y || found.reference !== symbol.reference) throw new Error('Official reexport changed a device identity or position.');
+    }
+    if (JSON.stringify(actual.data.walls) !== JSON.stringify(floor.data.walls)) throw new Error('Official reexport changed building walls.');
+  }
   const target = process.env.ZONE_SKETCH_EXPORT_OUTPUT;
   if (target) await writeFile(target, JSON.stringify(data, null, 2) + '\n');
   console.log(JSON.stringify({officialImporter:'accepted',officialExporter:data.format,version:data.version,...imported.summary,dialogs}, null, 2));

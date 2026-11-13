@@ -54,6 +54,11 @@ export function panelContext(
     workRequested: {
       system: present(job.system),
       workType: job.workType || "",
+      reference: job.workflow?.details?.reference || "",
+      title: job.workflow?.details?.title || "",
+      actions: clone(list(job.workflow?.tasks)),
+      safetyRequirements: job.workflow?.details?.safetyRequirements || "",
+      serviceRequirements: job.workflow?.details?.serviceRequirements || "",
       scope: job.scope || "",
       instructions: job.instructions || "",
       assignedEngineer: job.engineer || "",
@@ -84,6 +89,10 @@ export function panelContext(
     engineerEvidence: {
       provenance: "engineer-recorded",
       results: clone(results),
+      visitNotes: job.visitNotes || "",
+      technicianNote: job.workflow?.finalisation?.technicianNote || "",
+      drawingChanges: clone(list(job.drawingChanges)),
+      archivedResults: clone(list(job.archivedResults)),
       faults: results
         .filter(
           (result) =>

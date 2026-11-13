@@ -18,3 +18,5 @@ Device markers support mouse, touch and keyboard activation. A 44px-minimum devi
 This is a review viewer, not a pixel-identical Zone Sketch renderer. Doors are simplified; specialist symbol artwork, directional coverage cones, circuit bridge humps, draft edit overlays, source layer filters and brightness/contrast filters are not reproduced. Original geometry and all source fields are preserved for future rendering improvements. Drawing lines and symbols are not dimensional survey evidence or test certification.
 
 CSS hooks: `.plan-viewer`, `.plan-controls`, `.plan-status`, `.plan-scroll`, `.plan-legend`, `.plan-details`, `.plan-devices`. Essential responsive layout is self-contained; application button/select styles are inherited.
+
+The subsequent engine integration uses Zone Sketch’s verbatim `cbBoardToPlan` helper for circuit coordinate conversion. Original geometry licensing and provenance are retained under `vendor/zonesketch/`; the SVG renderer itself remains independently implemented.

@@ -1,6 +1,6 @@
 # Zone Sketch import contract
 
-Jobs contains an independent data importer, not the Zone Sketch application. The reference repository was inspected at [`dca2eff063f52a9980c2aed255879a65cc579379`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/tree/dca2eff063f52a9980c2aed255879a65cc579379). It contained no `AGENTS.md`. Its `LICENSE` is proprietary, copyright © 2026 Will Flood; no source, renderer, artwork, vendor libraries or licence text from that application has been copied into Jobs. Reading the schema does not relicense either application.
+Jobs contains an independent data importer, not the Zone Sketch application. The reference repository was inspected at [`dca2eff063f52a9980c2aed255879a65cc579379`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/tree/dca2eff063f52a9980c2aed255879a65cc579379). It contained no `AGENTS.md`. Its `LICENSE` is proprietary, copyright © 2026 Will Flood; the importer remains independent. Following the owner's later explicit request to use the shared engine, focused original geometry routines were extracted under that unchanged licence (see `zone-engine.md`). No complete application, original renderer or symbol artwork was copied. Neither the schema reader nor engine integration relicenses Zone Sketch.
 
 ## Actual supported saves
 
