@@ -9,6 +9,7 @@ async function createJob(page) {
   await page.goto('/');
   await page.locator('#zone-file').setInputFiles(fixture);
   await page.getByRole('button', { name: 'Save site', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
   await page.locator('[data-action="create"]').last().click();
   await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
   await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Synthetic complete workflow');
@@ -141,102 +142,133 @@ test('editable visit sections retain work, materials, purchase records and final
   } finally { await fresh.close(); }
 });
 
-test('job plan import and working edits keep drawing history and removed-device evidence', async ({ page, context }, testInfo) => {
+
+async function pngSource(page) {
+  const image = page.getByTestId('plan-png');
+  await expect(image).toBeVisible();
+  await expect.poll(() => image.evaluate(node => node.complete && node.naturalWidth > 0)).toBeTruthy();
+  const src = await image.getAttribute('src');
+  expect(src).toMatch(/^data:image\/png;base64,/);
+  expect(Buffer.from(src.split(',')[1], 'base64').subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  return src;
+}
+async function importPlan(page, project, name = 'synthetic-update.zonesketch.json') {
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import Zone Sketch plan', exact: true }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({ name, mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await page.getByRole('button', { name: 'Apply plan to job', exact: true }).click();
+  await expect(page.getByTestId('plan-png')).toBeVisible();
+  await pngSource(page);
+}
+
+test('PNG plans, issued evidence and revised imports survive offline package round trips', async ({ page, context, browser }, testInfo) => {
   await createJob(page);
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
-  await page.locator('.device-browser-grid > button').filter({ hasText: 'MCP-01' }).click();
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  const firstPNG = await pngSource(page);
+  await expect(page.locator('#plan-root svg')).toHaveCount(0);
+  await expect(page.locator('.drawing-editor')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await expect(page.locator('.plan-preview-zoom output')).toHaveText('150%');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
+  await page.getByRole('button', { name: 'Fit', exact: true }).click();
+  await expect(page.locator('.plan-preview-zoom output')).toHaveText('100%');
+  await expect.poll(() => page.locator('.plan-preview-viewport').evaluate(viewport => {
+    const image = viewport.querySelector('[data-testid="plan-png"]');
+    return image.getBoundingClientRect().height <= viewport.clientHeight + 1;
+  })).toBeTruthy();
+  const firstFloor = await page.getByLabel('Plan floor').inputValue();
+  await page.getByLabel('Plan floor').selectOption({ index: 1 });
+  await pngSource(page);
+  await page.getByLabel('Plan floor').selectOption(firstFloor);
+  const snapshotId = await page.getByLabel('Drawing record').locator('option').nth(1).getAttribute('value');
+  await page.getByLabel('Drawing record').selectOption(snapshotId);
+  const issuedPNG = await pngSource(page);
+  await expect(page.locator('.plan-status')).toContainText('Issued');
+  await page.getByRole('button', { name: 'FAP-01', exact: true }).click();
+  await expect(page.locator('.plan-details')).toContainText('Historical drawing evidence');
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveCount(0);
+  await screenshot(page, testInfo.outputPath('issued-plan.png'));
+  await page.getByLabel('Drawing record').selectOption('');
+  await expect(page.getByTestId('plan-png')).toHaveAttribute('src', firstPNG);
+  await page.getByRole('button', { name: 'Open MCP-01', exact: true }).click();
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Unsatisfactory');
-  await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Synthetic call point damaged before drawing update.');
+  await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Synthetic call point damaged before revised drawing arrived.');
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
   await expect(page.locator('#notice')).toContainText('Work saved');
   const original = await exportJob(page);
   const originalDrawing = original.data.site.drawings.find(d => d.id === original.data.job.drawingId);
   const removedAsset = originalDrawing.assets.find(asset => asset.reference === 'MCP-01');
   const retainedResult = original.data.job.results.find(result => result.assetId === removedAsset.id);
+  expect(originalDrawing.planPreviews.find(preview => preview.floorId === firstFloor && !preview.snapshotId).image).toBe(firstPNG);
+  expect(originalDrawing.planPreviews.find(preview => preview.floorId === firstFloor && preview.snapshotId === snapshotId).image).toBe(issuedPNG);
 
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
   const incoming = structuredClone(sample);
-  incoming.project.meta.revision = 'C01';
-  const chooserPromise = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import Zone Sketch plan', exact: true }).click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({ name: 'synthetic-update.zonesketch.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(incoming)) });
-  await page.getByRole('button', { name: 'Apply plan to job', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit working drawing', exact: true })).toBeVisible();
-  const afterImport = await exportJob(page);
-  expect(afterImport.data.job.id).toBe(original.data.job.id);
-  expect(afterImport.data.job.results.find(result => result.assetId === removedAsset.id)).toEqual(retainedResult);
-  expect(afterImport.data.site.drawings).toHaveLength(2);
+  incoming.project.meta.revision = 'C02-ZONE';
+  const floor = incoming.project.floors[0];
+  floor.data.symbols.find(symbol => symbol.reference === 'FAP-01').x = 0.55;
+  floor.data.symbols = floor.data.symbols.filter(symbol => symbol.reference !== 'MCP-01');
+  floor.data.symbols.push({ ...structuredClone(floor.data.symbols.find(symbol => symbol.reference === 'SD-01')), id: 'synthetic-new-device', reference: 'SD-NEW', x: 0.6, y: 0.6 });
+  floor.data.walls.push({ id: 'synthetic-added-wall', points: [{ x: 0.2, y: 0.4 }, { x: 0.4, y: 0.4 }] });
+  // Actual saves mirror active-floor fields at project level; retain that shape.
+  for (const [key, value] of Object.entries(floor.data)) incoming.project[key] = structuredClone(value);
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await importPlan(page, incoming);
+  const updatedPNG = await pngSource(page);
+  expect(updatedPNG).not.toBe(firstPNG);
+  await screenshot(page, testInfo.outputPath('png-plan.png'));
+  const revised = await exportJob(page);
+  const drawing = revised.data.site.drawings.find(d => d.id === revised.data.job.drawingId);
+  expect(drawing.revision).toBe('C02-ZONE');
+  expect(drawing.assets.find(asset => asset.reference === 'FAP-01').x).toBe(0.55);
+  expect(drawing.assets.some(asset => asset.reference === 'MCP-01')).toBe(false);
+  const newAsset = drawing.assets.find(asset => asset.reference === 'SD-NEW');
+  expect(revised.data.job.results.find(result => result.assetId === newAsset.id).state).toBe('Not tested');
+  expect(revised.data.job.archivedResults.find(record => record.assetId === removedAsset.id).result).toEqual(retainedResult);
+  expect(revised.data.site.drawings.find(value => value.id === originalDrawing.id)).toEqual(originalDrawing);
+  expect(drawing.issuedSnapshots).toEqual(originalDrawing.issuedSnapshots);
+  expect(drawing.planPreviews.find(preview => preview.floorId === firstFloor && !preview.snapshotId).image).toBe(updatedPNG);
 
-  await page.getByRole('button', { name: 'Edit working drawing', exact: true }).click();
-  await page.locator('#edit-object').selectOption({ label: 'Device · FAP-01' });
-  const panelMarker = page.getByTestId('editable-plan').locator('g[role="button"]').filter({ hasText: 'FAP-01' }).locator('circle').first();
-  const originalX = await panelMarker.getAttribute('cx');
-  await page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true }).fill('');
-  await page.getByRole('button', { name: 'Apply device changes', exact: true }).click();
-  await expect(page.locator('.drawing-editor .edit-error')).toBeVisible();
-  await expect(panelMarker).toHaveAttribute('cx', originalX);
-  await expect(page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true })).toHaveValue('');
-  await page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true }).fill('0.55');
-  await page.getByRole('spinbutton', { name: 'Position Y (0–1)', exact: true }).fill('0.55');
-  await page.getByRole('button', { name: 'Apply device changes', exact: true }).click();
-  await page.locator('#edit-snap').uncheck();
-  await page.getByRole('button', { name: 'Add wall', exact: true }).click();
-  const canvas = page.getByTestId('editable-plan');
-  const box = await canvas.boundingBox();
-  await canvas.click({ position: { x: box.width * 0.2, y: box.height * 0.4 } });
-  await canvas.click({ position: { x: box.width * 0.4, y: box.height * 0.4 } });
-  await page.getByRole('button', { name: 'Finish wall', exact: true }).click();
-  await page.locator('#edit-object').selectOption('');
-  await page.getByRole('textbox', { name: 'New device reference', exact: true }).fill('SD-NEW');
-  await page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true }).fill('0.6');
-  await page.getByRole('spinbutton', { name: 'Position Y (0–1)', exact: true }).fill('0.6');
-  await page.getByRole('button', { name: 'Add device at coordinates', exact: true }).click();
-  await page.locator('#edit-object').selectOption({ label: 'Device · MCP-01' });
-  await page.getByRole('button', { name: 'Delete selected', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Drawing revision label', exact: true }).fill('C02-JOBS');
-  await screenshot(page, testInfo.outputPath('drawing-editor.png'));
-  await page.getByRole('button', { name: 'Save drawing revision', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit working drawing', exact: true })).toBeVisible();
-  const edited = await exportJob(page);
-  const selected = edited.data.site.drawings.find(d => d.id === edited.data.job.drawingId);
-  expect(selected.id).not.toBe(originalDrawing.id);
-  expect(selected.revision).toBe('C02-JOBS');
-  expect(selected.assets.find(a => a.reference === 'FAP-01').x).toBe(0.55);
-  expect(selected.assets.find(a => a.reference === 'FAP-01').y).toBe(0.55);
-  expect(selected.floors[0].data.walls).toHaveLength(originalDrawing.floors[0].data.walls.length + 1);
-  expect(selected.assets.find(a => a.reference === 'MCP-01')).toBeUndefined();
-  expect(selected.assets.find(a => a.reference === 'SD-NEW')).toBeTruthy();
-  expect(edited.data.job.results.find(r => r.assetId === selected.assets.find(a => a.reference === 'SD-NEW').id).state).toBe('Not tested');
-  expect(edited.data.job.archivedResults.find(r => r.assetId === removedAsset.id).result).toEqual(retainedResult);
-  expect(edited.data.site.drawings.find(d => d.id === originalDrawing.id)).toEqual(originalDrawing);
-  expect(selected.issuedSnapshots).toEqual(originalDrawing.issuedSnapshots);
-  expect(edited.data.job.drawingChanges).toHaveLength(2);
-
-  const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export editable drawing', exact: true }).click();
-  const download = await downloaded;
-  await download.saveAs(testInfo.outputPath('edited.zonesketch.json'));
-  const editable = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(editable.format).toBe('ZoneSketchByWill');
-  expect(editable.project.meta.revision).toBe('C02-JOBS');
-  expect(editable.project.floors[0].data.symbols.find(s => s.reference === 'FAP-01').x).toBe(0.55);
-  expect(editable.project.floors[0].data.symbols.some(s => s.reference === 'SD-NEW')).toBe(true);
   await page.evaluate(async () => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBeTruthy();
   await context.setOffline(true);
   await page.reload();
   await page.getByTestId('job-card').click();
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await expect(page.locator('.plan-status')).toContainText('C02-JOBS');
-  const reopened = await exportJob(page);
-  expect(reopened.data.job.archivedResults).toEqual(edited.data.job.archivedResults);
-  expect(reopened.data.site.drawings).toEqual(edited.data.site.drawings);
-  await page.setViewportSize({ width: 320, height: 844 });
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await expect(page.getByTestId('plan-png')).toHaveAttribute('src', updatedPNG);
+  await pngSource(page);
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download PNG', exact: true }).click();
+  const download = await downloaded;
+  expect(await readFile(await download.path())).toEqual(Buffer.from(updatedPNG.split(',')[1], 'base64'));
+  const offlineExport = await exportJob(page);
+  expect(offlineExport.data.site.drawings).toEqual(revised.data.site.drawings);
+  expect(offlineExport.data.job.archivedResults).toEqual(revised.data.job.archivedResults);
+
+  const fresh = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: testInfo.project.use.viewport });
+  try {
+    const reopened = await fresh.newPage();
+    await reopened.goto('/');
+    await reopened.locator('#job-file').setInputFiles({ name: 'png-job.jobs.json', mimeType: 'application/json', buffer: Buffer.from(offlineExport.input) });
+    await expect(reopened.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
+    await reopened.evaluate(async () => navigator.serviceWorker.ready);
+    await expect.poll(() => reopened.evaluate(() => !!navigator.serviceWorker.controller)).toBeTruthy();
+    await fresh.setOffline(true);
+    await reopened.reload();
+    await reopened.getByTestId('job-card').click();
+    await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
+    await expect(reopened.getByTestId('plan-png')).toHaveAttribute('src', updatedPNG);
+    await pngSource(reopened);
+    await reopened.getByLabel('Drawing record').selectOption(snapshotId);
+    await pngSource(reopened);
+    await expect(reopened.locator('.plan-status')).toContainText('Issued');
+    const returned = await exportJob(reopened);
+    expect(returned.data.site.drawings).toEqual(offlineExport.data.site.drawings);
+    expect(returned.data.job.results).toEqual(offlineExport.data.job.results);
+  } finally { await fresh.close(); }
 });
 
-test('manual equipment keeps its unknown location until the engineer explicitly places it', async ({ page }) => {
+test('manual equipment stays unplaced and an unrelated supplied plan preserves its recorded work', async ({ page }) => {
   await page.goto('/');
   await page.locator('[data-action="sites"]').first().click();
   await page.getByRole('textbox', { name: 'Site name', exact: true }).fill('Synthetic unplaced equipment');
@@ -246,56 +278,91 @@ test('manual equipment keeps its unknown location until the engineer explicitly 
   await page.getByRole('button', { name: 'Add device', exact: true }).click();
   await page.locator('[data-action="create"]').last().click();
   await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.getByRole('button', { name: /SD-MANUAL/ }).first().click();
+  await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Manual check recorded before a supplied plan.');
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await page.getByRole('button', { name: 'Edit working drawing', exact: true }).click();
-  await page.locator('#edit-system').selectOption('fire');
-  await page.getByRole('button', { name: 'Save drawing revision', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit working drawing', exact: true })).toBeVisible();
+  await expect(page.locator('.drawing-editor')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Open SD-MANUAL', exact: true })).toHaveCount(0);
   const unplaced = await exportJob(page);
-  const unplacedDrawing = unplaced.data.site.drawings.find(d => d.id === unplaced.data.job.drawingId);
-  const asset = unplacedDrawing.assets.find(a => a.reference === 'SD-MANUAL');
+  const oldDrawing = unplaced.data.site.drawings.find(d => d.id === unplaced.data.job.drawingId);
+  const asset = oldDrawing.assets.find(a => a.reference === 'SD-MANUAL');
   expect(asset.x == null).toBe(true);
   expect(asset.y == null).toBe(true);
-  let unexpectedDownload = false;
-  const onDownload = () => { unexpectedDownload = true; };
-  page.on('download', onDownload);
-  await page.getByRole('button', { name: 'Export editable drawing', exact: true }).click();
-  await expect(page.locator('#notice')).toContainText(/place|position|location/i);
-  expect(unexpectedDownload).toBe(false);
-  page.off('download', onDownload);
 
-  await page.getByRole('button', { name: 'Edit working drawing', exact: true }).click();
-  await page.locator('#edit-object').selectOption('device:' + asset.id);
-  await expect(page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true })).toHaveValue('');
-  await expect(page.getByRole('spinbutton', { name: 'Position Y (0–1)', exact: true })).toHaveValue('');
-  await page.getByRole('spinbutton', { name: 'Position X (0–1)', exact: true }).fill('0.2');
-  await page.getByRole('spinbutton', { name: 'Position Y (0–1)', exact: true }).fill('0.4');
-  await page.getByRole('button', { name: 'Apply device changes', exact: true }).click();
-  await page.getByRole('button', { name: 'Save drawing revision', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit working drawing', exact: true })).toBeVisible();
+  const located = structuredClone(sample);
+  located.project.site = 'Synthetic unplaced equipment';
+  located.project.meta.revision = 'A01-LOCATED';
+  const floor = located.project.floors[0];
+  floor.id = oldDrawing.floors[0].id;
+  floor.name = oldDrawing.floors[0].name;
+  const symbol = structuredClone(floor.data.symbols.find(value => value.type === 'smoke'));
+  symbol.id = 'external-source-smoke';
+  symbol.reference = 'SD-MANUAL';
+  symbol.x = 0.2;
+  symbol.y = 0.4;
+  floor.data.symbols = [symbol];
+  floor.data.circuits = [];
+  floor.data.connections = [];
+  located.project.floors = [floor];
+  located.project.activeFloor = floor.id;
+  located.project.issuedAsFits = [];
+  for (const [key, value] of Object.entries(floor.data)) located.project[key] = structuredClone(value);
+  await importPlan(page, located, 'located-manual.zonesketch.json');
+  await expect(page.getByRole('button', { name: 'Open SD-MANUAL', exact: true })).toBeVisible();
   const placed = await exportJob(page);
   const drawing = placed.data.site.drawings.find(d => d.id === placed.data.job.drawingId);
   const updated = drawing.assets.find(a => a.reference === 'SD-MANUAL');
-  expect(updated.id).toBe(asset.id);
+  // A matching human reference alone must not guess a source identity.
+  expect(updated.id).not.toBe(asset.id);
   expect(updated.x).toBe(0.2);
   expect(updated.y).toBe(0.4);
-  expect(placed.data.job.results).toEqual(unplaced.data.job.results);
-  const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export editable drawing', exact: true }).click();
-  const download = await downloaded;
-  const editable = JSON.parse(await readFile(await download.path(), 'utf8'));
-  const symbol = editable.project.floors.flatMap(f => f.data.symbols).find(s => s.reference === 'SD-MANUAL');
-  expect(symbol.x).toBe(0.2);
-  expect(symbol.y).toBe(0.4);
-  expect(editable.project.systemType).toBe('fire');
-  const chooserPromise = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import Zone Sketch plan', exact: true }).click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({ name: 'manual-return.zonesketch.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(editable)) });
-  await page.getByRole('button', { name: 'Apply plan to job', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Edit working drawing', exact: true })).toBeVisible();
-  const returned = await exportJob(page);
-  const returnedDrawing = returned.data.site.drawings.find(d => d.id === returned.data.job.drawingId);
-  expect(returnedDrawing.assets.find(a => a.reference === 'SD-MANUAL').id).toBe(asset.id);
-  expect(returned.data.job.results).toEqual(placed.data.job.results);
+  expect(placed.data.job.results.find(result => result.assetId === updated.id).state).toBe('Not tested');
+  expect(placed.data.job.archivedResults.find(record => record.assetId === asset.id).result).toEqual(unplaced.data.job.results[0]);
+  expect(placed.data.site.drawings.find(value => value.id === oldDrawing.id)).toEqual(oldDrawing);
+});
+
+test('an in-progress local save prevents typing that could otherwise be lost', async ({ page }) => {
+  await createJob(page);
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid > button').first().click();
+  const notes = page.getByRole('textbox', { name: 'Notes', exact: true });
+  await notes.fill('The engineer-confirmed note to save.');
+  // Hold the save completion signal, modelling a slow device without a timed sleep.
+  await page.evaluate(() => {
+    const original = IDBDatabase.prototype.transaction;
+    let hold = true;
+    IDBDatabase.prototype.transaction = function (...args) {
+      const transaction = original.apply(this, args);
+      if (args[1] === 'readwrite' && hold) {
+        hold = false;
+        Object.defineProperty(transaction, 'oncomplete', {
+          set(callback) {
+            transaction.addEventListener('complete', event => {
+              window.__writeHeld = true;
+              window.__releaseWrite = () => callback.call(transaction, event);
+            }, { once: true });
+          },
+        });
+      }
+      return transaction;
+    };
+  });
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => !!window.__writeHeld)).toBeTruthy();
+  await expect(page.getByTestId('save-status')).toContainText('Saving');
+  expect(await page.locator('main').evaluate(main => main.inert)).toBe(true);
+  await notes.evaluate(input => input.focus());
+  await page.keyboard.type('This typing must not become an unsaved replacement.');
+  await expect(notes).toHaveValue('The engineer-confirmed note to save.');
+  await page.evaluate(() => window.__releaseWrite());
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
+  await expect.poll(() => page.locator('main').evaluate(main => main.inert)).toBe(false);
+  await page.reload();
+  await page.getByTestId('job-card').first().click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid > button').first().click();
+  await expect(page.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('The engineer-confirmed note to save.');
 });

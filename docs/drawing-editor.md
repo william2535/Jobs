@@ -1,5 +1,6 @@
 # Working drawing edits in Jobs
 
+**Historical implementation:** the in-Jobs editor described below is no longer exposed in the application. The current workflow uses PNG plans and the actual Zone Sketch application through [Edit site](zone-sketch-connection.md). Its actual-schema export and draft helpers remain for compatibility and automatic handoff preparation.
 The Jobs drawing editor uses the same normalized floor/object data model for fire alarm, intruder alarm, CCTV and access control drawings. An explicit **Drawing system** choice preserves the imported discipline and requires a deliberate choice for a manual drawing. Equipment choices come from the independently mapped current Zone Sketch catalogue; labels/references do not become manufacturer, model, loop or address claims.
 
 ## What is editable

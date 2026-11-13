@@ -11,6 +11,7 @@ async function importSite(page) {
   await page.locator('#zone-file').setInputFiles(fixture);
   await expect(page.getByRole('button', { name: 'Save site', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Save site', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
 }
 async function createVisit(page) {
   await page.locator('[data-action="create"]').last().click();
@@ -38,6 +39,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.locator('#zone-file').setInputFiles(fixture);
   await expect(page.locator('#match-site')).not.toHaveValue('');
   await page.getByRole('button', { name: 'Save site', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
   await page.locator('[data-action="sites"]').first().click();
   await expect(page.locator('.site-card')).toHaveCount(1);
   await expect(page.locator('.site-card')).toContainText('1 drawing revisions');

@@ -480,3 +480,105 @@ test("v2 rejects unsafe, repeated, missing, non-null and unused attachment refer
   }
   assert.equal(Object.prototype.polluted, undefined);
 });
+
+test("optional PNG plan previews round-trip through the image pool and malformed cache metadata is rejected", async () => {
+  const { site, job } = fixture();
+  const drawing = site.drawings[0],
+    image = drawing.assets[0].photos[0].image;
+  drawing.planPreviews = [
+    {
+      id: "preview-1",
+      drawingId: drawing.id,
+      floorId: "floor-1",
+      snapshotId: null,
+      rendererVersion: 1,
+      renderer: "JobsPreview",
+      revision: "A",
+      image,
+      width: 1,
+      height: 1,
+      generatedAt: "2026-11-13T12:00:00Z",
+    },
+  ];
+  drawing.planPreviewErrors = [];
+  drawing.planPreviewAttemptedFor = drawing.id;
+  const packed = await createJobPackage(site, job);
+  const restored = await importJobPackage({ sites: [], jobs: [] }, packed);
+  assert.deepEqual(
+    restored.state.sites[0].drawings[0].planPreviews,
+    drawing.planPreviews,
+  );
+  assert.equal(
+    packed.attachments.length,
+    1,
+    "preview and evidence share one included image",
+  );
+  for (const mutate of [
+    (preview) => {
+      preview.floorId = "missing";
+    },
+    (preview) => {
+      preview.snapshotId = "missing";
+    },
+    (preview) => {
+      preview.width = -1;
+    },
+    (preview) => {
+      preview.height = 20000;
+    },
+    (preview) => {
+      preview.generatedAt = "bad date";
+    },
+    (preview) => {
+      preview.image = "https://example.com/preview.png";
+    },
+  ]) {
+    const invalid = validateJobPackage(packed);
+    mutate(invalid.site.drawings[0].planPreviews[0]);
+    assert.throws(() => validateJobPackage(invalid), /Invalid job package/);
+  }
+});
+
+test("generated preview caches do not create drawing conflicts and imported source-engine PNGs remain usable after true conflicts", async () => {
+  const { site, job } = fixture();
+  const base = structuredClone(site);
+  const drawing = site.drawings[0];
+  drawing.planPreviews = [
+    {
+      id: "engine-preview",
+      drawingId: drawing.id,
+      floorId: "floor-1",
+      snapshotId: null,
+      rendererVersion: 1,
+      renderer: "ZoneSketch",
+      revision: "A",
+      image: drawing.assets[0].photos[0].image,
+      width: 1,
+      height: 1,
+      generatedAt: "2026-11-13T12:00:00Z",
+    },
+  ];
+  drawing.planPreviewErrors = [];
+  drawing.planPreviewAttemptedFor = drawing.id;
+  const pack = await createJobPackage(site, job);
+  const same = await importJobPackage({ sites: [base], jobs: [job] }, pack);
+  assert.equal(same.conflict, false);
+  assert.equal(same.duplicate, true);
+  assert.equal(same.state.sites[0].drawings.length, 1);
+  assert.deepEqual(
+    same.state.sites[0].drawings[0].planPreviews,
+    drawing.planPreviews,
+  );
+  base.drawings[0].revision = "Real local drawing change";
+  const conflict = await importJobPackage({ sites: [base], jobs: [] }, pack);
+  const restored = conflict.state.sites[0].drawings.find(
+    (value) => value.id === conflict.job.drawingId,
+  );
+  assert.notEqual(restored.id, drawing.id);
+  assert.equal(restored.planPreviews[0].drawingId, restored.id);
+  assert.equal(restored.planPreviews[0].image, drawing.planPreviews[0].image);
+  assert.equal(restored.planPreviews[0].renderer, "ZoneSketch");
+  validateJobPackage(
+    await createJobPackage(conflict.state.sites[0], conflict.job),
+  );
+});

@@ -29,11 +29,12 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await page.locator('#job-file').setInputFiles({ name: 'grid.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
   const cards = page.locator('.device-browser-grid > button');
-  await expect(cards).toHaveCount(8);
+  const pageSize = await page.evaluate(() => window.matchMedia('(max-width: 700px)').matches ? 4 : 8);
+  await expect(cards).toHaveCount(pageSize);
   await expect(cards.first()).toContainText('SD-01');
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Next devices', exact: true }).click();
-  await expect(cards.first()).toContainText('SD-09');
+  await expect(cards.first()).toContainText(`SD-${String(pageSize + 1).padStart(2, '0')}`);
   await page.getByRole('button', { name: 'Previous devices', exact: true }).click();
   await expect(cards.first()).toContainText('SD-01');
 
@@ -53,7 +54,7 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await expect(cards).toHaveCount(1);
   await expect(cards).toContainText('SD-06');
   await page.locator('#device-state').selectOption('Not tested');
-  await expect(cards).toHaveCount(8);
+  await expect(cards).toHaveCount(pageSize);
   await expect(cards.first()).toContainText('SD-02');
   await page.locator('#device-state').selectOption('');
   await cards.first().click();
@@ -78,11 +79,13 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await page.screenshot({ path: testInfo.outputPath('device-grid-40.png'), fullPage: true });
 
   await page.setViewportSize({ width: 320, height: 844 });
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(cards).toHaveCount(4);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   const gridBox = await page.locator('.device-browser-grid').boundingBox();
   expect(gridBox.height).toBeLessThan(700);
   await page.locator('[data-action="home"]').first().click();
-  const actions = page.locator('.quick-actions > button');
+  const actions = page.locator('.quick-actions > button, .mw-shortcuts > button');
   await expect(actions).toHaveCount(4);
   const first = await actions.nth(0).boundingBox();
   const second = await actions.nth(1).boundingBox();

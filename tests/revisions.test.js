@@ -209,3 +209,17 @@ test("asset alignment uses newest source-floor mapping, maps issued assets, and 
   );
   assert.equal(incoming.issuedSnapshots[0].assets[0].id, "issued-generated");
 });
+
+test("same drawing reimport ignores derived PNG cache differences without changing saved previews or visit results", () => {
+  const { state, drawing, visit } = fixture();
+  const incoming = structuredClone(drawing);
+  drawing.planPreviews = [
+    { id: "preview-cache", image: "included PNG cache", drawingId: drawing.id },
+  ];
+  drawing.planPreviewErrors = [];
+  drawing.planPreviewAttemptedFor = drawing.id;
+  const before = structuredClone(state);
+  const result = applyDrawingToJob(state, visit.id, incoming);
+  assert.deepEqual(result, before);
+  assert.deepEqual(state, before);
+});

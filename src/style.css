@@ -7,15 +7,15 @@
   --muted: #746b60;
   --line: #ddd5c9;
   --soft-line: #e8e0d5;
-  --accent: #86664c;
-  --accent-dark: #705138;
-  --accent-light: #d8bfa4;
-  --focus: #ae8256;
-  --rail: #332f2b;
-  --on-rail: #eee5da;
-  --rail-muted: #b8aa99;
-  --rail-active: #51473e;
-  --rail-line: #736352;
+  --accent: #174a80;
+  --accent-dark: #123763;
+  --accent-light: #a8c8ee;
+  --focus: #4688cf;
+  --rail: #112c4e;
+  --on-rail: #e9f1fb;
+  --rail-muted: #b5c6dc;
+  --rail-active: #23456d;
+  --rail-line: #426387;
   font-family:
     Inter,
     ui-sans-serif,
@@ -1516,4 +1516,50 @@ main:has(.drawing-editor) > .job-title,
 main:has(.drawing-editor) > .job-toolbar,
 main:has(.drawing-editor) > .job-tools {
   display: none;
+}
+
+.zone-connection {
+  flex-basis: 100%;
+  min-width: 0;
+}
+.zone-connection > p {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+}
+.zone-connection label {
+  min-width: 180px;
+  max-width: 100%;
+}
+.site-plan-panel {
+  margin-bottom: 1.25rem;
+}
+.site-plan-panel > .section-head {
+  flex-wrap: wrap;
+}
+.site-plan-panel .zone-connection {
+  flex: 1 1 260px;
+}
+
+@media (max-width: 700px) {
+  body[data-page="home"] .workspace > header {
+    min-height: 50px;
+    padding: 8px 16px;
+    color: white;
+    background: #092650;
+    border-bottom: 0;
+  }
+  body[data-page="home"] .workspace > header .eyebrow {
+    display: none;
+  }
+  body[data-page="home"] .workspace > header strong {
+    color: white;
+    font-size: 15px;
+  }
+  body[data-page="home"] .connection,
+  body[data-page="home"] .connection small {
+    color: #d8e6fa;
+  }
+  body[data-page="home"] main {
+    padding-top: 0;
+  }
 }

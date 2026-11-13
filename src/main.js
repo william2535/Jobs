@@ -1,4 +1,7 @@
 import "./style.css";
+import "./mobile-job.css";
+import "./mobile-shell.css";
+import { renderMobileWorkspace } from "./mobile-shell.js";
 import { loadState, saveState } from "./storage.js";
 import {
   importZoneSketch,
@@ -7,11 +10,15 @@ import {
 } from "./zone-import.js";
 import { createJobPackage, importJobPackage } from "./packages.js";
 import { panelContext } from "./panel-context.js";
-import { renderPlan } from "./plan.js";
 import {
-  renderDrawingEditor,
-  buildEditableZoneSketch,
-} from "./drawing-editor.js";
+  renderPlanPreview,
+  ensurePlanPreviews,
+  acceptZoneSketchPreviews,
+} from "./plan-preview.js";
+import "./plan-preview.css";
+import { buildEditableZoneSketch } from "./drawing-editor.js";
+import { createZoneHandoff, DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
+import { prepareZoneLaunch, applyZoneReturn } from "./zone-return.js";
 import { renderWorkflowSection, renderWorkflowReport } from "./job-workflow.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, newJob, id, now, states } from "./model.js";
@@ -38,7 +45,8 @@ let state = { sites: [], jobs: [] },
   deviceState = "",
   devicePage = 0,
   importTargetJob = null,
-  editorActive = false,
+  handoff = null,
+  handoffStatus = "",
   review = null,
   saveLabel = "Opening local records…",
   offlineLabel = "Preparing offline use…",
@@ -71,12 +79,14 @@ async function runTask(fn) {
     return;
   }
   operationPending = true;
+  updateInteractionLock();
   try {
     return await fn();
   } catch (e) {
     reportError(e.message);
   } finally {
     operationPending = false;
+    updateInteractionLock();
   }
 }
 function reportError(text) {
@@ -102,9 +112,15 @@ async function persist(next, success) {
     );
   if (busy) throw Error("A save is already in progress.");
   busy = true;
+  updateInteractionLock();
   saveLabel = "Saving…";
   updateStatus();
   try {
+    for (const site of next.sites) {
+      for (let index = 0; index < site.drawings.length; index++) {
+        site.drawings[index] = await ensurePlanPreviews(site.drawings[index]);
+      }
+    }
     await saveState(next);
     state = next;
     dirty = false;
@@ -124,7 +140,15 @@ async function persist(next, success) {
     return false;
   } finally {
     busy = false;
+    updateInteractionLock();
     updateStatus();
+  }
+}
+function updateInteractionLock() {
+  const main = document.querySelector("main");
+  if (main) {
+    main.inert = busy || operationPending;
+    main.setAttribute("aria-busy", String(busy || operationPending));
   }
 }
 function updateStatus() {
@@ -153,7 +177,6 @@ function focusDevice() {
 }
 function resetDeviceBrowser() {
   selectedAsset = null;
-  editorActive = false;
   deviceQuery = "";
   deviceState = "";
   devicePage = 0;
@@ -166,6 +189,7 @@ function markDirty(value = true) {
 async function saveWorkflow(updatedJob) {
   if (operationPending) return false;
   operationPending = true;
+  updateInteractionLock();
   try {
     const next = structuredClone(state);
     const index = next.jobs.findIndex((j) => j.id === updatedJob.id);
@@ -182,34 +206,185 @@ async function saveWorkflow(updatedJob) {
     return false;
   } finally {
     operationPending = false;
+    updateInteractionLock();
   }
 }
-async function saveDrawing(drawing) {
-  if (operationPending) return false;
+async function savePreviewCache(siteId, drawing) {
+  if (dirty || busy || operationPending)
+    throw Error(
+      "Finish the open Jobs form, then retry preparing this PNG preview.",
+    );
   operationPending = true;
+  updateInteractionLock();
   try {
-    const next = applyDrawingToJob(state, activeJob, drawing);
-    if (
-      await persist(
-        next,
-        "Working drawing saved as a new revision. Earlier drawings and visit evidence were retained.",
-      )
-    ) {
-      editorActive = false;
-      render();
-      return true;
+    const next = structuredClone(state);
+    const saved = next.sites
+      .find((site) => site.id === siteId)
+      ?.drawings.find((value) => value.id === drawing.id);
+    if (!saved) throw Error("This drawing is no longer available.");
+    for (const key of [
+      "planPreviews",
+      "planPreviewErrors",
+      "planPreviewAttemptedFor",
+    ]) {
+      if (drawing[key] !== undefined)
+        saved[key] = structuredClone(drawing[key]);
     }
-    return false;
+    if (!(await persist(next, "PNG preview saved for offline use.")))
+      throw Error(
+        "The PNG preview could not be saved locally. Retry when storage is available.",
+      );
   } finally {
     operationPending = false;
+    updateInteractionLock();
   }
 }
+function drawingConnection(drawing) {
+  const unknownSystem =
+    !drawing.systemType && !drawing.source?.project?.systemType;
+  return `<div class="zone-connection"><div class="actions">${
+    unknownSystem
+      ? select(
+          "Drawing system",
+          "launchSystem",
+          [
+            ["", "Choose system"],
+            ["fire", "Fire alarm"],
+            ["security", "Intruder alarm"],
+            ["cctv", "CCTV"],
+            ["access", "Access control"],
+          ],
+          "",
+        )
+      : ""
+  }${drawing.kind === "issued" ? '<span class="muted">Issued record is read-only. Import a working drawing to edit.</span>' : button("Edit site", "edit-site", "primary")}</div><p class="muted" data-testid="zone-connection-status">${esc(handoffStatus || "Open the linked Zone Sketch editor, then use Save to Jobs to return your changes.")}</p></div>`;
+}
+function showHandoffStatus(value) {
+  handoffStatus = value;
+  document
+    .querySelectorAll('[data-testid="zone-connection-status"]')
+    .forEach((node) => {
+      node.textContent = value;
+    });
+}
+function editSite() {
+  if (handoff?.active && !handoff.popup?.closed) {
+    handoff.popup?.focus();
+    showHandoffStatus(
+      "A drawing is already open in Zone Sketch. Save or close that editing session before opening another site.",
+    );
+    return;
+  }
+  handoff?.dispose();
+  const job = state.jobs.find((value) => value.id === activeJob);
+  const site = job
+    ? siteOf(job)
+    : state.sites.find((value) => value.id === activeSite);
+  if (!site) throw Error("Open a site or job first.");
+  const drawing = job ? drawingOf(site, job) : site.drawings.at(-1);
+  const systemType = document.querySelector('[name="launchSystem"]')?.value;
+  if (
+    !drawing.systemType &&
+    !drawing.source?.project?.systemType &&
+    !systemType
+  ) {
+    throw Error("Choose the drawing system before opening Zone Sketch.");
+  }
+  let launchContext,
+    launchWarnings = [];
+  const prepared = prepareZoneLaunch(site, job, {
+    systemType,
+  }).then((value) => {
+    launchContext = value.context;
+    launchWarnings = value.warnings;
+    return value;
+  });
+  handoff = createZoneHandoff({
+    url: import.meta.env.VITE_ZONE_SKETCH_URL || DEFAULT_ZONE_SKETCH_URL,
+    payload: prepared.then(({ envelope, context }) => ({
+      ...context,
+      project: envelope,
+    })),
+    onStatus: ({ message, connected }) =>
+      showHandoffStatus(
+        [message, ...(connected ? launchWarnings : [])].join(" "),
+      ),
+    onError: (failure) => reportError(failure.message),
+    onSave: async (envelope, receipt) => {
+      if (dirty)
+        throw Error(
+          "Save the open form in Jobs, then retry Save to Jobs in Zone Sketch.",
+        );
+      if (operationPending || busy)
+        throw Error(
+          "Jobs is saving another change. Retry Save to Jobs when it finishes.",
+        );
+      operationPending = true;
+      updateInteractionLock();
+      try {
+        const result = await applyZoneReturn(state, launchContext, envelope);
+        let next = result.state;
+        if (receipt.previews?.length) {
+          next = structuredClone(next);
+          const updatedSite = next.sites.find((value) => value.id === site.id);
+          const index = updatedSite.drawings.findIndex(
+            (value) => value.id === result.drawing.id,
+          );
+          updatedSite.drawings[index] = acceptZoneSketchPreviews(
+            updatedSite.drawings[index],
+            receipt.previews,
+          );
+        }
+        if (!result.unchanged || receipt.previews?.length) {
+          if (
+            !(await persist(
+              next,
+              "Zone Sketch drawing saved. Plan and equipment updated; earlier visits and results retained.",
+            ))
+          ) {
+            throw Error(
+              "Jobs could not save locally. Keep Zone Sketch open and retry Save to Jobs.",
+            );
+          }
+        }
+        launchContext = result.context;
+        render();
+        return {
+          siteId: site.id,
+          jobId: job?.id || null,
+          drawingId: result.drawing.id,
+          jobRevision: result.job?.revision || null,
+        };
+      } finally {
+        operationPending = false;
+        updateInteractionLock();
+      }
+    },
+  });
+}
+let renderedRoute = null;
 function render() {
+  const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
+  const changedRoute = route !== renderedRoute;
+  renderedRoute = route;
   const j = state.jobs.find((j) => j.id === activeJob),
     s = j ? siteOf(j) : state.sites.find((s) => s.id === activeSite);
+  const mobileHome =
+    page === "home" && window.matchMedia("(max-width: 700px)").matches;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside><div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span><strong>${esc(s?.name || "Jobs")}</strong></div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "create" ? createForm() : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span><strong>${esc(s?.name || "Jobs")}</strong></div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "create" ? createForm() : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
+  document.body.dataset.page = page;
+  if (page === "home" && $("#mobile-workspace-root")) {
+    $("#mobile-workspace-root").append(
+      renderMobileWorkspace({
+        state,
+        onAction: (value) => runTask(() => action(value)),
+      }),
+    );
+  }
+  updateInteractionLock();
   $("#zone-file").onchange = (e) => runTask(() => readZone(e.target.files[0]));
   $("#job-file").onchange = (e) => runTask(() => readJob(e.target.files[0]));
   document.querySelectorAll("form").forEach((f) => {
@@ -267,26 +442,25 @@ function render() {
       }),
     );
   }
-  if (page === "job" && tab === "Plan" && j && editorActive) {
-    $("#drawing-editor-root").append(
-      renderDrawingEditor(drawingOf(s, j), {
-        siteId: s.id,
-        siteName: s.name,
-        onSave: saveDrawing,
-        onDirty: markDirty,
-        onCancel: () => runTask(() => action("cancel-drawing")),
-      }),
-    );
-  }
-  if (page === "job" && tab === "Plan" && j && !editorActive) {
+  if (page === "job" && tab === "Plan" && j) {
     $("#plan-root").append(
-      renderPlan(drawingOf(s, j), {
+      renderPlanPreview(drawingOf(s, j), {
+        onPreviewsReady: (drawing) => savePreviewCache(s.id, drawing),
         onSelectAsset: (aid) => {
           selectedAsset = aid;
           tab = "Devices";
           render();
           focusDevice();
         },
+      }),
+    );
+  }
+  if (page === "site" && s) {
+    $("#site-plan-root").append(
+      renderPlanPreview(s.drawings.at(-1), {
+        onPreviewsReady: (drawing) => savePreviewCache(s.id, drawing),
+        onSelectAsset: () =>
+          scrollSection(document.querySelector(".asset-summary")),
       }),
     );
   }
@@ -304,8 +478,11 @@ function render() {
         flash(e.message, true);
       }
     };
+  if (changedRoute) window.scrollTo(0, 0);
 }
 function home() {
+  if (window.matchMedia("(max-width: 700px)").matches)
+    return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
   return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create"><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${state.jobs.map((j) => `<button class="job-card" data-testid="job-card" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(siteOf(j)?.name)}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${esc(j.workType)} · ${esc(j.engineer || "Unassigned")}</small></span><span class="job-meta">${badge(j.status)}<small>${new Date(j.updatedAt).toLocaleDateString()}</small></span><span>→</span></button>`).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
@@ -337,7 +514,7 @@ function createForm() {
 function siteView(s) {
   if (!s) return "";
   const d = s.drawings.at(-1);
-  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(s.name)}</h1><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div>${button("Create job", "create", "primary")}</section><div class="two-column"><section class="panel"><h2>Site record</h2><form data-form="site-details">${field("Site name", "name", s.name, "text", true)}${area("Address", "address", s.address)}<button>Save site details</button></form>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
+  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(s.name)}</h1><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div>${button("Create job", "create", "primary")}</section><section class="panel site-plan-panel"><div class="section-head"><h2>Site plan</h2>${drawingConnection(d)}</div><div id="site-plan-root"></div></section><div class="two-column"><section class="panel"><h2>Site record</h2><form data-form="site-details">${field("Site name", "name", s.name, "text", true)}${area("Address", "address", s.address)}<button>Save site details</button></form>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
     "Floor",
     "floorId",
     d.floors.map((f) => [f.id, f.name]),
@@ -374,14 +551,12 @@ function jobView(j, s) {
   if (["Job details", "Work", "Products", "POs", "Finalisation"].includes(tab))
     content = `<div id="workflow-root"></div>${tab === "Job details" ? `<aside class="integration-note"><span><strong>FINDR adapter: future work.</strong> Export context for the planned local connection.</span>${button("Export Panel Pal context", "panel-export")}</aside>` : ""}`;
   else if (tab === "Plan")
-    content = editorActive
-      ? '<div id="drawing-editor-root"></div>'
-      : `<section class="plan-actions panel"><div><h2>Plans</h2><p>Working revision ${esc(d.revision || "Unlabelled")} · ${d.floors.length} floors</p></div><div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${d.kind === "issued" ? '<span class="muted">Issued record is read-only. Import a working drawing to edit.</span>' : button("Edit working drawing", "edit-drawing", "primary")}${button("Export editable drawing", "edited-source-export")}</div></section><div id="plan-root" class="panel"></div>`;
+    content = `<section class="plan-actions panel"><div><h2>Plans</h2><p>Working revision ${esc(d.revision || "Unlabelled")} · ${d.floors.length} floors</p></div><div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${button("Export editable drawing", "edited-source-export")}</div>${drawingConnection(d)}</section><div id="plan-root" class="panel"></div>`;
   else if (tab === "Devices") content = devices(j, d);
   else content = results(j, d);
   return `<section class="page-title job-title"><div><span class="eyebrow">${esc(j.workflow?.details?.reference || j.workType)}</span><h1>${esc(j.workflow?.details?.title || s.name)}</h1><p>${esc(j.system)} · Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div>${badge(j.status)}</section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
-const DEVICE_PAGE_SIZE = 8;
+const devicePageSize = () => window.matchMedia("(max-width: 700px)").matches ? 4 : 8;
 function filteredDevices(j, d) {
   const query = deviceQuery.trim().toLocaleLowerCase();
   return d.assets.filter((a) => {
@@ -420,11 +595,11 @@ function deviceHistoryLabel(asset, job) {
 }
 function deviceCards(j, d) {
   const found = filteredDevices(j, d);
-  const pages = Math.max(1, Math.ceil(found.length / DEVICE_PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(found.length / devicePageSize()));
   devicePage = Math.min(devicePage, pages - 1);
   const visible = found.slice(
-    devicePage * DEVICE_PAGE_SIZE,
-    (devicePage + 1) * DEVICE_PAGE_SIZE,
+    devicePage * devicePageSize(),
+    (devicePage + 1) * devicePageSize(),
   );
   return `<p class="device-count" role="status">${found.length} of ${d.assets.length} devices${pages > 1 ? ` · Page ${devicePage + 1} of ${pages}` : ""}</p>
     <div class="device-browser-grid">${visible.map((a) => `<button class="device-row" data-action="asset:${esc(a.id)}"><strong>${esc(a.reference || a.type)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small>${badge(j.results.find((r) => r.assetId === a.id)?.state || "Not tested")}${deviceHistoryLabel(a, j)}</button>`).join("")}</div>
@@ -552,9 +727,12 @@ async function action(a) {
         "print",
         "source-export",
         "edited-source-export",
+        "edit-site",
       ].includes(a)
     ) {
-      reportError("Save your changes before exporting or printing.");
+      reportError(
+        "Save your changes before exporting, printing or opening Zone Sketch.",
+      );
       return;
     }
     if (!confirm("Leave this form and discard unsaved changes?")) return;
@@ -565,7 +743,6 @@ async function action(a) {
     page = a;
     activeJob = null;
     importTargetJob = null;
-    editorActive = false;
     message = "";
     error = "";
     render();
@@ -579,20 +756,7 @@ async function action(a) {
     importTargetJob = activeJob;
     return $("#zone-file").click();
   }
-  if (a === "edit-drawing") {
-    message = "";
-    error = "";
-    editorActive = true;
-    tab = "Plan";
-    render();
-    return;
-  }
-  if (a === "cancel-drawing") {
-    editorActive = false;
-    markDirty(false);
-    render();
-    return;
-  }
+  if (a === "edit-site") return editSite();
   if (a === "import-job") return $("#job-file").click();
   if (a === "demo")
     return stageZone(await (await fetch("./demo.zonesketch.json")).text());
@@ -613,7 +777,6 @@ async function action(a) {
     return;
   }
   if (a.startsWith("tab:")) {
-    editorActive = false;
     tab = a.slice(4);
     if (tab === "Devices") selectedAsset = null;
     render();
@@ -656,7 +819,6 @@ async function action(a) {
       activeSite = null;
       page = "job";
       tab = "Plan";
-      editorActive = false;
       review = null;
       render();
     }
@@ -874,6 +1036,13 @@ async function init() {
     state = await loadState();
     storageReady = true;
     saveLabel = "Saved on this device";
+    if (
+      state.sites.some((site) =>
+        site.drawings.some((drawing) => !Array.isArray(drawing.planPreviews)),
+      )
+    ) {
+      await persist(structuredClone(state));
+    }
   } catch (e) {
     saveLabel = "Local storage unavailable";
     error = `Could not open local records: ${e.message}`;
@@ -899,4 +1068,7 @@ async function init() {
   const status = $("#offline-status");
   if (status) status.textContent = offlineLabel;
 }
+window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
+  if (!dirty && !busy && !operationPending) render();
+});
 init();

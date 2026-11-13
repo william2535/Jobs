@@ -11,6 +11,17 @@ function canonical(value) {
       .join(",")}}`;
   return JSON.stringify(value);
 }
+function drawingIdentity(drawing) {
+  const value = clone(drawing);
+  const strip = (record) => {
+    delete record.planPreviews;
+    delete record.planPreviewErrors;
+    delete record.planPreviewAttemptedFor;
+    for (const snapshot of record.issuedSnapshots || []) strip(snapshot);
+  };
+  strip(value);
+  return canonical(value);
+}
 function newResult(assetId) {
   return {
     id: id(),
@@ -86,7 +97,7 @@ export function applyDrawingToJob(state, jobId, newDrawing) {
   )
     throw new Error("Drawing asset IDs must be present and unique.");
   const saved = site.drawings.find((value) => value.id === newDrawing.id);
-  if (saved && canonical(saved) !== canonical(newDrawing))
+  if (saved && drawingIdentity(saved) !== drawingIdentity(newDrawing))
     throw new Error(
       "This drawing ID is already used by a different saved revision. Save the edit as a new revision.",
     );

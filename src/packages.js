@@ -103,6 +103,67 @@ function drawing(value, path) {
     }
     photos(asset.photos || [], `${path}.asset.photos`);
   }
+  const previewRecord = (entry, entryPath) => {
+    string(entry.floorId, `${entryPath}.floorId`);
+    if (entry.snapshotId != null)
+      string(entry.snapshotId, `${entryPath}.snapshotId`);
+    const record =
+      entry.snapshotId == null
+        ? value
+        : value.issuedSnapshots?.find(
+            (snapshot) => snapshot.id === entry.snapshotId,
+          );
+    if (
+      !record ||
+      !Array.isArray(record.floors) ||
+      !record.floors.some((floor) => floor.id === entry.floorId)
+    )
+      fail(`${entryPath} references a missing floor or issued snapshot.`);
+  };
+  if (value.planPreviews != null) {
+    array(value.planPreviews, `${path}.planPreviews`);
+    unique(value.planPreviews, `${path}.planPreviews`);
+    for (const preview of value.planPreviews) {
+      previewRecord(preview, `${path}.planPreview`);
+      string(preview.drawingId, `${path}.planPreview.drawingId`);
+      if (
+        !Number.isSafeInteger(preview.rendererVersion) ||
+        preview.rendererVersion < 1
+      )
+        fail("plan preview renderer version is invalid.");
+      if (
+        typeof preview.revision !== "string" &&
+        typeof preview.revision !== "number"
+      )
+        fail("plan preview revision is invalid.");
+      if (
+        typeof preview.image !== "string" ||
+        !preview.image.startsWith("data:image/png;base64,") ||
+        !embeddedImage(preview.image)
+      )
+        fail("plan preview must contain an included PNG image.");
+      for (const dimension of ["width", "height"])
+        if (
+          !Number.isSafeInteger(preview[dimension]) ||
+          preview[dimension] < 1 ||
+          preview[dimension] > 16384
+        )
+          fail(`plan preview ${dimension} is invalid.`);
+      string(preview.generatedAt, "plan preview generation date");
+      if (!Number.isFinite(Date.parse(preview.generatedAt)))
+        fail("plan preview generation date is invalid.");
+    }
+  }
+  if (value.planPreviewErrors != null) {
+    array(value.planPreviewErrors, `${path}.planPreviewErrors`);
+    for (const error of value.planPreviewErrors) {
+      object(error, "plan preview error");
+      previewRecord(error, "plan preview error");
+      string(error.message, "plan preview error message", false);
+    }
+  }
+  if (value.planPreviewAttemptedFor != null)
+    string(value.planPreviewAttemptedFor, `${path}.planPreviewAttemptedFor`);
   if (value.issuedSnapshots != null) {
     array(value.issuedSnapshots, `${path}.issuedSnapshots`);
     unique(value.issuedSnapshots, `${path}.issuedSnapshots`);
@@ -565,6 +626,10 @@ function drawingContent(value) {
     content.basedOnDrawingId = content.sourceBasedOnDrawingId;
   delete content.sourceBasedOnDrawingId;
   const defaults = (drawing) => {
+    // These raster previews are derived cache, not a different drawing revision.
+    delete drawing.planPreviews;
+    delete drawing.planPreviewErrors;
+    delete drawing.planPreviewAttemptedFor;
     drawing.issuedSnapshots ??= [];
     drawing.assets.forEach((asset) => {
       asset.photos ??= [];
@@ -573,6 +638,45 @@ function drawingContent(value) {
   };
   defaults(content);
   return canonical(content);
+}
+
+function remapPreviewCache(drawing, fromId) {
+  for (const preview of drawing.planPreviews || []) {
+    if (preview.drawingId === fromId) {
+      preview.sourcePreviewId ??= preview.id;
+      preview.drawingId = drawing.id;
+      preview.id = `${drawing.id}/preview/${encodeURIComponent(preview.id)}`;
+    }
+  }
+  if (drawing.planPreviewAttemptedFor === fromId)
+    drawing.planPreviewAttemptedFor = drawing.id;
+}
+function mergePreviewCache(current, incoming) {
+  if (!incoming.planPreviews?.length) return;
+  const key = (preview) =>
+    JSON.stringify([
+      preview.floorId,
+      preview.snapshotId || null,
+      preview.rendererVersion,
+    ]);
+  const known = new Set(
+    (current.planPreviews || [])
+      .filter((preview) => preview.drawingId === current.id)
+      .map(key),
+  );
+  const additions = incoming.planPreviews.filter(
+    (preview) => preview.drawingId === incoming.id && !known.has(key(preview)),
+  );
+  if (additions.length)
+    current.planPreviews = [
+      ...(current.planPreviews || []),
+      ...clone(additions).filter(
+        (preview) =>
+          !(current.planPreviews || []).some(
+            (saved) => saved.id === preview.id,
+          ),
+      ),
+    ];
 }
 
 export async function importJobPackage(state, input) {
@@ -682,10 +786,13 @@ export async function importJobPackage(state, input) {
         const copy = clone(incoming);
         copy.sourceDrawingId = copy.id;
         copy.id = unusedId(`${copy.id}:import:${fingerprint}`, site.drawings);
+        remapPreviewCache(copy, incoming.id);
         site.drawings.push(copy);
         copiedDrawings.push(copy);
         drawingMap.set(incoming.id, copy.id);
         if (job.drawingId === incoming.id) job.drawingId = copy.id;
+      } else {
+        mergePreviewCache(current, incoming);
       }
     }
   }

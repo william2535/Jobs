@@ -10,25 +10,25 @@ Zone Sketch's existing `LICENSE` remains **unchanged and proprietary** in `vendo
 
 The extracted function bodies are verbatim. The only integration changes are ES-module exports and separate declarations of the original `CB_INSET` and `CB_SPAN` constants. `PROVENANCE.json` records each source line and SHA-256. Do not run formatters over the vendor module: source-line equality is deliberately tested.
 
-| Export | Original source line | Purpose |
-| --- | ---: | --- |
-| `clamp` | 1731 | Bound normalized coordinates |
-| `lerp` | 1952 | Interpolate points |
-| `proj` | 1953 | Project a point onto a finite line segment |
-| `segmentIntersection` | 2014 | Locate intersecting wall segments |
-| `pointInPoly` | 2119 | Test a point against a polygon |
-| `cbPlanToBoard` | 2710 | Preserve actual plan-to-circuit coordinate convention |
-| `cbBoardToPlan` | 2711 | Restore plan coordinates from circuit-board coordinates |
-| `cbEditProjectToSegment` | 2774 | Nearest segment point and distance for editing/snapping |
+| Export                   | Original source line | Purpose                                                 |
+| ------------------------ | -------------------: | ------------------------------------------------------- |
+| `clamp`                  |                 1731 | Bound normalized coordinates                            |
+| `lerp`                   |                 1952 | Interpolate points                                      |
+| `proj`                   |                 1953 | Project a point onto a finite line segment              |
+| `segmentIntersection`    |                 2014 | Locate intersecting wall segments                       |
+| `pointInPoly`            |                 2119 | Test a point against a polygon                          |
+| `cbPlanToBoard`          |                 2710 | Preserve actual plan-to-circuit coordinate convention   |
+| `cbBoardToPlan`          |                 2711 | Restore plan coordinates from circuit-board coordinates |
+| `cbEditProjectToSegment` |                 2774 | Nearest segment point and distance for editing/snapping |
 
 Circuit constants retain the source values at line 2593: inset `0.045`, span `0.91`.
 
 ## Integration boundary
 
-The in-Jobs editor uses these original coordinate/geometry helpers for its focused editing tools. Its controls, state management, revision creation and SVG interaction are Jobs code. Jobs' Zone Sketch importer remains an **independent data reader**, using the real current/legacy v1 save schema. Imported geometry, circuits, photos and issued snapshots remain in their original representation.
+The earlier in-Jobs editor used these helpers for focused editing tools. That editor is no longer exposed: the current **Edit site** action hands the drawing to the actual Zone Sketch application through its separately deployed companion receiver. Coordinate helpers remain in the independent preview/export preparation path. Jobs' Zone Sketch importer remains an **independent data reader**, using the real current/legacy v1 save schema. Imported geometry, circuits, photos and issued snapshots remain in their original representation.
 
-The entire Zone Sketch monolithic application, proprietary symbol artwork, drawing renderer, auto-fill tools and advanced routing UI are not copied. Those are possible later shared-engine work, with deliberate licensing and integration decisions. Preserve this boundary in product descriptions: say “uses Zone Sketch geometry helpers”, not “the complete Zone Sketch engine is embedded”.
+The entire Zone Sketch monolithic application, proprietary symbol artwork, drawing renderer, auto-fill tools and advanced routing UI are not copied. The actual application now remains the editing destination, using the automatic handoff contract instead of embedding its UI. Preserve this boundary in product descriptions: say “uses Zone Sketch geometry helpers”, not “the complete Zone Sketch engine is embedded”.
 
 ## Verification
 
-`node --test tests/zone-engine.test.js` checks wall projections including degenerate segments, polygon/intersection behavior, actual circuit coordinate round trips, exact source-line hashes and the byte-identical distributed licence. The drawing-editor tests cover the integrated tools and actual-schema export separately.
+`node --test tests/zone-engine.test.js` checks wall projections including degenerate segments, polygon/intersection behavior, actual circuit coordinate round trips, exact source-line hashes and the byte-identical distributed licence. The retained drawing-helper tests cover the actual-schema export separately. See [automatic connection](zone-sketch-connection.md) for receiver integration and source-engine verification.
