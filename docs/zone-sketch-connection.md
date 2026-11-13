@@ -1,6 +1,6 @@
 # Automatic Zone Sketch connection
 
-Companion change: [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit [`9f6728b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/9f6728bc68fa589a1d69b80643ecbfdd02ea0728). Prepared and tested; not merged or deployed.
+Companion change: [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit [`9f6728b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/9f6728bc68fa589a1d69b80643ecbfdd02ea0728). Prepared and tested; not merged or deployed. The follow-up [`ea04c0b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f) also allows the published Jobs origin `https://jobs-field-workspace.floodyyy21.chatgpt.site`.
 
 Jobs can open the **real Zone Sketch application** in a separate browser window, send the selected editable project automatically, and receive a saved revision back. This requires the companion handoff receiver to be installed in that Zone Sketch deployment. Merely linking to the existing public editor does not provide this connection.
 

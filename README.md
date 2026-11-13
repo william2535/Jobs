@@ -1,5 +1,7 @@
 # Jobs
 
+**[Open the Jobs website](https://jobs-field-workspace.floodyyy21.chatgpt.site)** · [Hosting and access details](docs/deployment.md)
+
 An independent, local-first job workspace for fire and security engineers. First working milestone: import a Zone Sketch drawing, review equipment, create a visit, record evidence, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
 [Desktop preview](docs/screenshots/desktop-details.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)

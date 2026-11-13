@@ -1,6 +1,6 @@
 # Zone Sketch companion receiver (prepared, not deployed)
 
-Companion change: [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit [`9f6728b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/9f6728bc68fa589a1d69b80643ecbfdd02ea0728). Prepared and tested; not merged or deployed.
+Companion change: [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit [`9f6728b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/9f6728bc68fa589a1d69b80643ecbfdd02ea0728). Prepared and tested; not merged or deployed. The follow-up [`ea04c0b`](https://github.com/william2535/FIRE-ZONE-PLAN-APP/commit/ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f) also allows the published Jobs origin `https://jobs-field-workspace.floodyyy21.chatgpt.site`.
 
 Jobs opens the existing Zone Sketch application in a separate window. The public Zone Sketch deployment currently has no cross-application import/return API. `jobs-bridge.js` is the independent receiver prepared for a separately approved Zone Sketch change. Merely deploying Jobs does **not** install this receiver in Zone Sketch.
 
