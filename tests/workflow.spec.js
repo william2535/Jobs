@@ -1,0 +1,203 @@
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
+const fixture = resolve('public/demo.zonesketch.json');
+const sample = JSON.parse(await readFile(fixture, 'utf8'));
+const devicePhoto = sample.project.floors[0].data.symbols.find(symbol => symbol.photos?.length).photos[0].image;
+
+async function importSite(page) {
+  await page.goto('/');
+  await page.locator('#zone-file').setInputFiles(fixture);
+  await expect(page.getByRole('button', { name: 'Save site', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save site', exact: true }).click();
+}
+async function createVisit(page) {
+  await page.locator('[data-action="create"]').last().click();
+  await page.getByRole('combobox', { name: 'Site', exact: true }).selectOption({ label: 'Westfield Training Centre' });
+  await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Synthetic maintenance visit');
+  await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
+  await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
+  await expect(page.getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
+}
+async function exportPackage(page) {
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export job', exact: true }).click();
+  const download = await downloaded;
+  return { path: await download.path(), data: JSON.parse(await readFile(await download.path(), 'utf8')) };
+}
+
+// Uses a real Zone Sketch export of synthetic data, never a customer drawing.
+test('drawing → visit → offline recording → package → fresh import preserves evidence', async ({ page, context, browser }, testInfo) => {
+  await importSite(page);
+  await page.locator('#zone-file').setInputFiles(fixture);
+  await expect(page.locator('#match-site')).not.toHaveValue('');
+  await page.getByRole('button', { name: 'Save site', exact: true }).click();
+  await page.locator('[data-action="sites"]').first().click();
+  await expect(page.locator('.site-card')).toHaveCount(1);
+  await expect(page.locator('.site-card')).toContainText('1 drawing revisions');
+  await page.locator('.site-card').click();
+  await createVisit(page);
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(page.getByLabel('Drawing record')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Open FAP-01', exact: true })).toBeVisible();
+  const issueValue = await page.getByLabel('Drawing record').locator('option').nth(1).getAttribute('value');
+  await page.getByLabel('Drawing record').selectOption(issueValue);
+  await expect(page.locator('.plan-status')).toContainText('Issued as-fit record');
+  await page.getByRole('button', { name: 'FAP-01', exact: true }).click();
+  await expect(page.locator('.plan-details')).toContainText('Historical drawing evidence');
+  await page.getByLabel('Drawing record').selectOption('');
+  await page.getByRole('button', { name: 'Open FAP-01', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
+  await expect(page.locator('img').first()).toBeVisible();
+  await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Unsatisfactory');
+  await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Battery voltage below expected value.');
+  await page.getByRole('textbox', { name: 'Defects', exact: true }).fill('Battery needs investigation.');
+  await page.getByRole('textbox', { name: 'Reading name', exact: true }).fill('Battery voltage');
+  await page.getByRole('textbox', { name: 'Value', exact: true }).fill('23.8');
+  await page.getByRole('textbox', { name: 'Unit', exact: true }).fill('V');
+  await page.getByLabel('Add photographs').setInputFiles({ name: 'visit-evidence.png', mimeType: 'image/png', buffer: Buffer.from(devicePhoto.split(',')[1], 'base64') });
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect(page.locator('#notice')).toContainText('Work saved on this device');
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
+  await page.reload();
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBeTruthy();
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByTestId('job-card').first().click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.getByRole('button', { name: /FAP-01/ }).first().click();
+  await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Battery voltage below expected value.');
+  const photo = page.locator('img').first();
+  await expect.poll(() => photo.evaluate(image => image.complete && image.naturalWidth > 0)).toBeTruthy();
+  await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Recorded while offline.');
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect(page.locator('#notice')).toContainText('Work saved on this device');
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open FAP-01', exact: true })).toBeVisible();
+  const exported = await exportPackage(page);
+  expect(JSON.stringify(exported.data)).toContain(devicePhoto);
+  expect(JSON.stringify(exported.data)).toContain('Recorded while offline.');
+  const fresh = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: testInfo.project.use.viewport });
+  try {
+    const reopened = await fresh.newPage();
+    await reopened.goto('/');
+    await reopened.locator('#job-file').setInputFiles(exported.path);
+    await expect(reopened.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
+    await reopened.getByRole('button', { name: 'Devices', exact: true }).click();
+    await reopened.getByRole('button', { name: /FAP-01/ }).first().click();
+    await expect(reopened.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Unsatisfactory');
+    await expect(reopened.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('Recorded while offline.');
+    await reopened.screenshot({ path: testInfo.outputPath('devices.png'), fullPage: true });
+    const again = await exportPackage(reopened);
+    expect(JSON.stringify(again.data)).toContain(devicePhoto);
+    expect(again.data.job.id).toBe(exported.data.job.id);
+    expect(again.data.site.id).toBe(exported.data.site.id);
+    expect(again.data.job.results).toEqual(exported.data.job.results);
+    expect(again.data.site.drawings).toEqual(exported.data.site.drawings);
+    expect(again.data.job.results.find(r => r.state === 'Unsatisfactory').photos).toHaveLength(1);
+    await reopened.locator('[data-action="home"]').first().click();
+    await expect(reopened.getByTestId('job-card')).toHaveCount(1);
+    await reopened.locator('#job-file').setInputFiles(exported.path);
+    await expect(reopened.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
+    await reopened.locator('[data-action="home"]').first().click();
+    await expect(reopened.getByTestId('job-card')).toHaveCount(1);
+    await reopened.locator('#job-file').setInputFiles({ name: 'invalid.jobs.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wrong"}') });
+    await expect(reopened.locator('#notice')).toContainText('Job import rejected');
+    await expect(reopened.getByTestId('job-card')).toHaveCount(1);
+    await expect.poll(() => reopened.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
+    await reopened.locator('[data-action="home"]').first().click();
+    await reopened.screenshot({ path: testInfo.outputPath('home.png'), fullPage: true });
+    await reopened.getByTestId('job-card').click();
+    await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
+    await reopened.screenshot({ path: testInfo.outputPath('plan.png'), fullPage: true });
+  } finally { await fresh.close(); }
+});
+
+
+test('manual site and repair visit keep fresh results and require explanations', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('[data-action="sites"]').first().click();
+  await page.getByRole('textbox', { name: 'Site name', exact: true }).fill('Synthetic repair site');
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('Training location only');
+  await page.getByRole('button', { name: 'Save site', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Device reference', exact: true }).fill('PSU-01');
+  await page.getByRole('textbox', { name: 'Device type', exact: true }).fill('Power supply');
+  await page.getByRole('button', { name: 'Add device', exact: true }).click();
+  await page.locator('[data-action="create"]').last().click();
+  await page.getByRole('combobox', { name: 'Work type', exact: true }).selectOption('General fault or repair work');
+  await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Investigate intermittent power fault.');
+  await page.getByRole('button', { name: 'Create job', exact: true }).click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
+  await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
+  await page.getByRole('textbox', { name: 'Reading name', exact: true }).fill('Supply voltage');
+  await page.getByRole('textbox', { name: 'Value', exact: true }).fill('12.2');
+  await page.getByRole('textbox', { name: 'Unit', exact: true }).fill('V');
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect(page.locator('#notice')).toContainText('Please explain');
+  await expect(page.getByRole('textbox', { name: 'Reading name', exact: true })).toHaveValue('Supply voltage');
+  await expect(page.getByRole('textbox', { name: 'Value', exact: true })).toHaveValue('12.2');
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
+  await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
+  await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Locked plant room; key holder unavailable.');
+  await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await page.reload();
+  await page.getByTestId('job-card').click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
+  await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Locked plant room; key holder unavailable.');
+  await page.locator('[data-action="create"]').first().click();
+  await page.getByRole('button', { name: 'Create job', exact: true }).click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
+});
+
+
+test('conflicts preserve local work and unusual IDs remain text', async ({ page }) => {
+  await importSite(page);
+  await createVisit(page);
+  const exported = await exportPackage(page);
+  const changed = structuredClone(exported.data);
+  changed.job.results[0].state = 'Satisfactory';
+  changed.job.results[0].observations = 'Synthetic evidence imported from another device.';
+  const file = { name: 'conflict.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(changed)) };
+  await page.locator('#job-file').setInputFiles(file);
+  await expect(page.locator('#notice')).toContainText('preserved version');
+  await page.locator('[data-action="home"]').first().click();
+  await expect(page.getByTestId('job-card')).toHaveCount(2);
+  await page.getByTestId('job-card').first().click();
+  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
+  await page.locator('#job-file').setInputFiles(file);
+  await expect(page.locator('#notice')).toContainText('already saved');
+  await page.locator('[data-action="home"]').first().click();
+  await expect(page.getByTestId('job-card')).toHaveCount(2);
+  const unusual = structuredClone(exported.data);
+  unusual.job.id = 'job"><img src=x onerror="window.__injected=1">';
+  await page.locator('#job-file').setInputFiles({ name: 'unusual-id.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(unusual)) });
+  await expect(page.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
+  await page.locator('[data-action="home"]').first().click();
+  await expect(page.getByTestId('job-card')).toHaveCount(3);
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__injected)).toBeUndefined();
+  await page.getByTestId('job-card').first().click();
+  await expect(page.getByText('FINDR adapter: future work.')).toBeVisible();
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export Panel Pal context', exact: true }).click();
+  const download = await downloaded;
+  const panel = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(panel.kind).toBe('jobs-panel-pal-context');
+  expect(panel.adapter.connected).toBe(false);
+  expect(panel.adapter.status).toBe('future');
+  expect(panel.identity.jobId).toBe(exported.data.job.id);
+  await page.evaluate(() => { window.print = () => { window.__printText = document.querySelector('#print-report').innerText; }; });
+  await page.getByRole('button', { name: 'Draft service report', exact: true }).click();
+  const report = await page.evaluate(() => window.__printText);
+  expect(report).toContain('Draft service report');
+  expect(report).toContain('Not a certificate of compliance');
+  expect(report).toContain('Not tested');
+});

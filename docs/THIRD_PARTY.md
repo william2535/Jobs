@@ -1,0 +1,7 @@
+# Third-party and reference notes
+
+Jobs' importer and read-only renderer are independent implementations of the observed data contract. No Zone Sketch application source or proprietary symbol artwork is included. Reference commit and exact schema sources are documented in `zone-sketch.md`. FINDR implementation and instructions were read at the commit documented in `panel-pal-context.md`; no FINDR application code is included.
+
+Production application modules have no npm runtime dependencies. Build/test dependencies are Vite (MIT), Playwright (Apache-2.0), and fake-indexeddb (Apache-2.0), plus their locked transitive dependencies. Their original licences and notices remain in installed packages; no licence files were modified. The committed icon is an original simple geometric clipboard/check drawing. No remote fonts or assets are required.
+
+The repository owner's pre-existing files and instructions are retained. The supplied real customer drawing is not included in the generated static build or automated fixtures. Do not add customer saves, manuals or photographs to `public/` or test fixtures.
