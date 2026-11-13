@@ -24,7 +24,7 @@ The supplied real save was validated privately: **1 floor, 40 equipment assets, 
 
 ## Browser verification
 
-`npm run test:e2e`: **6 passed** across desktop Chromium and Pixel 7 mobile emulation.
+`npm run test:e2e`: **8 passed** across desktop Chromium and Pixel 7 mobile emulation after the warm-neutral/grid update.
 
 | Check | Evidence |
 | --- | --- |
@@ -34,6 +34,7 @@ The supplied real save was validated privately: **1 floor, 40 equipment assets, 
 | Export/import without attachment loss | Fresh receiving browser profile; stable job/site/result IDs and complete drawings equal after re-export; uploaded visit photo retained |
 | Duplicate/conflict handling | Same drawing and job package reimported; unchanged visit stays unique; divergent work retained separately; repeated conflict does not create another copy |
 | Invalid input | Malformed package rejection leaves saved jobs intact; untrusted IDs remain escaped text; invalid result leaves typed work intact |
+| Grid navigation | Synthetic 40-device package: eight cards per page, search, result filtering, previous/next/jump navigation, saved-note preservation and unsaved-navigation cancellation |
 | Mobile layout | Pixel 7 emulation plus 320px checks of Home, Plan and Devices; no page overflow, touch-sized controls, screenshots reviewed |
 | Manual site/visit | Site and equipment creation, fault/repair work, explanations enforced, later visit begins Not tested |
 | Reports and future integration | Draft/non-certificate report contents; disconnected Panel Pal export with matching job identity |
@@ -42,7 +43,7 @@ The supplied real drawing additionally passed an isolated browser check at 390 Ã
 
 The offline browser test exposed a static-server `Vary: Origin` issue. The service worker now uses its own public-shell cache with `ignoreVary` for cached static files; the full offline flow passed after this correction. No personalized server responses are cached.
 
-Synthetic previews: [Desktop home](screenshots/desktop-home.png), [Desktop plan](screenshots/desktop-plan.png), [Mobile plan](screenshots/mobile-plan.png), [Mobile devices](screenshots/mobile-devices.png).
+Synthetic previews: [Desktop home](screenshots/desktop-home.png), [Desktop plan](screenshots/desktop-plan.png), [Mobile plan](screenshots/mobile-plan.png), [Mobile devices](screenshots/mobile-devices.png), [Mobile device grid](screenshots/mobile-device-grid.png), [Desktop device grid](screenshots/desktop-device-grid.png).
 
 ## Practical boundaries
 

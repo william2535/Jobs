@@ -28,12 +28,18 @@ To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses 
 
 1. **Import Zone Sketch** and review the site mapping, floors, devices and warnings; choose **Save site**. Alternatively open **Sites**, create a site and add equipment manually.
 2. Choose **Create job**. Enter the system reference, scope, instructions and engineer. This milestone includes all equipment in the chosen drawing; every result starts **Not tested**.
-3. Use **Plan** for floors, working drawings and issued snapshots; tap working devices to open **Devices**. Issued views remain historical evidence.
+3. Use **Plan** for floors, working drawings and issued snapshots; tap working devices to open **Devices**. Or choose a card in the searchable **Devices** grid (eight per page), filter by result, and move between records with Previous/Next or Choose device. Issued views remain historical evidence.
 4. Record outcomes, observations, readings with units, notes, defects and photographs. Save each form explicitly. Unsaved changes and save failures are visible. Non-satisfactory/access/exclusion states require an explanation.
 5. **Export job** creates a `.jobs.json` containing stable IDs, drawing data and embedded media. **Import job** validates it before saving. Identical reimports reopen the existing job; conflicts preserve both versions for review.
 6. **Draft service report** prints the actual recorded visit. It is not a validated certificate. **Original drawing** exports the preserved Zone Sketch JSON content.
 
 Home offers **Explore demonstration site** when there are no jobs. `public/demo.zonesketch.json` is a synthetic save verified by importing it into the actual Zone Sketch application and using its real exporter. The customer example added by the repository owner was used only for local validation; it is not copied into `public/`, the build or test fixtures.
+
+## Interface direction
+
+Warm-neutral charcoal, stone and bronze are the default palette. Prefer compact responsive grids to long stacked option lists: Home has four action tiles (two columns on phones), saved jobs/sites/results use cards, and devices open individually from a paged grid. Drawing photographs stay available in a collapsible details section. Keep touch targets comfortable, source drawing colours intact, and the site/save status visible while recording.
+
+[Mobile device grid](docs/screenshots/mobile-device-grid.png) · [Desktop device grid](docs/screenshots/desktop-device-grid.png)
 
 ## Architecture and contracts
 

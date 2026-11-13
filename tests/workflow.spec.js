@@ -20,6 +20,11 @@ async function createVisit(page) {
   await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
   await expect(page.getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
 }
+async function capture(page, path) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.screenshot({ path, fullPage: true });
+}
 async function exportPackage(page) {
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export job', exact: true }).click();
@@ -49,6 +54,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.getByLabel('Drawing record').selectOption('');
   await page.getByRole('button', { name: 'Open FAP-01', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
+  await page.locator('.device-context > summary').click();
   await expect(page.locator('img').first()).toBeVisible();
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Unsatisfactory');
   await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Battery voltage below expected value.');
@@ -69,6 +75,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
   await page.getByRole('button', { name: /FAP-01/ }).first().click();
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Battery voltage below expected value.');
+  await page.locator('.device-context > summary').click();
   const photo = page.locator('img').first();
   await expect.poll(() => photo.evaluate(image => image.complete && image.naturalWidth > 0)).toBeTruthy();
   await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Recorded while offline.');
@@ -90,7 +97,7 @@ test('drawing → visit → offline recording → package → fresh import prese
     await reopened.getByRole('button', { name: /FAP-01/ }).first().click();
     await expect(reopened.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Unsatisfactory');
     await expect(reopened.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('Recorded while offline.');
-    await reopened.screenshot({ path: testInfo.outputPath('devices.png'), fullPage: true });
+    await capture(reopened, testInfo.outputPath('devices.png'));
     const again = await exportPackage(reopened);
     expect(JSON.stringify(again.data)).toContain(devicePhoto);
     expect(again.data.job.id).toBe(exported.data.job.id);
@@ -109,10 +116,12 @@ test('drawing → visit → offline recording → package → fresh import prese
     await expect(reopened.getByTestId('job-card')).toHaveCount(1);
     await expect.poll(() => reopened.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
     await reopened.locator('[data-action="home"]').first().click();
-    await reopened.screenshot({ path: testInfo.outputPath('home.png'), fullPage: true });
+    await capture(reopened, testInfo.outputPath('home.png'));
     await reopened.getByTestId('job-card').click();
+    await reopened.getByRole('button', { name: 'Devices', exact: true }).click();
+    await capture(reopened, testInfo.outputPath('device-grid.png'));
     await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
-    await reopened.screenshot({ path: testInfo.outputPath('plan.png'), fullPage: true });
+    await capture(reopened, testInfo.outputPath('plan.png'));
   } finally { await fresh.close(); }
 });
 
@@ -131,6 +140,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Investigate intermittent power fault.');
   await page.getByRole('button', { name: 'Create job', exact: true }).click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
   await page.getByRole('textbox', { name: 'Reading name', exact: true }).fill('Supply voltage');
@@ -147,11 +157,13 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.reload();
   await page.getByTestId('job-card').click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Locked plant room; key holder unavailable.');
   await page.locator('[data-action="create"]').first().click();
   await page.getByRole('button', { name: 'Create job', exact: true }).click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
 });
@@ -171,6 +183,7 @@ test('conflicts preserve local work and unusual IDs remain text', async ({ page 
   await expect(page.getByTestId('job-card')).toHaveCount(2);
   await page.getByTestId('job-card').first().click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.locator('#job-file').setInputFiles(file);
   await expect(page.locator('#notice')).toContainText('already saved');
