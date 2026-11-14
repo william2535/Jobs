@@ -130,3 +130,13 @@ Previews: [mobile daily timesheet](screenshots/mobile-timesheets.png) and [mobil
 ## Coloured Zone Sketch launcher
 
 The mobile navigation uses the original 256×256 coloured house-and-flame PNG in place of its plain outline icon. The label and external destination remain unchanged. Its 26px logo and reduced gap preserve the existing navigation row height and minimum 44px link target. Source syntax and the production build passed; all four existing engine/licence checks passed. Exact original/bundled logo bytes, matching licence notices and inclusion in the generated offline precache were verified. Browser visual QA for this small change was unavailable in the managed environment because the required cloud-browser tool was not present; earlier screenshots predate this logo update.
+
+## Embedded FINDR Toolbox — 14 November 2026
+
+The current FINDR source and repository instructions were inspected at `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. All four core calculators, the complete six-calculator/six-guide on-site pack, Resistor Lab and FESS revision are included in Jobs. Source hashes and unchanged-file boundaries are recorded in the two FINDR vendor provenance manifests. The FINDR checkout and live application were not changed.
+
+`npm test`: **235 passed**. This includes 26 calculator/source-integrity checks and 14 event-driven DOM, engine and storage checks for Toolbox. The latter exercise every calculator form, invalid/zero/missing inputs, saved drafts, failed writes, guides, the mobile Toolbox action, resistor search/sandbox, FESS correction/reopen, full-paper submission and isolated IndexedDB storage. Navigation leaves the app hash unchanged; disposal disables old controls and stops timers. Calculator drafts and practice progress remain separate from job records.
+
+The production build passed. Its lazy Toolbox chunk includes the complete question bank and six embedded SVG guides, and every build asset except the service worker itself is listed in the offline precache. No external download is needed for tool calculations or practice content; source-reference links remain external. Original component notices are included in the build. No customer data was added.
+
+These new interaction checks run in Happy DOM under Node, not a real browser. Fresh mobile visual and browser-offline QA could not run because the managed browser tool was unavailable in this environment. Earlier browser results above concern their stated releases and do not constitute new Toolbox browser verification. Physical-device verification remains outstanding.

@@ -1,0 +1,25 @@
+FINDR Resistor Lab and FESS revision components for Jobs
+
+Source: https://github.com/william2535/Findr
+Source revision: 8bdd8b03feb8babd6266b80b57dbc5d53efeadb2
+Original location: public/app/
+
+Reused at the project owner's explicit request. Original source comments,
+question explanations, attribution and external reference links are retained.
+The inspected source does not include an overarching licence for these
+components. This integration does not grant an MIT licence or otherwise
+relicense the FINDR source, educational question content or cited material.
+Their existing rights remain with their respective owners.
+
+The resistor, quiz and full-paper engines, generated-audio module, paper
+view and question data are byte-for-byte copies. Controllers adapt storage,
+local navigation and lifecycle handling; styles use Jobs' light blue theme.
+Exact original and included SHA-256 hashes are in PROVENANCE.json.
+
+FESS quizzes and papers are practice only, not official examination papers
+or assessment results. The included full papers have a 60-minute practice
+timer. The original notice that Highfield's cited FESS kit v5.0 lists
+60 questions in 75 minutes is retained, with its source link.
+
+No tool calculation, practice answer or score writes to engineer-confirmed
+job results. Saved tool progress uses a separate local Jobs database.

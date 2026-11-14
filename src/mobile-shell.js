@@ -409,11 +409,7 @@ export function renderMobileWorkspace({
       ),
     );
     const tools = node("div", undefined, "mw-toolbox");
-    const toolbox = control("", () =>
-      root
-        .querySelector(".mw-shortcuts")
-        ?.scrollIntoView({ block: "center", behavior: "smooth" }),
-    );
+    const toolbox = control("", () => onAction("toolbox"));
     toolbox.append(icon("toolbox"), node("strong", "Toolbox"));
     const findr = node("a", undefined, "mw-findr");
     findr.href = "https://findr-fault-finder.floodyyy21.chatgpt.site/app/";

@@ -26,6 +26,8 @@ import { renderMobileWorkspace } from "./mobile-shell.js";
 import { renderTimesheets } from "./timesheets-ui.js";
 import { saveTimesheet, deleteTimesheet, submitTimesheets, createTimesheetPackage } from "./timesheets.js";
 import "./timesheets-ui.css";
+import "./toolbox.css";
+import "./toolbox-extras.css";
 import { loadState, saveState } from "./storage.js";
 import {
   importZoneSketch,
@@ -579,6 +581,7 @@ function render() {
   document.querySelector(".fire-maintenance")?.dispose?.();
   document.querySelector(".timesheets-ui")?.dispose?.();
   document.querySelector(".mobile-workspace")?.dispose?.();
+  document.querySelector(".jobs-toolbox")?.dispose?.();
   disposeJobHold?.();
   disposeJobHold = null;
   const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
@@ -592,9 +595,9 @@ function render() {
   const headerSite = page === "job" && j && s
     ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
     : `<strong>${esc(s ? siteLabel(s) : j ? j.workflow?.details?.title || "Job notes" : "Jobs")}</strong>`;
-  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", page === "toolbox" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "toolbox" ? `<div id="toolbox-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
@@ -726,6 +729,9 @@ function render() {
       onDirty: markDirty,
     }));
   }
+  if (page === "toolbox" && $("#toolbox-root")) {
+    mountToolbox($("#toolbox-root"));
+  }
   if (page === "job" && rawJob && $("#notes-root")) {
     $("#notes-root").append(renderJobNotes({
       job: rawJob,
@@ -813,6 +819,22 @@ function render() {
     };
   if (changedRoute) window.scrollTo(0, 0);
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
+}
+async function mountToolbox(target) {
+  target.textContent = "Opening toolbox…";
+  try {
+    const { renderToolbox } = await import("./toolbox.js");
+    if (!target.isConnected || page !== "toolbox") return;
+    target.replaceChildren(renderToolbox({ onHome: () => runTask(() => action("home")) }));
+  } catch (cause) {
+    if (!target.isConnected || page !== "toolbox") return;
+    target.textContent = "The toolbox could not be opened. Prepare the app online once before using it offline.";
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.textContent = "Retry opening toolbox";
+    retry.onclick = () => mountToolbox(target);
+    target.append(retry);
+  }
 }
 function home() {
   if (window.matchMedia("(max-width: 700px)").matches)
@@ -1075,6 +1097,7 @@ async function readJob(file) {
   }
 }
 async function action(a) {
+  if (document.querySelector(".jobs-toolbox")?.confirmLeave?.() === false) return;
   if (a === "cancel-card-result") {
     pendingCardResult = null;
     markDirty(false);
@@ -1152,7 +1175,7 @@ async function action(a) {
     render();
     return;
   }
-  if (a === "home" || a === "sites" || a === "timesheets") {
+  if (a === "home" || a === "sites" || a === "timesheets" || a === "toolbox") {
     page = a;
     draftJob = null;
     activeJob = null;
@@ -1498,7 +1521,7 @@ installReportPrinting({
 });
 
 window.addEventListener("beforeunload", (event) => {
-  if (dirty) {
+  if (dirty || document.querySelector(".jobs-toolbox")?.hasUnsavedChanges?.()) {
     event.preventDefault();
     event.returnValue = "";
   }

@@ -11,8 +11,9 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "vite": "^7.2.2",
     "@playwright/test": "^1.56.1",
-    "fake-indexeddb": "^6.2.4"
+    "fake-indexeddb": "^6.2.4",
+    "happy-dom": "^21.0.4",
+    "vite": "^7.2.2"
   }
 }
