@@ -7,15 +7,15 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_f02a8a1c2b8481918644c5fd9cb48587` (site-folder / hold-edit update)
-- Successful deployment: `appgdep_6af7a74dd7e8819197f2bc5eb51e0e62`
-- Application source: Jobs commit `713281f490ad83dbcc0ee9a720dcd68a7d43b18e`
-- Sanitized hosting-source commit: `c9603615f8abd682928dc18fce75dc1a52e3720d`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_ee1b364bbe508191936019e73156696e` (job creation dropdown update)
+- Successful deployment: `appgdep_6af7abf75fe88191bec38b4ee69ff0a3`
+- Application source: Jobs commit `df717a448bcc0506c9f9dfc974a6223ad1e5ed23`
+- Sanitized hosting-source commit: `e02c511b415868aef7bc0aadc3d2cf9eb61bfe2a`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
-The 14 November update adds site folders, inherited recorded details, hidden empty fields, three-second hold editing and regression coverage for each job’s pinned map. The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
+The latest 14 November update disables Create job until a site exists, then requires Site, Discipline, Job type and Description. The exact requested dropdown choices and custom-name fields are included. Site folders, inherited recorded details, hidden empty fields, three-second hold editing and each job’s pinned map remain available. The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
