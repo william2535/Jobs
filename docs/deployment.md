@@ -7,15 +7,17 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_ee1b364bbe508191936019e73156696e` (job creation dropdown update)
-- Successful deployment: `appgdep_6af7abf75fe88191bec38b4ee69ff0a3`
-- Application source: Jobs commit `df717a448bcc0506c9f9dfc974a6223ad1e5ed23`
-- Sanitized hosting-source commit: `e02c511b415868aef7bc0aadc3d2cf9eb61bfe2a`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_3bb0454391688191b3197ff0656b6b84` (job navigation and quick checklist update)
+- Successful deployment: `appgdep_6af7b226c3e88191919e385169fdfb4a`
+- Application source: Jobs commit `7d69f3be3bdcdf957ff8410916619022cf74387f`
+- Sanitized hosting-source commit: `d7af8e1580574c6ebc01039f383c4f13e5326fd6`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
-The latest 14 November update disables Create job until a site exists, then requires Site, Discipline, Job type and Description. The exact requested dropdown choices and custom-name fields are included. Site folders, inherited recorded details, hidden empty fields, three-second hold editing and each job’s pinned map remain available. The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
+The latest 14 November update makes the job's back control return Home and the header site name open its site folder. Quick checklist selects recording prompts by discipline and job type, retains saved drawing references and history, and feeds the offline draft report and self-contained job export. Known details prefill the draft; unrecorded facts and excluded work remain visible. The independent forms are not validated compliance certificates. Site-first creation, the requested dropdowns, hold editing and each job's pinned map remain available.
+
+The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. Verification includes 134 passing unit tests and all 31 applicable desktop/mobile browser cases passing across the full run and final creation rerun; one mobile-only case is intentionally skipped on desktop. See [the full test results](VERIFICATION.md). If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
