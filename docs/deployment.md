@@ -7,21 +7,21 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_99f3d8d62c14819195d89768d7a2396a` (Zone Sketch navigation)
-- Successful deployment: `appgdep_6af864e04ff08191a2b7c57b2c882559`
-- Application source: Jobs commit `2a2464f3278947551650eb565f1396ce322a1631`
-- Sanitized hosting-source commit: `29af4359be1bc065a66c33a68ffcf3174222a3f9`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_211a6f439a588191ac127c1487921a87` (quick device results and starred defects)
+- Successful deployment: `appgdep_6af86ac73c88819184b8c5b1663fa522`
+- Application source: Jobs commit `ebb37a07da80b70663fccb018e0aadfacd296e90`
+- Sanitized hosting-source commit: `9e1d2217ff034cee8287a491c0847b82d0a26eb3`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
 The notes and device-remarks update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
 
-The latest update replaces Stock in the mobile bottom navigation with Zone Sketch. It opens the existing editor at `https://william2535.github.io/FIRE-ZONE-PLAN-APP/` in a separate tab; per-job product records are retained. FINDR remains immediately beneath Toolbox and continues to open its existing app. Neither launcher transfers job context.
+The mobile home navigation replaces Stock in the mobile bottom navigation with Zone Sketch. It opens the existing editor at `https://william2535.github.io/FIRE-ZONE-PLAN-APP/` in a separate tab; per-job product records are retained. FINDR remains immediately beneath Toolbox and continues to open its existing app. Neither launcher transfers job context.
 
-The native deployment reported **succeeded**, and all 12 published files matched the production build byte-for-byte. The updated existing mobile dashboard browser case passed. A focused browser click opened the actual Zone Sketch v0.64 editor and verified the third navigation position, a 44px touch target, retained FINDR shortcut and 320px layout.
+The latest update adds explicit Pass / Fail / N/A controls to every device card and replaces its arrow with Edit for defects. Missing Fail/N/A explanations are requested before saving. Saved remarks have a star for reusable wording, available through Add remark → Saved quick defects. The local library keeps title, description, severity and recommendation; applying a shortcut creates a fresh Open finding without previous visit photos, location, private notes, products or test outcomes.
 
-The preceding milestone passed 163 unit tests and 41 applicable browser cases, followed by all 8 affected Notes/remarks checks after its final layout adjustment. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
+The native deployment reported **succeeded**, and all 12 published files matched the production build byte-for-byte. **172 unit tests passed**. All **45 applicable browser cases passed** across the complete run and the final six-case correction check; one mobile-only dashboard case is intentionally skipped on desktop. The final check verified compact 320px rows, offline recording/export, failed-save rollback, starred-defect persistence and reuse, focus and resizing. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
