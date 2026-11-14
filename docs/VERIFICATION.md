@@ -19,6 +19,8 @@ Original milestone verified on 13 November 2026; site-folder and hold-edit updat
 
 The final targeted rerun covers the creation flow and complete offline/package workflows after classification normalization and header editing fixes. Creation tests check that every Create job entry is disabled without a site; the three dropdowns contain the specified choices; custom names and description are required; only the requested creation fields are shown; and exports reopen without duplicate jobs. `npx playwright test tests/job-creation.spec.js tests/workflow.spec.js` passed **8 of 8** cases on the final production build, including immediate same-profile deduplication and custom header editing.
 
+Completed-job export was also checked through **Finalisation → Export job**, after an offline reload and another offline save. `npx playwright test tests/new-workflow.spec.js -g "editable visit sections"` passed **2 of 2** desktop/mobile cases on that production build. The downloaded `.jobs.json` retained Complete status, work records, unchanged Not tested results, embedded PNG plans and photographs; importing into a fresh browser profile and exporting again preserved the drawing records exactly.
+
 | Workflow | Verified behaviour |
 | --- | --- |
 | Genuine save import | Real source envelope and legacy marker accepted; stable floor/device mappings; source content, photos, circuits and issued records retained |

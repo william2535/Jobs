@@ -28,10 +28,11 @@ async function saveEditor(page, name) {
   await expect(page.locator('.wf-editor')).toHaveCount(0);
   await expect(page.getByTestId('save-status')).toContainText('Saved');
 }
-async function exportJob(page) {
+async function exportJob(page, container = '.job-toolbar') {
   const downloaded = page.waitForEvent('download');
-  await page.locator('.job-toolbar').getByRole('button', { name: 'Export job', exact: true }).click();
+  await page.locator(container).getByRole('button', { name: 'Export job', exact: true }).click();
   const download = await downloaded;
+  expect(download.suggestedFilename()).toMatch(/^job-.+\.jobs\.json$/);
   const input = await readFile(await download.path(), 'utf8');
   return { input, data: validateJobPackage(input) };
 }
@@ -114,6 +115,9 @@ test('editable visit sections retain work, materials, purchase records and final
   await expect(page.locator('.workflow-module')).toContainText('Total recorded time: 2.5 hours');
   await screenshot(page, testInfo.outputPath('finalisation.png'));
 
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  const savedPNG = await pngSource(page);
+
   await page.evaluate(async () => navigator.serviceWorker.ready);
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBeTruthy();
   await context.setOffline(true);
@@ -123,7 +127,7 @@ test('editable visit sections retain work, materials, purchase records and final
   await page.getByRole('button', { name: 'Edit notes & status', exact: true }).first().click();
   await page.getByRole('textbox', { name: 'Technician note', exact: true }).fill('Saved offline; all unresolved checks remain visible.');
   await saveEditor(page, 'Save notes & status');
-  const exported = await exportJob(page);
+  const exported = await exportJob(page, '.workflow-module');
   expect(exported.data.job.engineer).toBe('Engineer Two');
   expect(exported.data.job.workflow.details.reference).toBe('JOB-SYN-001');
   expect(exported.data.job.workflow.appointments).toHaveLength(1);
@@ -135,6 +139,9 @@ test('editable visit sections retain work, materials, purchase records and final
   expect(exported.data.job.status).toBe('Complete');
   expect(exported.data.job.results.every(result => result.state === 'Not tested')).toBe(true);
   expect(exported.data.job.workflow.finalisation.technicianNote).toContain('Saved offline');
+  const savedDrawing = exported.data.site.drawings.find(drawing => drawing.id === exported.data.job.drawingId);
+  expect(savedDrawing.planPreviews.some(preview => preview.image === savedPNG)).toBe(true);
+  expect(savedDrawing.assets.flatMap(asset => asset.photos || []).length).toBeGreaterThan(0);
   const fresh = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: testInfo.project.use.viewport });
   try {
     const reopened = await fresh.newPage();
@@ -144,6 +151,8 @@ test('editable visit sections retain work, materials, purchase records and final
     const roundtrip = await exportJob(reopened);
     expect(roundtrip.data.job.workflow).toEqual(exported.data.job.workflow);
     expect(roundtrip.data.job.results).toEqual(exported.data.job.results);
+    expect(roundtrip.data.job.status).toBe('Complete');
+    expect(roundtrip.data.site.drawings).toEqual(exported.data.site.drawings);
   } finally { await fresh.close(); }
 });
 
