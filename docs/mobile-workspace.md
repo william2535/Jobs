@@ -8,7 +8,7 @@ Below 700px, Jobs uses a deep-blue mobile dashboard with circular summaries, sch
 
 - **Dashboard:** completed visits out of all saved jobs, time recorded today, overdue open visits, and the four core actions: Create job, Import Zone Sketch, Import job and Sites.
 - **Tasks:** saved jobs with site/reference search. Today, Tomorrow and Calendar filter actual appointment dates or the job's visit date. All shows one card per saved job. With multiple appointments, the card shows the next scheduled appointment, or the most recent past one when no future appointment exists.
-- **Stock:** products and labour entered against jobs, including planned/used state and quantities. This is not a warehouse balance or connected stock service.
+- **Zone Sketch:** replaces Stock in the bottom navigation and opens the existing Zone Sketch editor in a separate tab. Product records remain available inside each job through its settings and More job tools.
 - **Timesheets:** dated time records with recorded durations. Explicit entered hours take precedence over a start/end-time calculation. Opening a record opens its job notes; **gear → More job tools → Visit records** contains the editable timesheet.
 - **About:** local/offline workflow information, core actions and the request for persistent browser storage.
 

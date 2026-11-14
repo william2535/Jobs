@@ -61,11 +61,11 @@ test('mobile dashboard navigation and schedule reflect the saved records', async
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
   await expect(page.locator('.job-notes').getByRole('textbox', { name: 'Job title', exact: true })).toHaveValue('Synthetic planned repair');
   await page.locator('[data-action="home"]:visible').first().click();
-  await nav.getByRole('button', { name: 'Stock', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Stock & materials', exact: true })).toBeVisible();
-  await expect(page.locator('.mw-record-card')).toContainText('Synthetic cable');
-  await expect(page.locator('.mw-record-card')).toContainText('3 m');
-  await capture(page, testInfo.outputPath('mobile-stock.png'));
+  const zoneSketch = nav.getByRole('link', { name: 'Zone Sketch', exact: true });
+  await expect(zoneSketch).toBeVisible();
+  await expect(zoneSketch).toHaveAttribute('href', 'https://william2535.github.io/FIRE-ZONE-PLAN-APP/');
+  await expect(zoneSketch).toHaveAttribute('target', '_blank');
+  await expect(nav.getByRole('button', { name: 'Stock', exact: true })).toHaveCount(0);
   await nav.getByRole('button', { name: 'Timesheets', exact: true }).click();
   await expect(page.locator('.mw-screen-description')).toContainText('2:30 recorded');
   await expect(page.locator('.mw-record-card')).toContainText('Synthetic recorded attendance.');

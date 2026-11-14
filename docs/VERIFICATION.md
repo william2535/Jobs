@@ -84,3 +84,8 @@ Mobile verification uses browser emulation. Physical-device installation, OS sha
 ## FINDR launcher update
 
 The owner-requested circular FINDR logo sits directly below Toolbox on the mobile dashboard. The production build and existing mobile dashboard browser case passed. A focused browser check verified the original logo bytes, minimum 44px touch target, position below Toolbox, a real click opening `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` with the FINDR app title, offline logo loading after preparation, and no horizontal overflow at 320px. [Mobile preview](screenshots/mobile-findr-launcher.png). This launcher does not transfer job context or implement the future Panel Pal adapter.
+
+
+## Zone Sketch navigation update
+
+Zone Sketch replaces Stock in the third position of the mobile home navigation. The production build and updated existing mobile dashboard browser test passed. A focused real-browser click opened the verified Zone Sketch v0.64 editor at `https://william2535.github.io/FIRE-ZONE-PLAN-APP/` in another tab, with a minimum 44px target and no horizontal overflow at 320px. FINDR remains underneath Toolbox. Existing per-job product records are unchanged. [Mobile preview](screenshots/mobile-zone-sketch-navigation.png).

@@ -1,4 +1,5 @@
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
+import { DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
 import { jobTypeLabel } from "./job-options.js";
 const list = (value) => (Array.isArray(value) ? value : []);
 const pad = (value) => String(value).padStart(2, "0");
@@ -87,7 +88,6 @@ export function mobileWorkspaceSummary(state, today) {
 const paths = {
   dashboard: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"],
   tasks: ["M8 3h8v4H8z", "M8 5H5v16h14V5h-3", "M8 12h8", "M8 16h6"],
-  stock: ["M3 7l9-4 9 4-9 4z", "M3 7v10l9 4 9-4V7", "M12 11v10", "M7 5l10 4"],
   timesheets: ["M12 8v5l3 2", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"],
   about: ["M12 10v7", "M12 6v1", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0"],
   toolbox: ["M7 8V5h10v3", "M3 8h18v12H3z", "M3 13h18", "M10 11v4h4v-4"],
@@ -470,29 +470,6 @@ export function renderMobileWorkspace({
       );
     return content;
   }
-  function products() {
-    return listScreen(
-      "Stock & materials",
-      "Products and labour recorded against your jobs. These are job quantities, not a live stock balance.",
-      summary.products,
-      ({ job, entry }) => {
-        const card = control("", () => goJob(job), "mw-record-card");
-        const heading = node("div", undefined, "mw-card-head");
-        heading.append(node("strong", entry.description), icon("chevron"));
-        card.append(
-          heading,
-          node(
-            "span",
-            `${entry.quantity} ${entry.unit || "each"} · ${entry.complete ? "Used / complete" : "Planned"}`,
-            "mw-record-value",
-          ),
-          node("small", siteFor(job)?.name || "No site"),
-        );
-        return card;
-      },
-      "No materials recorded",
-    );
-  }
   function timesheets() {
     return listScreen(
       "Timesheets",
@@ -601,20 +578,28 @@ export function renderMobileWorkspace({
         ? dashboard()
         : tab === "Tasks"
           ? jobsSection()
-          : tab === "Stock"
-            ? products()
-            : tab === "Timesheets"
-              ? timesheets()
-              : about();
+          : tab === "Timesheets"
+            ? timesheets()
+            : about();
     const navigation = node("nav", undefined, "mw-bottom-nav");
     navigation.setAttribute("aria-label", "Mobile workspace");
     for (const [label, symbol] of [
       ["Dashboard", "dashboard"],
       ["Tasks", "tasks"],
-      ["Stock", "stock"],
+      ["Zone Sketch", "plan"],
       ["Timesheets", "timesheets"],
       ["About", "about"],
     ]) {
+      if (label === "Zone Sketch") {
+        const link = node("a");
+        link.href = DEFAULT_ZONE_SKETCH_URL;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.title = "Open Zone Sketch";
+        link.append(icon(symbol), node("span", label));
+        navigation.append(link);
+        continue;
+      }
       const button = control(
         "",
         () => {
