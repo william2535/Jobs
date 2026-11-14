@@ -37,6 +37,7 @@ import {
   acceptZoneSketchPreviews,
 } from "./plan-preview.js";
 import "./plan-preview.css";
+import "./plan-asset-controls.css";
 import { buildEditableZoneSketch } from "./drawing-editor.js";
 import { createZoneHandoff, DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
 import { prepareZoneLaunch, applyZoneReturn } from "./zone-return.js";
@@ -277,8 +278,10 @@ async function saveCardResult(assetId, outcome, explanation = "") {
   if (!(await persist(next))) return false;
   pendingCardResult = null;
   render();
-  const row = [...document.querySelectorAll('.device-row')].find(row => row.dataset.assetId === assetId);
-  row?.querySelector(`[data-card-result="${outcome}"]`)?.focus({ preventScroll: true });
+  requestAnimationFrame(() => {
+    const row = [...document.querySelectorAll('.device-row, .plan-asset-work-row')].find(row => row.dataset.assetId === assetId);
+    row?.querySelector(`[data-card-result="${outcome}"]`)?.focus({ preventScroll: true });
+  });
   return true;
 }
 function bindCardResultForms(root = document) {
@@ -479,6 +482,20 @@ function editSite() {
 }
 let renderedRoute = null;
 let disposeJobHold = null;
+const planViews = new Map();
+function mountPlanPreview(target, drawing, options) {
+  const viewKey = `${page}:${activeJob || activeSite || ""}:${drawing.id}`;
+  const preview = renderPlanPreview(drawing, { ...options, viewState: planViews.get(viewKey) });
+  preview.dataset.viewKey = viewKey;
+  $(target).append(preview);
+}
+function beforePlanNavigate() {
+  if (!pendingCardResult) return true;
+  if (!confirm("Discard the unsaved result change before changing the plan view?")) return false;
+  pendingCardResult = null;
+  markDirty(false);
+  return true;
+}
 function openJobField(target) {
   if (busy || operationPending) return;
   let workflow = document.querySelector(".workflow-module");
@@ -494,6 +511,10 @@ function openJobField(target) {
 const holdField = (group, field) =>
   `data-job-edit="${group}" data-edit-field="${field}" data-hold-edit tabindex="0" title="Hold for 3 seconds to edit"`;
 function render() {
+  const previousPlan = document.querySelector('.plan-preview');
+  const planScroll = previousPlan ? { x: window.scrollX, y: window.scrollY } : null;
+  if (previousPlan?.dataset.viewKey && previousPlan.getViewState)
+    planViews.set(previousPlan.dataset.viewKey, previousPlan.getViewState());
   document.querySelector(".workflow-module")?.disposeHoldToEdit?.();
   document.querySelector(".job-checklist")?.dispose?.();
   document.querySelector(".job-notes")?.dispose?.();
@@ -676,32 +697,22 @@ function render() {
     });
   }
   if (page === "job" && tab === "Plan" && j && s && $("#plan-root")) {
-    $("#plan-root").append(
-      renderPlanPreview(drawingOf(s, j), {
+    mountPlanPreview("#plan-root", drawingOf(s, j), {
+        renderAssetCard: draftJob ? undefined : planAssetCard,
+        onBeforeNavigate: beforePlanNavigate,
         onPreviewsReady: (drawing) => savePreviewCache(s.id, drawing),
         onSelectAsset: (aid) => {
-          if (draftJob) {
-            reportError("Save this job before recording device results.");
-            return;
-          }
-          selectedAsset = aid;
-          deviceTab = "Record";
-          tab = "Devices";
-          render();
-          focusDevice();
+          runTask(() => action(`asset:${aid}`));
         },
-      }),
-    );
+      });
   }
   if (page === "site" && s) {
     $("#site-profile-root").append(renderSiteProfile({site: s, onSave: saveWorkflowSite, onDirty: markDirty}));
-    $("#site-plan-root").append(
-      renderPlanPreview(s.drawings.at(-1), {
+    mountPlanPreview("#site-plan-root", s.drawings.at(-1), {
         onPreviewsReady: (drawing) => savePreviewCache(s.id, drawing),
         onSelectAsset: () =>
           scrollSection(document.querySelector(".asset-summary")),
-      }),
-    );
+      });
   }
   if (page === "review")
     $("#match-site").onchange = async (e) => {
@@ -718,6 +729,7 @@ function render() {
       }
     };
   if (changedRoute) window.scrollTo(0, 0);
+  else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
 }
 function home() {
   if (window.matchMedia("(max-width: 700px)").matches)
@@ -826,6 +838,28 @@ function deviceHistoryLabel(asset, job) {
   const previous = priorVisit(asset.id, job);
   return `<small class="asset-identity">Asset ID: ${esc(asset.sourceId || asset.id.slice(0, 12))}</small>${previous ? `<small class="previous-result">Previous visit: ${esc(previous.state)} · ${esc(new Date(previous.at).toLocaleDateString())}</small>` : ""}`;
 }
+const pencilIcon = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 15z"/></svg>';
+function resultButtons(asset, result, extraClass = "") {
+  return `<div class="device-card-results ${extraClass}" role="group" aria-label="Today's result for ${esc(asset.reference || asset.type)}" title="Current result: ${esc(result?.state || "Not tested")}">${[["pass", "Pass", "Satisfactory"], ["fail", "Fail", "Unsatisfactory"], ["na", "N/A", "Not applicable"]].map(([key, label, value]) => `<button data-action="card-result:${key}:${esc(asset.id)}" data-card-result="${value}" aria-pressed="${result?.state === value}">${label}</button>`).join("")}</div>`;
+}
+function resultReason(assetId) {
+  const pending = pendingCardResult?.assetId === assetId ? pendingCardResult : null;
+  return pending ? `<form data-form="card-result" class="device-quick-explanation" data-asset="${esc(assetId)}"><strong>${pending.state === "Unsatisfactory" ? "Fail" : "N/A"} — add a reason to save</strong><label>Explanation<textarea name="explanation" rows="2" maxlength="10000" required>${esc(pending.explanation)}</textarea></label><div class="actions"><button type="submit" class="primary">Save result</button><button type="button" data-action="cancel-card-result">Cancel</button></div></form>` : "";
+}
+function planAssetCard(asset, { issued }) {
+  if (issued || draftJob) return null;
+  const result = currentJob()?.results.find(value => value.assetId === asset.id);
+  if (!result) return null;
+  const reference = asset.reference || asset.type;
+  const positioned = Number.isFinite(asset.x) && Number.isFinite(asset.y) && asset.x >= 0 && asset.x <= 1 && asset.y >= 0 && asset.y <= 1;
+  const row = document.createElement('article');
+  row.className = 'plan-asset-card plan-asset-work-row';
+  row.dataset.assetId = asset.id;
+  row.innerHTML = `<button class="plan-asset-name" data-action="asset:${esc(asset.id)}" aria-label="${esc(reference)}"><strong>${esc(reference)}</strong><small>${esc(asset.typeName || asset.type)}${positioned ? "" : " · Position not recorded"}</small></button>${resultButtons(asset, result, "plan-inline-results")}<button class="plan-asset-edit" data-action="edit-defects:${esc(asset.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects">${pencilIcon}</button>${resultReason(asset.id)}`;
+  bindActions(row);
+  bindCardResultForms(row);
+  return row;
+}
 function deviceCards(j, d) {
   const found = filteredDevices(j, d);
   const pages = Math.max(1, Math.ceil(found.length / devicePageSize()));
@@ -837,9 +871,8 @@ function deviceCards(j, d) {
   return `<p class="device-count" role="status">${found.length} of ${d.assets.length} devices${pages > 1 ? ` · Page ${devicePage + 1} of ${pages}` : ""}</p>
     <div class="device-browser-grid">${visible.map(a => {
       const result = j.results.find(value => value.assetId === a.id);
-      const pending = pendingCardResult?.assetId === a.id ? pendingCardResult : null;
       const reference = a.reference || a.type;
-      return `<article class="device-row" data-asset-id="${esc(a.id)}"><div class="device-card-heading"><button class="device-open" data-action="asset:${esc(a.id)}"><strong>${esc(reference)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small></button><button class="device-edit" data-action="edit-defects:${esc(a.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 15z"/></svg><span>Edit</span></button></div>${badge(result?.state || "Not tested")}<div class="device-card-results" role="group" aria-label="Today's result for ${esc(reference)}">${[["pass", "Pass", "Satisfactory"], ["fail", "Fail", "Unsatisfactory"], ["na", "N/A", "Not applicable"]].map(([key, label, value]) => `<button data-action="card-result:${key}:${esc(a.id)}" data-card-result="${value}" aria-pressed="${result?.state === value}">${label}</button>`).join("")}</div>${pending ? `<form data-form="card-result" class="device-quick-explanation" data-asset="${esc(a.id)}"><strong>${pending.state === "Unsatisfactory" ? "Fail" : "N/A"} — add a reason to save</strong><label>Explanation<textarea name="explanation" rows="2" maxlength="10000" required>${esc(pending.explanation)}</textarea></label><div class="actions"><button type="submit" class="primary">Save result</button><button type="button" data-action="cancel-card-result">Cancel</button></div></form>` : ""}${deviceHistoryLabel(a, j)}</article>`;
+      return `<article class="device-row" data-asset-id="${esc(a.id)}"><div class="device-card-heading"><button class="device-open" data-action="asset:${esc(a.id)}"><strong>${esc(reference)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small></button><button class="device-edit" data-action="edit-defects:${esc(a.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects">${pencilIcon}<span>Edit</span></button></div>${badge(result?.state || "Not tested")}${resultButtons(a, result)}${resultReason(a.id)}${deviceHistoryLabel(a, j)}</article>`;
     }).join("")}</div>
     ${!found.length ? '<p class="empty">No devices match. Try another reference, floor or result.</p>' : ""}
     ${pages > 1 ? `<div class="device-pagination"><button data-action="device-page:${devicePage - 1}" ${devicePage === 0 ? "disabled" : ""}>Previous devices</button><span>Page ${devicePage + 1} / ${pages}</span><button data-action="device-page:${devicePage + 1}" ${devicePage === pages - 1 ? "disabled" : ""}>Next devices</button></div>` : ""}`;
@@ -1007,7 +1040,7 @@ async function action(a) {
       pendingCardResult = { assetId, state: outcome, explanation: "" };
       markDirty();
       render();
-      document.querySelector('form[data-form="card-result"] textarea')?.focus({ preventScroll: true });
+      requestAnimationFrame(() => document.querySelector('form[data-form="card-result"] textarea')?.focus({ preventScroll: true }));
       return;
     }
     return saveCardResult(assetId, outcome, defect?.description || "");

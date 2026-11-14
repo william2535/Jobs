@@ -178,7 +178,7 @@ test('PNG plans, issued evidence and revised imports survive offline package rou
   await createJob(page);
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
   const firstPNG = await pngSource(page);
-  await expect(page.locator('#plan-root svg')).toHaveCount(0);
+  await expect(page.locator('#plan-root .plan-preview-viewport svg')).toHaveCount(0);
   await expect(page.locator('.drawing-editor')).toHaveCount(0);
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await expect(page.locator('.plan-preview-zoom output')).toHaveText('150%');

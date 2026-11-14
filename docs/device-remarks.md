@@ -1,8 +1,10 @@
 # Device remarks and defects
 
-Each device card has **Pass / Fail / N/A** controls and a pencil **Edit** button. Edit opens **Defects** directly; the device name opens its full record. You can also open a device from its job plan. The layout follows the supplied mobile reference with grouped remark details, photograph strips and a separate resolution section. The rest of the job stays in Notes, Plan and Finalisation.
+In a saved job's **Plan → Assets on this floor**, each working-drawing row has **Pass / Fail / N/A** in the middle and an icon-only pencil at the far right. The pencil opens **Defects** directly; the device name opens its full record. Saving a result keeps the current floor, asset page and plan zoom. Issued snapshots and site-only plans have no visit-result controls. The separate **Devices** grid retains its quick controls and pencil **Edit** button.
 
-On a card, **Pass** saves that device's result immediately. **Fail** and **N/A** use an existing recorded explanation or open a short explanation field with **Save result** and **Cancel**. An explicit Fail selection can also reuse the description of an existing open remark when no other explanation is recorded. An incomplete explanation or failed save leaves the previous saved result intact. Changing a result preserves its other observations, readings, photographs and remarks.
+The defect editor follows the supplied mobile reference with grouped remark details, photograph strips and a separate resolution section. The rest of the job stays in Notes, Plan and Finalisation.
+
+In either list, **Pass** saves that device's result immediately. **Fail** and **N/A** use an existing recorded explanation or open a short explanation field with **Save result** and **Cancel**. An explicit Fail selection can also reuse the description of an existing open remark when no other explanation is recorded. An incomplete explanation or failed save leaves the previous saved result intact. Changing a result preserves its other observations, readings, photographs and remarks.
 
 The full **Today's result** form also offers Not tested and Inaccessible. Pass and Fail save the existing Satisfactory and Unsatisfactory result states. The engineer explicitly selects the outcome; unsatisfactory, inaccessible and not-applicable results require an explanation. This records a visit result; it does not certify compliance. Adding, starring or resolving a remark never changes that result.
 

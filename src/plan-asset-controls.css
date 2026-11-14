@@ -1,0 +1,128 @@
+/* Inline visit results for the working plan's asset rows. */
+.plan-asset-grid:has(> .plan-asset-work-row) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+}
+.plan-asset-card.plan-asset-work-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(138px, 1.4fr) 44px;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 10px;
+  border: 1px solid var(--line, #dce2e9);
+  border-radius: 7px;
+  background: var(--surface, #ffffff);
+}
+.plan-asset-card.plan-asset-work-row::after,
+body:has(.job-main-nav) .plan-asset-card.plan-asset-work-row::after {
+  display: none;
+  content: none;
+}
+.plan-asset-work-row .plan-asset-name {
+  display: block;
+  min-width: 0;
+  min-height: 44px;
+  width: 100%;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink, #202b39);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.plan-asset-work-row .plan-asset-name:hover {
+  color: #173d68;
+  background: transparent;
+}
+.plan-asset-work-row .plan-asset-name strong,
+.plan-asset-work-row .plan-asset-name small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.plan-asset-work-row .plan-asset-name strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.plan-asset-work-row .plan-asset-name small {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.plan-asset-work-row .plan-inline-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  justify-self: center;
+  align-self: center;
+  width: 100%;
+  min-width: 138px;
+  gap: 3px;
+  margin: 0;
+}
+.plan-asset-work-row .plan-inline-results button {
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 2px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.plan-asset-work-row .plan-asset-edit {
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #214f80;
+}
+.plan-asset-work-row .plan-asset-edit:hover {
+  border-color: #b7c9df;
+  background: #edf3fa;
+}
+.plan-asset-work-row .plan-asset-edit svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.plan-asset-work-row button:focus-visible {
+  outline: 3px solid #4c87c7;
+  outline-offset: 3px;
+}
+.plan-asset-work-row .device-quick-explanation {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin-top: 4px;
+  padding-top: 10px;
+}
+.plan-asset-work-row .device-quick-explanation .actions {
+  margin-bottom: 0;
+}
+@media (max-width: 700px) {
+  body:has(.job-main-nav) .plan-asset-grid:has(> .plan-asset-work-row) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  body:has(.job-main-nav) .plan-asset-card.plan-asset-work-row {
+    padding: 10px 4px;
+    border: 0;
+    border-bottom: 1px solid var(--line, #dce2e9);
+    border-radius: 0;
+    background: #ffffff;
+  }
+  .plan-asset-work-row .device-quick-explanation textarea {
+    font-size: 16px;
+  }
+}

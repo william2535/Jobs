@@ -352,17 +352,47 @@ export function renderPlanPreview(
   {
     onSelectAsset = () => {},
     onPreviewsReady = async () => {},
+    renderAssetCard = () => null,
+    onBeforeNavigate = () => true,
+    viewState,
     floorId,
     snapshotId = null,
   } = {},
 ) {
   const root = node("section", undefined, "plan-preview");
   root.setAttribute("aria-label", "Floor plan PNG previews");
+  const boundedScroll = (value) =>
+    Number.isFinite(value) ? Math.min(1000000, Math.max(0, value)) : 0;
+  // View state belongs to this mounted drawing, not the persisted job package.
+  const restored =
+    viewState &&
+    typeof viewState === "object" &&
+    !Array.isArray(viewState) &&
+    viewState.drawingId === drawing.id
+      ? viewState
+      : null;
   let current = drawing,
-    selectedFloor = floorId || drawing.floors?.[0]?.id,
-    selectedSnapshot = snapshotId || null,
-    zoom = 1,
-    assetPage = 0,
+    selectedFloor =
+      typeof restored?.floorId === "string"
+        ? restored.floorId
+        : floorId || drawing.floors?.[0]?.id,
+    selectedSnapshot =
+      restored &&
+      (restored.snapshotId === null ||
+        list(drawing.issuedSnapshots).some(
+          (record) => record.id === restored.snapshotId,
+        ))
+        ? restored.snapshotId
+        : snapshotId || null,
+    zoom = Number.isFinite(restored?.zoom)
+      ? Math.min(8, Math.max(1, restored.zoom))
+      : 1,
+    assetPage = Number.isSafeInteger(restored?.assetPage)
+      ? Math.max(0, restored.assetPage)
+      : 0,
+    scrollLeft = boundedScroll(restored?.scrollLeft),
+    scrollTop = boundedScroll(restored?.scrollTop),
+    pendingViewport = null,
     preparing = false,
     generationError = "";
   const details = node("div", undefined, "plan-details");
@@ -386,6 +416,7 @@ export function renderPlanPreview(
     details.append(img);
   };
   const openAsset = (asset, issued) => {
+    if (onBeforeNavigate() === false) return;
     details.replaceChildren();
     if (!issued) {
       onSelectAsset(asset.id);
@@ -403,7 +434,7 @@ export function renderPlanPreview(
     );
   };
   async function prepare(force = false) {
-    if (preparing) return;
+    if (preparing || onBeforeNavigate() === false) return;
     preparing = true;
     generationError = "";
     paint();
@@ -420,12 +451,25 @@ export function renderPlanPreview(
       if (root.isConnected) paint();
     }
   }
-  function paint() {
+  function capturePan() {
+    const viewport = root.querySelector(".plan-preview-viewport");
+    if (viewport?.isConnected && viewport !== pendingViewport) {
+      scrollLeft = boundedScroll(viewport.scrollLeft);
+      scrollTop = boundedScroll(viewport.scrollTop);
+    }
+  }
+  function paint({ resetPan = false } = {}) {
+    if (resetPan) scrollLeft = scrollTop = 0;
+    else capturePan();
+    pendingViewport = null;
     const { record, snapshotId } = selected();
+    if (selectedSnapshot !== snapshotId) scrollLeft = scrollTop = 0;
     selectedSnapshot = snapshotId;
     const floors = list(record.floors);
-    if (!floors.some((f) => f.id === selectedFloor))
+    if (!floors.some((f) => f.id === selectedFloor)) {
       selectedFloor = floors[0]?.id;
+      scrollLeft = scrollTop = 0;
+    }
     const floor = floors.find((f) => f.id === selectedFloor),
       issued = snapshotId !== null || current.kind === "issued";
     const entry = floor
@@ -460,10 +504,15 @@ export function renderPlanPreview(
     });
     recordSelect.value = snapshotId || "";
     recordSelect.onchange = () => {
+      if ((recordSelect.value || null) === selectedSnapshot) return;
+      if (onBeforeNavigate() === false) {
+        recordSelect.value = selectedSnapshot || "";
+        return;
+      }
       selectedSnapshot = recordSelect.value || null;
       zoom = 1;
       assetPage = 0;
-      paint();
+      paint({ resetPan: true });
     };
     recordLabel.append(recordSelect);
     const floorLabel = node("label", "Plan floor"),
@@ -476,10 +525,15 @@ export function renderPlanPreview(
     });
     floorSelect.value = selectedFloor || "";
     floorSelect.onchange = () => {
+      if (floorSelect.value === selectedFloor) return;
+      if (onBeforeNavigate() === false) {
+        floorSelect.value = selectedFloor || "";
+        return;
+      }
       selectedFloor = floorSelect.value;
       zoom = 1;
       assetPage = 0;
-      paint();
+      paint({ resetPan: true });
     };
     floorLabel.append(floorSelect);
     controls.append(recordLabel, floorLabel);
@@ -496,7 +550,7 @@ export function renderPlanPreview(
       }),
       button("Fit", () => {
         zoom = 1;
-        paint();
+        paint({ resetPan: true });
       }),
     );
     zoomControls.querySelector("button").setAttribute("aria-label", "Zoom out");
@@ -520,6 +574,7 @@ export function renderPlanPreview(
       root.append(message);
     }
     if (!entry) {
+      assetPage = 0;
       root.append(
         node(
           "p",
@@ -576,6 +631,21 @@ export function renderPlanPreview(
       }
       viewport.append(stage);
       root.append(viewport);
+      // The returned root is mounted by the caller after paint. Restore only
+      // this connected viewport after layout, never one replaced by a repaint.
+      pendingViewport = viewport;
+      requestAnimationFrame(() => {
+        if (
+          pendingViewport !== viewport ||
+          !viewport.isConnected ||
+          !root.contains(viewport)
+        ) return;
+        viewport.scrollLeft = scrollLeft;
+        viewport.scrollTop = scrollTop;
+        scrollLeft = boundedScroll(viewport.scrollLeft);
+        scrollTop = boundedScroll(viewport.scrollTop);
+        pendingViewport = null;
+      });
       const actions = node("div", undefined, "plan-preview-actions");
       actions.append(
         button("Download PNG", () => {
@@ -629,7 +699,9 @@ export function renderPlanPreview(
             renderPlan(current, {
               floorId: floor.id,
               snapshotId: snapshotId || "",
-              onSelectAsset,
+              onSelectAsset: (assetId) => {
+                if (onBeforeNavigate() !== false) onSelectAsset(assetId);
+              },
             }),
           );
         }
@@ -663,6 +735,11 @@ export function renderPlanPreview(
       assetPage * pageSize,
       (assetPage + 1) * pageSize,
     )) {
+      const custom = !issued ? renderAssetCard(asset, { issued }) : null;
+      if (custom instanceof Element) {
+        assets.append(custom);
+        continue;
+      }
       const card = button(
         "",
         () => openAsset(asset, issued),
@@ -683,11 +760,13 @@ export function renderPlanPreview(
       const pages = node("nav", undefined, "plan-preview-pagination");
       pages.setAttribute("aria-label", "Floor asset pages");
       const previous = button("Previous assets", () => {
+        if (onBeforeNavigate() === false) return;
         assetPage -= 1;
         paint();
       });
       previous.disabled = assetPage === 0;
       const next = button("Next assets", () => {
+        if (onBeforeNavigate() === false) return;
         assetPage += 1;
         paint();
       });
@@ -725,6 +804,18 @@ export function renderPlanPreview(
       root.append(notes);
     }
   }
+  root.getViewState = () => {
+    capturePan();
+    return {
+      drawingId: current.id,
+      floorId: selectedFloor || null,
+      snapshotId: selectedSnapshot,
+      zoom,
+      assetPage,
+      scrollLeft,
+      scrollTop,
+    };
+  };
   paint();
   return root;
 }
