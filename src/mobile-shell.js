@@ -143,7 +143,7 @@ export function renderMobileWorkspace({
   const siteFor = (job) =>
     list(state.sites).find((site) => site.id === job.siteId);
   const jobTitle = (job) =>
-    job.workflow?.details?.title || job.workType || "Site visit";
+    job.workflow?.details?.title || job.workType || "Untitled job";
   const goJob = (job) => onAction(`job:${job.id}`);
   const empty = (title, detail) => {
     const box = node("div", undefined, "mw-empty");
@@ -222,7 +222,7 @@ export function renderMobileWorkspace({
     card.dataset.action = `job:${job.id}`;
     const head = node("div", undefined, "mw-card-head");
     head.append(
-      node("strong", siteFor(job)?.name || "Site record"),
+      node("strong", siteFor(job)?.name || "Site not set"),
       icon("chevron"),
     );
     const meta = node("div", undefined, "mw-card-meta");
@@ -461,7 +461,7 @@ export function renderMobileWorkspace({
             `${entry.quantity} ${entry.unit || "each"} · ${entry.complete ? "Used / complete" : "Planned"}`,
             "mw-record-value",
           ),
-          node("small", siteFor(job)?.name || "Site record"),
+          node("small", siteFor(job)?.name || "Site not set"),
         );
         return card;
       },
@@ -479,7 +479,7 @@ export function renderMobileWorkspace({
         const card = control("", () => goJob(job), "mw-record-card");
         const heading = node("div", undefined, "mw-card-head");
         heading.append(
-          node("strong", siteFor(job)?.name || "Site record"),
+          node("strong", siteFor(job)?.name || "Site not set"),
           icon("chevron"),
         );
         card.append(

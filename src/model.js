@@ -1,3 +1,5 @@
+import { jobDefaultsFromSite } from "./site-profile.js";
+
 export const states = [
   "Not tested",
   "Satisfactory",
@@ -7,6 +9,7 @@ export const states = [
 ];
 export const id = () => crypto.randomUUID();
 export const now = () => new Date().toISOString();
+export const siteLabel = (site) => site?.name?.trim() || "Site";
 export function newSite(name, address = "") {
   const siteId = id(),
     drawingId = id(),
@@ -36,20 +39,23 @@ export function newSite(name, address = "") {
   };
 }
 export function newJob(site, values = {}) {
+  if (!site?.id || !site.name?.trim())
+    throw Error("Create a named site before creating a job.");
   const drawing = site.drawings.at(-1);
   return {
     id: id(),
     siteId: site.id,
     drawingId: drawing.id,
     revision: 1,
-    system: "Fire alarm",
-    workType: "Fire alarm maintenance",
+    system: "",
+    workType: "",
     scope: "",
     instructions: "",
     engineer: "",
     status: "Open",
     createdAt: now(),
     updatedAt: now(),
+    ...jobDefaultsFromSite(site),
     ...values,
     results: drawing.assets.map((a) => ({
       id: id(),

@@ -28,6 +28,8 @@ To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses 
 
 ## Workflow
 
+Start with **Sites → Create site manually**, or import a Zone Sketch save to create the site folder. Add the reusable contact, access and work details once, then choose **Create job** inside that site. Recorded details fill the new job automatically; unfilled boxes and empty report sections stay hidden. Hold a filled field for **3 seconds** to edit it, or use **Edit**. Use **Add details** to fill a missing section. Each job keeps its selected plan revision and included PNG through local saving and package export.
+
 1. **Import Zone Sketch** and review the site mapping, floors, devices and warnings; choose **Save site**. Alternatively open **Sites**, create a site and add equipment manually.
 2. Choose **Create job**. Enter the system reference, scope, instructions and engineer. This milestone includes all equipment in the chosen drawing; every result starts **Not tested**.
 3. Use **Plan** for floors, working drawings and issued snapshots; tap working devices to open **Devices**. Or choose a card in the searchable **Devices** grid (four per page on phones, eight on desktop), filter by result, and move between records with Previous/Next or Choose device. Issued views remain historical evidence.
@@ -46,13 +48,15 @@ Deep contrasting blue provides the headers and accents. The mobile workspace fol
 ## Architecture and contracts
 
 - `src/main.js`, `src/style.css`: touch-friendly application, explicit save flow and printable report.
-- `src/model.js`: stable site/job/result identities and new-visit defaults.
+- `src/model.js`: stable site/job/result identities, named-site creation guard and inherited visit defaults.
+- `src/site-profile.js`: reusable site folder information; recorded values are copied into new jobs without changing earlier visits.
 - `src/storage.js`: versioned IndexedDB, atomic writes and concurrent-tab protection.
 - `src/zone-import.js`: independently implemented current/legacy importer and drawing comparison.
 - `src/plan-preview.js`: embedded PNG floor previews, issued records and device navigation; `src/plan.js` independently renders imported drawings when a Zone Sketch PNG is unavailable.
 - `src/zone-handoff.js`, `src/zone-return.js`: automatic Zone Sketch launch/return protocol and safe revision reconciliation.
 - `src/revisions.js`: permanent asset mapping and retained visit history; `src/drawing-editor.js` retains the actual-schema export utility and earlier editing helpers for compatibility.
 - `src/job-workflow.js`: editable job metadata, actions, materials, local POs, time and finalisation.
+- `src/hold-to-edit.js`: cancellable three-second hold shortcut, with explicit editing and keyboard alternatives.
 - `src/packages.js`: validated versioned package export/import, duplicate receipts and preserved conflicts.
 - `src/panel-context.js`: future Panel Pal handoff contract, separate engineer evidence and AI proposals.
 - `vite.config.js`: self-contained, build-versioned offline application cache.

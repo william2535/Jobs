@@ -1,4 +1,6 @@
 /** Local editable visit workflow. No supplier submission, certification or AI actions. */
+import { attachHoldToEdit } from "./hold-to-edit.js";
+
 const clone = (value) => structuredClone(value);
 const arrays = [
   "appointments",
@@ -284,16 +286,24 @@ const input = (label, name, value = "", type = "text", required = false) =>
 const area = (label, name, value = "") =>
   `<label>${label}<textarea name="${name}" rows="3">${esc(value)}</textarea></label>`;
 const select = (label, name, options, value) =>
-  `<label>${label}<select name="${name}">${options.map((x) => `<option value="${esc(x)}" ${x === value ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>`;
+  `<label>${label}<select name="${name}">${options.map((option) => { const [key, title] = Array.isArray(option) ? option : [option, option]; return `<option value="${esc(key)}" ${key === value ? "selected" : ""}>${esc(title)}</option>`; }).join("")}</select></label>`;
 const check = (label, name, value) =>
   `<label class="wf-check"><input type="checkbox" name="${name}" ${value ? "checked" : ""}>${label}</label>`;
 const button = (label, action, extra = "") =>
   `<button type="button" data-wf-action="${esc(action)}" ${extra}>${label}</button>`;
 const empty = (text) => `<p class="muted">${text}</p>`;
+const hasValue = (value) => value !== null && value !== undefined && (typeof value !== "string" || value.trim() !== "");
 const show = (label, value) =>
-  value !== "" && value !== null && value !== undefined
+  hasValue(value)
     ? `<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`
     : "";
+const holdAttributes = (group, field = "", recordId = "", label = "record", keyboard = true) =>
+  `data-hold-edit="${esc(group)}" data-hold-field="${esc(field)}" data-hold-record="${esc(recordId)}"${keyboard ? ` role="button" tabindex="0" aria-label="${esc(`Edit ${label}. Hold for 3 seconds or press Enter.`)}"` : ""}`;
+const editableValue = (group, field, label, value, recordId = "") => {
+  if (!hasValue(value)) return "";
+  const display = String(value);
+  return `<div class="wf-readout" ${holdAttributes(group, field, recordId, `${label}: ${display.slice(0, 160)}`)}><dt>${esc(label)}</dt><dd>${esc(display)}</dd></div>`;
+};
 const groups = {
   overview: {
     title: "Job overview",
@@ -311,6 +321,7 @@ const groups = {
       ["System reference", "system"],
       ["Assigned engineer", "engineer"],
       ["Work type", "workType", "workType"],
+      ["Visit date", "visitDate", "date"],
       ["Scope", "scope", "area"],
       ["Instructions", "instructions", "area"],
     ],
@@ -355,11 +366,12 @@ const groups = {
 /** Component owns only its draft UI; caller saves returned job atomically and increments its revision. */
 export function renderWorkflowSection(
   section,
-  { job, site, onSave, onDirty = () => {}, onNavigate = () => {} },
+  { job, site, onSave, onSaveSite, onDirty = () => {}, onNavigate = () => {} },
 ) {
   const root = document.createElement("section");
   root.className = "workflow-module";
   let current = clone(job),
+    currentSite = clone(site || {}),
     editor = null,
     localDirty = false,
     saving = false;
@@ -374,20 +386,30 @@ export function renderWorkflowSection(
   };
   const discard = () =>
     !localDirty || confirm("Discard unsaved changes to this form?");
-  function openEditor(collection, record = null) {
+  function openEditor(collection, record = null, field = "") {
+    if (saving || root.closest("[inert]")) return false;
     if (!discard()) return;
+    if (collection === "site" && typeof onSaveSite !== "function") {
+      fail(Error("Open the permanent site record to edit its name and address."));
+      return false;
+    }
+    if (!groups[collection] && !arrays.includes(collection) && !["site", "finalisation", "acknowledgement"].includes(collection)) return false;
     editor = { collection, record: record ? clone(record) : null };
     setDirty(false);
     render();
     root.querySelector(".wf-editor")?.scrollIntoView({ block: "nearest" });
+    const inputs = [...root.querySelectorAll("input, textarea, select")];
+    (inputs.find((input) => input.name === field) || inputs[0])?.focus({ preventScroll: true });
+    return true;
   }
-  async function save(next) {
+  async function save(next, siteOnly = false) {
     if (saving) return;
     saving = true;
     root.querySelectorAll("button").forEach((b) => (b.disabled = true));
     try {
-      if (await onSave(next)) {
-        current = next;
+      if (await (siteOnly ? onSaveSite(next) : onSave(next))) {
+        if (siteOnly) currentSite = next;
+        else current = next;
         editor = null;
         setDirty(false);
         render();
@@ -402,31 +424,27 @@ export function renderWorkflowSection(
     }
   }
   function summaryCard(key, group, details) {
-    const populated = group.fields.filter(
-      ([, name]) =>
-        details[name] !== "" &&
-        details[name] !== null &&
-        details[name] !== undefined,
-    );
-    return `<article class="wf-card"><div class="section-head"><h3>${group.title}</h3>${button("Edit", `edit:${key}`)}</div><dl>${
-      populated
-        .slice(0, 3)
-        .map(([label, name]) => show(label, details[name]))
-        .join("") || "<dd>Not recorded</dd>"
-    }</dl>${populated.length > 3 ? '<small class="muted">More details saved · open Edit to review</small>' : ""}</article>`;
+    const fields = group.fields.map(([label, name]) => editableValue(key, name, label, details[name])).join("");
+    const status = key === "overview" ? editableValue("finalisation", "status", "Visit status", current.status) : "";
+    if (!fields && !status) return "";
+    return `<article class="wf-card wf-details-card" ${holdAttributes(key, "", "", group.title, false)}><div class="section-head"><h3>${group.title}</h3>${button("Edit", `edit:${key}`)}</div><dl>${fields}${status}</dl></article>`;
   }
   function listing(collection, title, items, renderItem) {
-    return `<section class="wf-block"><div class="section-head"><h2>${title} <span class="count">${items.length}</span></h2>${button(`Add ${collection === "purchaseOrders" ? "purchase order" : collection === "timesheets" ? "time entry" : collection === "appointments" ? "appointment" : collection === "tasks" ? "task" : "product"}`, `edit:${collection}`)}</div><div class="wf-grid">${items.map((item) => `<article class="wf-card">${renderItem(item)}<div class="actions">${button("Edit", `edit:${collection}:${item.id}`)}${button("Remove", `remove:${collection}:${item.id}`)}</div></article>`).join("") || empty(`No ${title.toLowerCase()} recorded.`)}</div></section>`;
+    return `<section class="wf-block${items.length ? "" : " wf-empty-collection"}"><div class="section-head"><h2>${title} <span class="count">${items.length}</span></h2>${button(`Add ${collection === "purchaseOrders" ? "purchase order" : collection === "timesheets" ? "time entry" : collection === "appointments" ? "appointment" : collection === "tasks" ? "task" : "product"}`, `edit:${collection}`)}</div>${items.length ? `<div class="wf-grid">${items.map((item) => `<article class="wf-card" ${holdAttributes(collection, "", item.id, title, false)}>${renderItem(item)}<div class="actions">${button("Edit", `edit:${collection}:${item.id}`)}${button("Remove", `remove:${collection}:${item.id}`)}</div></article>`).join("")}</div>` : ""}</section>`;
+  }
+  function addDetailsPicker() {
+    return `<details class="wf-add-details" data-testid="add-job-details"><summary>Add details</summary><p>Choose the details to add or update for this visit.</p><div class="wf-detail-options">${Object.entries(groups).map(([key, group]) => button(group.title, `add:${key}`)).join("")}${button("Site details", "add:site")}${button("Visit status & notes", "add:finalisation")}</div></details>`;
   }
   function listContent(w) {
     if (section === "Details")
-      return `<div class="wf-grid">${Object.entries(groups)
+      return `${addDetailsPicker()}<p class="wf-hold-hint">Hold a saved detail for 3 seconds to edit, or use Edit. Use Add details for anything else.</p><div class="wf-grid wf-details-grid">${Object.entries(groups)
         .map(([key, group]) =>
-          summaryCard(key, group, key === "instructions" ? current : w.details),
+          summaryCard(key, group, key === "instructions" ? current : w.details) +
+          (key === "overview" ? summaryCard("site", { title: "Site", fields: [["Site name", "name"], ["Site address", "address", "area"]] }, currentSite) : ""),
         )
         .join(
           "",
-        )}</div>${listing("appointments", "Appointments", w.appointments, (r) => `<h3>${esc(r.date || "Date not recorded")}</h3><p>${esc([r.start, r.end].filter(Boolean).join(" – ") || "Time not recorded")}</p><p>${esc(r.engineer || "Unassigned")}</p><p>${esc(r.note)}</p>`)}<details class="wf-timeline"><summary>Timeline · ${w.timeline.length} changes</summary>${
+        )}</div>${listing("appointments", "Appointments", w.appointments, (r) => `<h3>Appointment</h3><dl>${editableValue("appointments", "date", "Date", r.date, r.id)}${editableValue("appointments", "start", "Start time", r.start, r.id)}${editableValue("appointments", "end", "End time", r.end, r.id)}${editableValue("appointments", "engineer", "Engineer", r.engineer, r.id)}${editableValue("appointments", "note", "Appointment note", r.note, r.id)}</dl>`)}<details class="wf-timeline"><summary>Timeline · ${w.timeline.length} changes</summary>${
         w.timeline
           .slice()
           .reverse()
@@ -437,13 +455,13 @@ export function renderWorkflowSection(
           .join("") || empty("No workflow edits recorded yet.")
       }</details>`;
     if (section === "Work")
-      return `<div class="wf-shortcuts">${button("Plans", "navigate:Plan")}${button("Assets & devices", "navigate:Devices")}${button("Recorded results", "navigate:Results")}</div><p class="muted">${workflowProgress(current).complete} of ${w.tasks.length} work actions complete. Checklist completion does not pass equipment.</p>${listing("tasks", "Work actions / pre-start checklist", w.tasks, (r) => `<div class="section-head"><h3>${esc(r.title)}</h3><span class="badge">${r.complete ? "Complete" : "Not complete"}</span></div><p>${r.required ? "Required work action" : "Optional work action"}</p><p>${esc(r.notes)}</p>`)}`;
+      return `<div class="wf-shortcuts">${button("Plans", "navigate:Plan")}${button("Assets & devices", "navigate:Devices")}${button("Recorded results", "navigate:Results")}</div><p class="muted">${workflowProgress(current).complete} of ${w.tasks.length} work actions complete. Checklist completion does not pass equipment.</p>${listing("tasks", "Work actions / pre-start checklist", w.tasks, (r) => `<h3 ${holdAttributes("tasks", "title", r.id, "Task title", false)}>${esc(r.title)}</h3><dl>${editableValue("tasks", "complete", "Work status", r.complete ? "Complete" : "Not complete", r.id)}${editableValue("tasks", "required", "Requirement", r.required ? "Required work action" : "Optional work action", r.id)}${editableValue("tasks", "notes", "Task notes", r.notes, r.id)}</dl>`)}`;
     if (section === "Products")
-      return `<p class="muted">Record materials and labour for this visit. Quantities and prices are entered by the engineer; no catalogue or ordering service is connected.</p>${listing("products", "Products & labour", w.products, (r) => `<div class="section-head"><h3>${esc(r.description)}</h3><span class="badge">${r.complete ? "Used / complete" : "Planned"}</span></div><p>Quantity: ${esc(r.quantity)} ${esc(r.unit)}</p>${r.unitCost !== null ? `<p>${esc(r.currency)} ${esc((r.quantity * r.unitCost).toFixed(2))} total · ${esc(r.unitCost)} per ${esc(r.unit)}</p>` : empty("Cost not recorded")}`)}`;
+      return `<p class="muted">Record materials and labour for this visit. Quantities and prices are entered by the engineer; no catalogue or ordering service is connected.</p>${listing("products", "Products & labour", w.products, (r) => `<h3 ${holdAttributes("products", "description", r.id, "Product description", false)}>${esc(r.description)}</h3><dl>${editableValue("products", "quantity", "Quantity", r.quantity, r.id)}${editableValue("products", "unit", "Unit", r.unit, r.id)}${editableValue("products", "unitCost", "Unit cost", r.unitCost, r.id)}${editableValue("products", "currency", "Currency", r.currency, r.id)}${editableValue("products", "complete", "Line status", r.complete ? "Used / complete" : "Planned", r.id)}</dl>${r.unitCost !== null ? `<p class="wf-calculated">${esc(r.currency)} ${esc((r.quantity * r.unitCost).toFixed(2))} total</p>` : ""}`)}`;
     if (section === "POs")
-      return `<p class="notice">Purchase orders are local records. Changing a status does not send an order, notify a supplier or take payment.</p>${listing("purchaseOrders", "Purchase orders", w.purchaseOrders, (r) => `<div class="section-head"><h3>${esc(r.supplier)}</h3><span class="badge">${esc(r.status)}</span></div><p>${esc(r.reference || "No reference")} · ${esc(r.date || "No date")}</p><p>${r.amount === null ? "Amount not recorded" : `${esc(r.currency)} ${esc(r.amount.toFixed(2))}`}</p><p>${esc(r.notes)}</p>`)}`;
+      return `<p class="notice">Purchase orders are local records. Changing a status does not send an order, notify a supplier or take payment.</p>${listing("purchaseOrders", "Purchase orders", w.purchaseOrders, (r) => `<h3 ${holdAttributes("purchaseOrders", "supplier", r.id, "Supplier", false)}>${esc(r.supplier)}</h3><dl>${editableValue("purchaseOrders", "reference", "PO reference", r.reference, r.id)}${editableValue("purchaseOrders", "status", "PO status", r.status, r.id)}${editableValue("purchaseOrders", "date", "PO date", r.date, r.id)}${editableValue("purchaseOrders", "amount", "Amount", r.amount, r.id)}${editableValue("purchaseOrders", "currency", "Currency", r.currency, r.id)}${editableValue("purchaseOrders", "notes", "PO notes", r.notes, r.id)}</dl>`)}`;
     if (section === "Finalisation")
-      return `<div class="wf-grid"><article class="wf-card"><h3>Visit status</h3><p><span class="badge">${esc(current.status)}</span></p><p>${current.results.filter((r) => r.state === "Not tested").length} device results remain Not tested.</p><p>${workflowProgress(current).requiredComplete} / ${workflowProgress(current).requiredTotal} required work actions complete.</p>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card"><h3>Visit notes</h3><dl>${show("Technician note", w.finalisation.technicianNote) || "<dd>No technician note recorded</dd>"}${show("Invoice note", w.finalisation.invoiceNote)}</dl>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card"><h3>Client acknowledgement</h3>${w.finalisation.clientAcknowledgement ? `<p>${esc(w.finalisation.clientAcknowledgement.name)}</p><p>${esc(w.finalisation.clientAcknowledgement.recordedAt)}</p><p>${esc(w.finalisation.clientAcknowledgement.note)}</p>` : empty("No acknowledgement recorded.")}<p class="muted">A typed acknowledgement record, not a digital signature or certificate.</p>${button("Record acknowledgement", "edit:acknowledgement")}</article><article class="wf-card"><h3>Review and export</h3><p class="muted">Review actual findings, limitations and the condition left. Completing a job never passes equipment.</p><div class="actions">${button("Draft service report", "navigate:print")}${button("Export job", "navigate:export")}${button("Review results", "navigate:Results")}</div></article></div>${listing("timesheets", "Timesheet", w.timesheets, (r) => `<h3>${esc(r.date || "Date not recorded")} · ${esc(r.hours)} hours</h3><p>${esc([r.start, r.end].filter(Boolean).join(" – "))}</p><p>${esc(r.engineer || current.engineer)}</p><p>${esc(r.note)}</p>`)}<p class="muted">Total recorded time: ${workflowProgress(current).hours} hours</p>`;
+      return `<div class="wf-grid"><article class="wf-card" ${holdAttributes("finalisation", "status", "", "Visit status", false)}><h3>Visit status</h3><dl>${editableValue("finalisation", "status", "Status", current.status)}</dl><p>${current.results.filter((r) => r.state === "Not tested").length} device results remain Not tested.</p><p>${workflowProgress(current).requiredComplete} / ${workflowProgress(current).requiredTotal} required work actions complete.</p>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("finalisation", "technicianNote", "", "Visit notes", false)}><h3>Visit notes</h3><dl>${editableValue("finalisation", "technicianNote", "Technician note", w.finalisation.technicianNote)}${editableValue("finalisation", "invoiceNote", "Invoice note", w.finalisation.invoiceNote)}</dl>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("acknowledgement", "name", "", "Client acknowledgement", false)}><h3>Client acknowledgement</h3><dl>${editableValue("acknowledgement", "name", "Client name", w.finalisation.clientAcknowledgement?.name)}${editableValue("acknowledgement", "recordedAt", "Acknowledgement time", w.finalisation.clientAcknowledgement?.recordedAt)}${editableValue("acknowledgement", "note", "Acknowledgement note", w.finalisation.clientAcknowledgement?.note)}</dl><p class="muted">A typed acknowledgement record, not a digital signature or certificate.</p>${button("Record acknowledgement", "edit:acknowledgement")}</article><article class="wf-card"><h3>Review and export</h3><p class="muted">Review actual findings, limitations and the condition left. Completing a job never passes equipment.</p><div class="actions">${button("Draft service report", "navigate:print")}${button("Export job", "navigate:export")}${button("Review results", "navigate:Results")}</div></article></div>${listing("timesheets", "Timesheet", w.timesheets, (r) => `<h3>Time entry</h3><dl>${editableValue("timesheets", "date", "Work date", r.date, r.id)}${editableValue("timesheets", "hours", "Hours", r.hours, r.id)}${editableValue("timesheets", "start", "Start time", r.start, r.id)}${editableValue("timesheets", "end", "End time", r.end, r.id)}${editableValue("timesheets", "engineer", "Engineer", r.engineer, r.id)}${editableValue("timesheets", "note", "Time note", r.note, r.id)}</dl>`)}<p class="muted">Total recorded time: ${workflowProgress(current).hours} hours</p>`;
     return empty("Choose a job section.");
   }
   function editorContent(w) {
@@ -464,12 +482,18 @@ export function renderWorkflowSection(
               ? select(
                   label,
                   name,
-                  ["Fire alarm maintenance", "General fault or repair work"],
+                  [["", "Choose work type"], "Fire alarm maintenance", "General fault or repair work"],
                   source[name],
                 )
               : input(label, name, source[name], type || "text"),
         )
         .join("");
+    }
+    if (collection === "site") {
+      title = "Site details";
+      fields = input("Site name", "name", currentSite.name, "text", true) +
+        area("Site address", "address", currentSite.address) +
+        '<p class="muted">These details belong to the permanent site and are shared by its visits. Drawing revisions and visit results are retained.</p>';
     }
     if (collection === "appointments") {
       title = "Appointment";
@@ -588,7 +612,7 @@ export function renderWorkflowSection(
             }
             return;
           }
-          if (action === "edit") {
+          if (action === "edit" || action === "add") {
             openEditor(
               collection,
               id ? (w[collection] || []).find((r) => r.id === id) : null,
@@ -613,23 +637,32 @@ export function renderWorkflowSection(
           for (const checkbox of form.querySelectorAll("input[type=checkbox]"))
             values[checkbox.name] = checkbox.checked;
           let next;
-          if (key === "instructions") {
+          if (key === "site") {
+            next = clone(currentSite);
+            next.name = text(values.name, "Site name", true);
+            next.address = text(values.address, "Site address");
+            await save(next, true);
+            return;
+          } else if (key === "instructions") {
             next = clone(current);
             for (const name of [
               "system",
               "engineer",
               "workType",
+              "visitDate",
               "scope",
               "instructions",
             ])
               next[name] = text(values[name], name);
             if (
               ![
+                "",
                 "Fire alarm maintenance",
                 "General fault or repair work",
               ].includes(next.workType)
             )
               throw Error("Choose a supported work type.");
+            date(next.visitDate, "Visit date");
             next = updateWorkflow(next, "details", {});
           } else if (groups[key])
             next = updateWorkflow(current, "details", values);
@@ -657,6 +690,15 @@ export function renderWorkflowSection(
       };
     }
   }
+  root.openEditor = (group, field = "", recordId = "") => {
+    const records = normalizeWorkflow(current)[group];
+    const record = recordId && Array.isArray(records) ? records.find((item) => item.id === recordId) : null;
+    if (recordId && !record) return false;
+    return openEditor(group, record, field);
+  };
+  root.disposeHoldToEdit = attachHoldToEdit(root, {
+    onEdit: (target) => root.openEditor(target.dataset.holdEdit, target.dataset.holdField, target.dataset.holdRecord),
+  });
   render();
   return root;
 }
@@ -670,11 +712,13 @@ export function renderWorkflowReport(job) {
     records.length
       ? `<section><h3>${title}</h3>${records.map((record) => `<article class="result-record">${row(record)}</article>`).join("")}</section>`
       : "";
-  root.innerHTML = `<h2>Visit workflow</h2><dl>${show("Job reference", w.details.reference)}${show("Job title", w.details.title)}${show("Description", w.details.description)}${show("Client", w.details.client)}${show("Estimated hours", w.details.estimatedHours)}${show("Safety requirements", w.details.safetyRequirements)}${show("Service requirements", w.details.serviceRequirements)}</dl>
-    ${list("Work actions", w.tasks, (r) => `<p><strong>${esc(r.title)}</strong> · ${r.complete ? "Complete" : "Not complete"}${r.required ? " · Required" : ""}</p><p>${esc(r.notes)}</p>`)}
+  const paragraph = (value) => hasValue(value) ? `<p>${esc(value)}</p>` : "";
+  const details = show("Job reference", w.details.reference) + show("Job title", w.details.title) + show("Description", w.details.description) + show("Client", w.details.client) + show("Estimated hours", w.details.estimatedHours) + show("Safety requirements", w.details.safetyRequirements) + show("Service requirements", w.details.serviceRequirements);
+  const content = `${list("Work actions", w.tasks, (r) => `<p><strong>${esc(r.title)}</strong> · ${r.complete ? "Complete" : "Not complete"}${r.required ? " · Required" : ""}</p>${paragraph(r.notes)}`)}
     ${list("Products and labour", w.products, (r) => `<p><strong>${esc(r.description)}</strong> · ${r.complete ? "Used / complete" : "Planned"}</p><p>${esc(r.quantity)} ${esc(r.unit)}${r.unitCost !== null ? ` · ${esc(r.currency)} ${(r.quantity * r.unitCost).toFixed(2)}` : ""}</p>`)}
-    ${list("Recorded time", w.timesheets, (r) => `<p>${esc(r.date)} · ${esc(r.hours)} hours · ${esc(r.engineer || job.engineer)}</p><p>${esc(r.note)}</p>`)}
-    ${w.finalisation.technicianNote ? `<h3>Technician note</h3><p>${esc(w.finalisation.technicianNote)}</p>` : ""}
-    ${w.finalisation.clientAcknowledgement ? `<h3>Client acknowledgement record</h3><p>${esc(w.finalisation.clientAcknowledgement.name)} · ${esc(w.finalisation.clientAcknowledgement.recordedAt)}</p><p>${esc(w.finalisation.clientAcknowledgement.note)}</p><p>A typed acknowledgement record; not a digital signature or certificate.</p>` : ""}`;
+    ${list("Recorded time", w.timesheets, (r) => `<p>${[r.date, `${r.hours} hours`, r.engineer || job.engineer].filter(hasValue).map(esc).join(" · ")}</p>${paragraph(r.note)}`)}
+    ${hasValue(w.finalisation.technicianNote) ? `<h3>Technician note</h3>${paragraph(w.finalisation.technicianNote)}` : ""}
+    ${w.finalisation.clientAcknowledgement ? `<h3>Client acknowledgement record</h3><p>${esc(w.finalisation.clientAcknowledgement.name)} · ${esc(w.finalisation.clientAcknowledgement.recordedAt)}</p>${paragraph(w.finalisation.clientAcknowledgement.note)}<p>A typed acknowledgement record; not a digital signature or certificate.</p>` : ""}`.trim();
+  if (details || content) root.innerHTML = `<h2>Visit workflow</h2>${details ? `<dl>${details}</dl>` : ""}${content}`;
   return root;
 }

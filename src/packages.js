@@ -1,4 +1,5 @@
 import { validateWorkflow } from "./job-workflow.js";
+import { validateSiteProfile } from "./site-profile.js";
 
 export const PACKAGE_FORMAT = "JobsPackage";
 export const PACKAGE_VERSION = 2;
@@ -418,6 +419,7 @@ export function validateJobPackage(input) {
   const { site, job } = input;
   string(site.id, "site.id");
   string(site.name, "site.name");
+  if (site.profile !== undefined) validateSiteProfile(site.profile);
   if (site.address != null) string(site.address, "site.address", false);
   if (site.sourceKeys != null) {
     array(site.sourceKeys, "site.sourceKeys");

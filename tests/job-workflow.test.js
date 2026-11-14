@@ -222,3 +222,22 @@ test('draft workflow report includes actual work and safely separates private no
     else globalThis.document = originalDocument;
   }
 });
+
+test('draft workflow report omits unfilled sections while retaining a recorded zero estimate', () => {
+  const originalDocument = globalThis.document;
+  globalThis.document = { createElement: () => ({ className: '', innerHTML: '' }) };
+  try {
+    assert.equal(renderWorkflowReport(fixture()).innerHTML, '');
+    const withEstimate = updateWorkflow(fixture(), 'details', { estimatedHours: 0, description: '   ' });
+    const estimateReport = renderWorkflowReport(withEstimate).innerHTML;
+    assert.match(estimateReport, /Estimated hours<\/dt><dd>0<\/dd>/);
+    assert.doesNotMatch(estimateReport, /Description|Client|Safety requirements|Work actions|Recorded time/);
+    const taskOnly = updateWorkflow(fixture(), 'tasks', task({ notes: '' }));
+    const taskReport = renderWorkflowReport(taskOnly).innerHTML;
+    assert.match(taskReport, /Work actions/);
+    assert.doesNotMatch(taskReport, /<dl>|<p>\s*<\/p>|Job reference|Client acknowledgement/);
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  }
+});

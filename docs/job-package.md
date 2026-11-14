@@ -43,6 +43,14 @@ The example is structural: a valid package must include the drawing selected by 
 
 Every active asset has one visit result, initialized to `Not tested`. A result has stable `id`, `assetId`, `state`, `observations`, `notes`, `defects`, `readings`, and `photos`. States are `Not tested`, `Satisfactory`, `Unsatisfactory`, `Inaccessible`, `Not applicable`. The last three require an explanation in observations, notes or defects. Readings contain `{name, value, unit}`. Decoded photos contain `{id, image, caption?, createdAt?}`. Images are complete base64 PNG, JPEG, WebP, GIF, AVIF or BMP data URIs. Active online photo URLs and SVG attachments are rejected. No remote photo is silently treated as included.
 
+### Site folders and job defaults
+
+Every job belongs to a named permanent site folder. Optional `site.profile` version 1 stores only recorded reusable fields: `client`, `contactName`, `contactPhone`, `contactEmail`, `accessHours`, `accessProcedure`, `safetyRequirements`, `serviceRequirements`, `system`, `workType`, `engineer`, `scope` and `instructions`. Values are bounded strings; empty values are omitted. Work type is one of the two supported visit types when recorded. The profile is validated before package import changes local records.
+
+A new job copies the recorded profile values into its own core fields and `workflow.details`. Subsequent job edits do not change the site's defaults, and editing the defaults does not change older visits. Empty fields are omitted from the displayed job and printable report; `Add details` remains available to enter them. Internal empty defaults needed by the package's core schema are still accepted for compatibility.
+
+The job's `drawingId` pins its own saved map revision. That drawing's geometry, source envelope, PNG and photographs are included in the package; they do not depend on the latest site plan or a remote link. Updating the site plan appends a revision and leaves existing visits on their saved map. Importing a revised plan explicitly inside a job creates its reviewed drawing change/history instead.
+
 ## Attachment pool and decoding
 
 Version 2 replaces repeated image strings in the wire `site` and `job` with `null`, and lists their exact locations separately:

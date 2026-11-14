@@ -49,7 +49,8 @@ test('editable visit sections retain work, materials, purchase records and final
   await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Engineer Two');
   await page.getByRole('textbox', { name: 'Instructions', exact: true }).fill('Agree access with training manager.');
   await saveEditor(page, 'Save scope & assignment');
-  await page.locator('[data-wf-action="edit:contact"]').click();
+  await page.getByTestId('add-job-details').locator('summary').click();
+  await page.getByRole('button', { name: 'Client & contacts', exact: true }).click();
   await page.getByRole('textbox', { name: 'Client', exact: true }).fill('Synthetic Training Client');
   await page.getByRole('textbox', { name: 'Contact name', exact: true }).fill('Training Manager');
   await saveEditor(page, 'Save client & contacts');

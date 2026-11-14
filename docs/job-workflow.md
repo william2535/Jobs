@@ -4,6 +4,12 @@ Jobs uses the supplied application screenshots as a workflow reference. It does 
 
 The job workspace separates **Details**, **Work**, **Products**, **POs** and **Finalisation**. Related fields open in small editable groups; devices and other repeated records use compact cards. Plans, device evidence and results remain linked to the existing job and selected drawing revision.
 
+Create the permanent site folder first, then create its visit jobs. A new job can inherit the site's saved defaults without inventing missing client, contact, access or equipment information. Details shows populated fields and actual visit status; empty fields and empty groups are omitted. The **Add details** picker exposes every supported editor, including groups that are not yet shown. A populated group's Edit button also lets the engineer add or clear its fields. Clearing a field removes its readout after saving; zero-valued estimates remain visible.
+
+Hold a saved readout for three seconds to open its editor with that field focused. A short tap does not edit; scrolling or moving the pointer cancels the hold. The visible Edit/Add buttons remain available, and focused readouts support Enter/Space. Appointments, tasks, products, purchase orders, notes, acknowledgements and timesheets use the same shortcut. Unfilled fields are omitted from these records too. Empty record collections keep a compact Add control; completion still requires an explicit saved choice.
+
+The permanent site name/address has its own editor and save callback; it does not replace a visit or its results. Unfilled system/work-type/date fields stay empty until entered and do not appear as placeholder boxes. `renderWorkflowSection` accepts `onSaveSite(updatedSite)` separately from `onSave(updatedJob)` and exposes `root.openEditor(group, field?, recordId?)` for job-header shortcuts. Call `root.disposeHoldToEdit()` before removing the component to release its delegated document listeners. The host remains responsible for transactional storage and save-failure reporting. Each visit remains linked to its saved drawing revision; updating the site map does not automatically replace earlier visits' plans.
+
 ## Local data contract
 
 `job.workflow` is a version 1 extension to the Jobs package. It travels inside the exported job JSON and remains separate from permanent site/drawing data and `job.results`.

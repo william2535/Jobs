@@ -1,21 +1,23 @@
 # Milestone verification
 
-Verified on 13 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Automated fixtures and committed screenshots are synthetic. Physical iPhone/Android testing remains outstanding.
+Original milestone verified on 13 November 2026; site-folder and hold-edit update verified on 14 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Automated fixtures and committed screenshots are synthetic. Physical iPhone/Android testing remains outstanding.
 
 ## References and repository boundaries
 
 - Zone Sketch reference: `dca2eff063f52a9980c2aed255879a65cc579379`; its actual importer/exporter, engine, documentation and proprietary licence were inspected. No AGENTS.md was present. The source checkout remains unchanged.
-- The approved companion receiver is in [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit `9f6728bc68fa589a1d69b80643ecbfdd02ea0728`. It adds one receiver insertion in the web entry point and documentation. It is not merged or deployed; Android files and licences are unchanged.
+- The approved companion receiver is in [Zone Sketch PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40), commit `ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f`. It adds one receiver insertion in the web entry point and documentation. It is not merged or deployed; Android files and licences are unchanged.
 - FINDR reference: `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`; repository instructions and actual local Panel Pal storage/engine were inspected. No FINDR changes were made.
 - The owner's Jobs build brief and uploaded files were inspected. The existing customer save was used privately, with no copy added to public assets, automated fixtures or screenshots.
 
 ## Automated checks
 
-`npm test`: **86 passed**. Coverage includes current and legacy Zone Sketch import, source identities, non-equipment exclusions, issued snapshots, no-zone layouts, immutable drawing revisions, attachments, package v1/v2, duplicate/conflict detection, atomic save failures, stale-tab rejection, workflow records, Panel Pal evidence separation, PNG cache validation, mobile dashboard calculations and secure handoff/return reconciliation.
+`npm test`: **110 passed**. Coverage includes current and legacy Zone Sketch import, source identities, non-equipment exclusions, issued snapshots, no-zone layouts, immutable drawing revisions, attachments, package v1/v2, duplicate/conflict detection, atomic save failures, stale-tab rejection, workflow records, Panel Pal evidence separation, PNG cache validation, mobile dashboard calculations and secure handoff/return reconciliation. Site-folder cases verify required site identity, independent inheritance of recorded defaults, profile validation and package preservation. Unfilled workflow/report fields are omitted. Fourteen gesture cases cover the full three-second threshold, early release, movement, scrolling, multiple pointers, hidden/inert screens, keyboard editing and cleanup.
 
 `npm run build`: passed. The production shell has no runtime npm dependencies. Its service worker precaches the built modules/styles, icons, manifest, synthetic demonstration and original licence notices. No customer files enter the build.
 
-`npm run test:e2e`: **17 passed, 1 intentional desktop skip**. The production suite covers desktop Chromium and Pixel 7 emulation, including a separate 320px layout check. The mobile dashboard case intentionally runs only on the mobile project.
+`npm run test:e2e`: **23 passed, 1 intentional desktop skip**. The production suite covers desktop Chromium and Pixel 7 emulation, including a separate 320px layout check. Six new cases cover site-first creation, inherited recorded details, omission of empty fields, three-second and keyboard editing, offline reopen, package reimport and saved per-job maps that remain unchanged after site plan updates. The mobile dashboard case intentionally runs only on the mobile project.
+
+After the final site/equipment draft guard was added, `npx playwright test tests/site-first-hold.spec.js` passed **8 of 8** cases on the final production build: the six site-first cases plus two new desktop/mobile draft-protection cases. Cancelling either save prompt preserves both forms and the exact stored records; an explicitly accepted save commits only its intended form. These are 25 distinct passing browser cases across the full regression and final targeted runs, plus the intentional skip.
 
 | Workflow | Verified behaviour |
 | --- | --- |
@@ -29,7 +31,10 @@ Verified on 13 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Autom
 | PNG plans | Working/issued selectors, exact offline PNG download, genuine full-image Fit and zoom, included historical evidence, paged asset navigation |
 | Manual equipment | Unknown positions remain unknown; unrelated external symbols are not silently equated by human reference alone; archived evidence remains intact |
 | Editable job workflow | Details, scope, contacts, appointments, actions, products, local POs, timesheets and finalisation survive reload/export |
+| Site folders and hold editing | Create a named site first, then its job file; recorded site details are copied, empty boxes are hidden, and filled fields open after a three-second hold or Edit/keyboard |
+| Each job’s saved map | Existing job retains original drawing and exact PNG bytes after a newer plan is saved to the site; offline export/import includes that job’s map |
 | Save-time input protection | A deliberately delayed local save makes the editable area inert until completion, preventing late typing from being discarded by the saved render |
+| Concurrent site/equipment drafts | Saving one form warns before discarding the other unfinished form; cancelling retains both drafts and saved records |
 | Mobile workspace | Deep-blue dashboard shows actual completion/time, date filters, job search, products and timesheets; fixed navigation; no horizontal page overflow at 320px |
 | Reports/FINDR | Draft report contains actual engineer evidence; Panel Pal export identifies its adapter as future work |
 
@@ -60,7 +65,7 @@ Earlier v2 attachment-pooling verification retained the real source plus four ed
 
 ## Previews and boundaries
 
-Synthetic previews: [mobile dashboard](screenshots/mobile-dashboard.png), [mobile job details](screenshots/mobile-details.png), [mobile assets](screenshots/mobile-device-grid.png), [mobile plans](screenshots/mobile-png-plan.png), [desktop workspace](screenshots/desktop-home.png).
+Synthetic previews: [mobile site-folder job](screenshots/mobile-site-job-screen.png), [hold editor](screenshots/mobile-hold-editor-screen.png), [desktop site-folder job](screenshots/desktop-site-job.png), [mobile dashboard](screenshots/mobile-dashboard.png), [mobile assets](screenshots/mobile-device-grid.png), [mobile plans](screenshots/mobile-png-plan.png), [desktop workspace](screenshots/desktop-home.png).
 
 The public automatic connection becomes available after the companion Zone Sketch PR is merged and deployed. Jobs reports a missing receiver or blocked popup; it does not claim a connection before acknowledgement. Cold-opening the external Zone Sketch editor offline depends on that application's own caching, which the inspected web app does not provide. Jobs' saved PNG viewing, recording and export work independently offline.
 
