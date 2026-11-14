@@ -7,17 +7,19 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_d425118224e08191a9d08650d5f77855` (FINDR dashboard launcher)
-- Successful deployment: `appgdep_6af8621f3d8881918fb1a68366390edf`
-- Application source: Jobs commit `543a647a5468b810fd9c775adf050001170e1650`
-- Sanitized hosting-source commit: `ce824d49f2783c76d052071e49467318896435be`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_99f3d8d62c14819195d89768d7a2396a` (Zone Sketch navigation)
+- Successful deployment: `appgdep_6af864e04ff08191a2b7c57b2c882559`
+- Application source: Jobs commit `2a2464f3278947551650eb565f1396ce322a1631`
+- Sanitized hosting-source commit: `29af4359be1bc065a66c33a68ffcf3174222a3f9`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
 The notes and device-remarks update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
 
-The latest update adds the original circular FINDR logo directly beneath Toolbox. It opens `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; no job context is transferred. The native deployment reported **succeeded**, and all 12 published files matched the production build byte-for-byte. The existing mobile dashboard browser case passed, and a focused browser check verified a real app launch, the logo's offline cache, a 44px touch target and 320px layout.
+The latest update replaces Stock in the mobile bottom navigation with Zone Sketch. It opens the existing editor at `https://william2535.github.io/FIRE-ZONE-PLAN-APP/` in a separate tab; per-job product records are retained. FINDR remains immediately beneath Toolbox and continues to open its existing app. Neither launcher transfers job context.
+
+The native deployment reported **succeeded**, and all 12 published files matched the production build byte-for-byte. The updated existing mobile dashboard browser case passed. A focused browser click opened the actual Zone Sketch v0.64 editor and verified the third navigation position, a 44px touch target, retained FINDR shortcut and 320px layout.
 
 The preceding milestone passed 163 unit tests and 41 applicable browser cases, followed by all 8 affected Notes/remarks checks after its final layout adjustment. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
