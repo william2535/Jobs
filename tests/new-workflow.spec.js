@@ -340,7 +340,7 @@ test('manual equipment stays unplaced and an unrelated supplied plan preserves i
 test('an in-progress local save prevents typing that could otherwise be lost', async ({ page }) => {
   await createJob(page);
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid > button').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   const notes = page.getByRole('textbox', { name: 'Notes', exact: true });
   await notes.fill('The engineer-confirmed note to save.');
   // Hold the save completion signal, modelling a slow device without a timed sleep.
@@ -376,6 +376,6 @@ test('an in-progress local save prevents typing that could otherwise be lost', a
   await page.reload();
   await page.getByTestId('job-card').first().click();
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid > button').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('The engineer-confirmed note to save.');
 });

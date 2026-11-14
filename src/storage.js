@@ -1,3 +1,5 @@
+import { validateQuickDefects } from "./quick-defects.js";
+
 const DATABASE = "jobs-local";
 const VERSION = 2;
 let connection;
@@ -56,9 +58,15 @@ export async function loadState() {
     const sites = transaction.objectStore("sites").getAll();
     const jobs = transaction.objectStore("jobs").getAll();
     const revision = transaction.objectStore("metadata").get("revision");
+    const quickDefects = transaction.objectStore("metadata").get("quick-defects");
     transaction.oncomplete = () => {
-      lastSeenRevision = revision.result?.value || 0;
-      resolve({ sites: sites.result, jobs: jobs.result });
+      try {
+        const library = validateQuickDefects(quickDefects.result?.value);
+        lastSeenRevision = revision.result?.value || 0;
+        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library });
+      } catch (error) {
+        reject(error);
+      }
     };
     transaction.onerror = () =>
       reject(transaction.error || new Error("Could not read local jobs."));
@@ -71,6 +79,9 @@ export async function loadState() {
 export async function saveState(state) {
   if (!state || !Array.isArray(state.sites) || !Array.isArray(state.jobs))
     throw new Error("Invalid local state.");
+  // Older callers omit this key. Omission must preserve the stored library;
+  // an explicitly supplied empty array is the deliberate clear operation.
+  const quickDefects = state.quickDefects === undefined ? undefined : validateQuickDefects(state.quickDefects);
   for (const collection of [state.sites, state.jobs]) {
     if (
       collection.some(
@@ -98,7 +109,7 @@ export async function saveState(state) {
     };
     transaction.onerror = () =>
       reject(
-        transaction.error ||
+        failure || transaction.error ||
           new Error(
             "Could not save locally. Export your work and free browser storage.",
           ),
@@ -124,6 +135,8 @@ export async function saveState(state) {
           store.clear();
           for (const record of state[name]) store.put(record);
         }
+        if (quickDefects !== undefined)
+          transaction.objectStore("metadata").put({ key: "quick-defects", value: quickDefects });
         transaction
           .objectStore("metadata")
           .put({ key: "revision", value: expectedRevision + 1 });

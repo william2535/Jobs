@@ -13,6 +13,9 @@ import "./job-settings.css";
 import "./quick-job.css";
 import "./device-workspace.css";
 import "./device-remarks-ui.css";
+import "./device-cards.css";
+import { validateQuickDefects } from "./quick-defects.js";
+import { applyQuickDeviceResult } from "./device-results.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
 import { renderDeviceRemarks, renderDeviceRemarkReport, renderRemarkProducts, renderRemarkPhotos, renderRemarkHistory } from "./device-remarks-ui.js";
 import { renderJobNotes, renderNotesReport, validateNotesDocument } from "./job-notes.js";
@@ -64,6 +67,7 @@ let state = { sites: [], jobs: [] },
   deviceQuery = "",
   deviceState = "",
   devicePage = 0,
+  pendingCardResult = null,
   importTargetJob = null,
   importTargetSite = null,
   handoff = null,
@@ -200,6 +204,7 @@ function focusDevice() {
 }
 function resetDeviceBrowser() {
   selectedAsset = null;
+  pendingCardResult = null;
   deviceTab = "Record";
   deviceQuery = "";
   deviceState = "";
@@ -240,6 +245,53 @@ async function saveJob(updatedJob, afterTab = null) {
     operationPending = false;
     updateInteractionLock();
   }
+}
+async function saveQuickDefects(templates, remarkId) {
+  if (operationPending) return false;
+  operationPending = true;
+  updateInteractionLock();
+  try {
+    const next = structuredClone(state);
+    next.quickDefects = validateQuickDefects(templates);
+    if (!(await persist(next))) return false;
+    render();
+    return true;
+  } finally {
+    operationPending = false;
+    updateInteractionLock();
+    if (remarkId) [...document.querySelectorAll('[data-star-remark]')]
+      .find(button => button.dataset.starRemark === remarkId)?.focus({ preventScroll: true });
+  }
+}
+// Called inside runTask so the whole device write has the same save lock.
+async function saveCardResult(assetId, outcome, explanation = "") {
+  const next = structuredClone(state);
+  const index = next.jobs.findIndex(job => job.id === activeJob);
+  if (index < 0 || draftJob) throw Error("Save this job before recording results.");
+  const original = next.jobs[index];
+  const changed = applyQuickDeviceResult(original, assetId, outcome, explanation);
+  changed.results.find(result => result.assetId === assetId).recordedBy = effectiveJob(original, siteOf(original)).engineer;
+  changed.revision = original.revision + 1;
+  changed.updatedAt = now();
+  next.jobs[index] = changed;
+  if (!(await persist(next))) return false;
+  pendingCardResult = null;
+  render();
+  const row = [...document.querySelectorAll('.device-row')].find(row => row.dataset.assetId === assetId);
+  row?.querySelector(`[data-card-result="${outcome}"]`)?.focus({ preventScroll: true });
+  return true;
+}
+function bindCardResultForms(root = document) {
+  root.querySelectorAll('form[data-form="card-result"]').forEach(form => {
+    form.oninput = () => {
+      if (pendingCardResult?.assetId === form.dataset.asset) pendingCardResult.explanation = form.elements.explanation.value;
+      markDirty();
+    };
+    form.onsubmit = event => {
+      event.preventDefault();
+      runTask(() => submit(form));
+    };
+  });
 }
 async function saveWorkflowSite(updatedSite) {
   if (operationPending) return false;
@@ -494,14 +546,25 @@ function render() {
   );
   if (page === "job" && tab === "Devices" && j && $("#device-search")) {
     const update = () => {
-      deviceQuery = $("#device-search").value;
-      deviceState = $("#device-state").value;
+      const query = $("#device-search").value, filter = $("#device-state").value;
+      if (pendingCardResult) {
+        if (!confirm("Discard the unsaved result change before changing the device filter?")) {
+          $("#device-search").value = deviceQuery;
+          $("#device-state").value = deviceState;
+          return;
+        }
+        pendingCardResult = null;
+        markDirty(false);
+      }
+      deviceQuery = query;
+      deviceState = filter;
       devicePage = 0;
       updateDeviceGrid(j, drawingOf(s, j));
     };
     $("#device-search").oninput = update;
     $("#device-state").onchange = update;
   }
+  bindCardResultForms();
   if ($("#device-jump"))
     $("#device-jump").onchange = (event) => {
       const nextId = event.target.value;
@@ -524,6 +587,8 @@ function render() {
     if (result && asset && $("#device-remarks-root")) {
       $("#device-remarks-root").append(renderDeviceRemarks({
         result, asset,
+        quickDefects: state.quickDefects || [],
+        onQuickDefectsChange: saveQuickDefects,
         onDirty: markDirty,
         onBeforeEdit: () => {
           if (quickForm?.dataset.dirty === "true") {
@@ -770,7 +835,12 @@ function deviceCards(j, d) {
     (devicePage + 1) * devicePageSize(),
   );
   return `<p class="device-count" role="status">${found.length} of ${d.assets.length} devices${pages > 1 ? ` · Page ${devicePage + 1} of ${pages}` : ""}</p>
-    <div class="device-browser-grid">${visible.map((a) => `<button class="device-row" data-action="asset:${esc(a.id)}"><strong>${esc(a.reference || a.type)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small>${badge(j.results.find((r) => r.assetId === a.id)?.state || "Not tested")}${deviceHistoryLabel(a, j)}</button>`).join("")}</div>
+    <div class="device-browser-grid">${visible.map(a => {
+      const result = j.results.find(value => value.assetId === a.id);
+      const pending = pendingCardResult?.assetId === a.id ? pendingCardResult : null;
+      const reference = a.reference || a.type;
+      return `<article class="device-row" data-asset-id="${esc(a.id)}"><div class="device-card-heading"><button class="device-open" data-action="asset:${esc(a.id)}"><strong>${esc(reference)}</strong><small>${esc(a.typeName || a.type)} · ${esc(a.floorName || "Location not supplied")}</small></button><button class="device-edit" data-action="edit-defects:${esc(a.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 15z"/></svg><span>Edit</span></button></div>${badge(result?.state || "Not tested")}<div class="device-card-results" role="group" aria-label="Today's result for ${esc(reference)}">${[["pass", "Pass", "Satisfactory"], ["fail", "Fail", "Unsatisfactory"], ["na", "N/A", "Not applicable"]].map(([key, label, value]) => `<button data-action="card-result:${key}:${esc(a.id)}" data-card-result="${value}" aria-pressed="${result?.state === value}">${label}</button>`).join("")}</div>${pending ? `<form data-form="card-result" class="device-quick-explanation" data-asset="${esc(a.id)}"><strong>${pending.state === "Unsatisfactory" ? "Fail" : "N/A"} — add a reason to save</strong><label>Explanation<textarea name="explanation" rows="2" maxlength="10000" required>${esc(pending.explanation)}</textarea></label><div class="actions"><button type="submit" class="primary">Save result</button><button type="button" data-action="cancel-card-result">Cancel</button></div></form>` : ""}${deviceHistoryLabel(a, j)}</article>`;
+    }).join("")}</div>
     ${!found.length ? '<p class="empty">No devices match. Try another reference, floor or result.</p>' : ""}
     ${pages > 1 ? `<div class="device-pagination"><button data-action="device-page:${devicePage - 1}" ${devicePage === 0 ? "disabled" : ""}>Previous devices</button><span>Page ${devicePage + 1} / ${pages}</span><button data-action="device-page:${devicePage + 1}" ${devicePage === pages - 1 ? "disabled" : ""}>Next devices</button></div>` : ""}`;
 }
@@ -778,6 +848,7 @@ function updateDeviceGrid(j, d) {
   const root = $("#device-grid-results");
   root.innerHTML = deviceCards(j, d);
   bindActions(root);
+  bindCardResultForms(root);
 }
 function devices(j, d) {
   const a = d.assets.find((a) => a.id === selectedAsset);
@@ -887,6 +958,13 @@ async function readJob(file) {
   }
 }
 async function action(a) {
+  if (a === "cancel-card-result") {
+    pendingCardResult = null;
+    markDirty(false);
+    error = ""; message = "";
+    render();
+    return;
+  }
   if (a === "add-reading") {
     $("#reading-rows").insertAdjacentHTML(
       "beforeend",
@@ -912,7 +990,36 @@ async function action(a) {
     }
     if (!confirm("Leave this form and discard unsaved changes?")) return;
     dirty = false;
+    pendingCardResult = null;
     saveLabel = draftJob ? "Not saved yet" : "Saved on this device";
+  }
+  if (a.startsWith("card-result:")) {
+    const rest = a.slice("card-result:".length), separator = rest.indexOf(":");
+    const outcome = { pass: "Satisfactory", fail: "Unsatisfactory", na: "Not applicable" }[rest.slice(0, separator)];
+    const assetId = rest.slice(separator + 1);
+    const job = currentJob(), result = job?.results.find(value => value.assetId === assetId);
+    if (!outcome || !result || draftJob) throw Error("Open a saved device to record its result.");
+    const hasExplanation = [result.observations, result.notes, result.defects].some(value => value?.trim());
+    // An explicit Fail can use the defect already recorded on this device.
+    const defect = outcome === "Unsatisfactory" && !hasExplanation
+      ? result.remarks?.items.find(item => item.status === "Open" && item.description?.trim()) : null;
+    if (outcome !== "Satisfactory" && !hasExplanation && !defect) {
+      pendingCardResult = { assetId, state: outcome, explanation: "" };
+      markDirty();
+      render();
+      document.querySelector('form[data-form="card-result"] textarea')?.focus({ preventScroll: true });
+      return;
+    }
+    return saveCardResult(assetId, outcome, defect?.description || "");
+  }
+  if (a.startsWith("edit-defects:")) {
+    if (draftJob) throw Error("Save this job before recording defects.");
+    selectedAsset = a.slice("edit-defects:".length);
+    deviceTab = "Defects";
+    tab = "Devices";
+    render();
+    focusDevice();
+    return;
   }
   if (a === "create") {
     const site = page === "site" ? state.sites.find((site) => site.id === activeSite) : null;
@@ -1120,6 +1227,11 @@ async function submit(form) {
     document.querySelector('.site-profile[data-dirty="true"]') &&
     !confirm("Add this device and discard the unsaved site details? Cancel keeps both drafts open.")
   ) return;
+  if (type === "card-result") {
+    if (!pendingCardResult || pendingCardResult.assetId !== form.dataset.asset)
+      throw Error("Choose the device result again.");
+    return saveCardResult(pendingCardResult.assetId, pendingCardResult.state, v.explanation);
+  }
   if (type === "site") {
     const s = newSite(v.name.trim(), v.address);
     if (!s.name) throw Error("Enter a site name.");
@@ -1317,6 +1429,15 @@ async function init() {
   if (status) status.textContent = offlineLabel;
 }
 window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
-  if (!dirty && !busy && !operationPending) render();
+  if (dirty || busy || operationPending) return;
+  // CSS adapts editors without discarding their open picker or unsaved draft.
+  if (page === "home") render();
+  else if (page === "job" && tab === "Devices" && !selectedAsset) {
+    const job = currentJob();
+    if (job && $("#device-grid-results")) {
+      devicePage = 0;
+      updateDeviceGrid(job, drawingOf(siteOf(job), job));
+    }
+  }
 });
 init();

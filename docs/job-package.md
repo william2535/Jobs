@@ -122,6 +122,8 @@ Optional core extensions are preserved in supported wire versions:
 
 IndexedDB database `jobs-local` version 2 has separate `sites`, `jobs` and `metadata` stores. A save replaces the application snapshot transactionally; all stores commit or none do. A metadata revision rejects stale tabs before they overwrite newer work. Save state is shown only after commit, and failures are visible. Cache Storage contains the application shell; IndexedDB contains expanded engineer data and attachments. The export pool reduces package size; shared Blob storage and on-device media deduplication remain future work.
 
+The optional `metadata` key `quick-defects` holds this browser's reusable defect wording. It is saved atomically with the snapshot and is preserved when an older caller omits `state.quickDefects`; an explicit empty array clears it. This library is not part of the job package. Applying a shortcut creates a fresh remark which, once saved, is included in that job's normal results and export. Job imports preserve the receiving browser's library. See [device remarks](device-remarks.md) for its fields and limits.
+
 Use one editing tab at a time. Stale-tab writes are rejected; automatic merging is not implemented. When rejected, keep a copy of unsaved form content before reloading. Export regularly. Installed apps still use browser-managed storage and can be evicted. Service-worker readiness must be confirmed before offline reopening.
 
 ## Included PNG preview cache

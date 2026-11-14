@@ -1,6 +1,7 @@
 /** Device findings are engineer records, separate from the device's test result. */
 import { validateDeviceRemarks, newDeviceRemark, saveDeviceRemark, SEVERITIES, REMARK_STATUSES } from './device-remarks.js';
 import { validateNotesDocument } from './job-notes.js';
+import { validateQuickDefects, findQuickDefect, addQuickDefect, removeQuickDefect, instantiateQuickDefect } from './quick-defects.js';
 
 const templates = ['Battery backup', 'Critical defect', 'Custom note', 'Customer advice given'];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -37,9 +38,10 @@ function readPhoto(file) {
   });
 }
 
-export function renderDeviceRemarks({ result, asset, onSave, onDirty = () => {}, onBeforeEdit = () => true, onEdit = () => {} }) {
+export function renderDeviceRemarks({ result, asset, onSave, onDirty = () => {}, onBeforeEdit = () => true, onEdit = () => {}, quickDefects = [], onQuickDefectsChange = async () => false }) {
   const root = document.createElement('section'); root.className = 'device-remarks';
   let records = recordsOf(result), draft = null, choosing = false, dirty = false, saving = false, loadingPhotos = false, disposed = false;
+  let library = validateQuickDefects(quickDefects), quickQuery = '';
   function changed() {
     dirty = true;
     const form = root.querySelector('form'); if (form) form.dataset.dirty = 'true';
@@ -96,8 +98,36 @@ export function renderDeviceRemarks({ result, asset, onSave, onDirty = () => {},
     } catch (cause) { if (!disposed) showError(cause); }
     finally { loadingPhotos = false; if (!disposed) lock(false); }
   }
+  async function toggleQuickDefect(item) {
+    if (saving || loadingPhotos || disposed || onBeforeEdit() === false) return;
+    root.querySelector('.remark-error').hidden = true;
+    try {
+      const existing = findQuickDefect(library, item);
+      const next = existing ? removeQuickDefect(library, existing.id) : addQuickDefect(library, item);
+      saving = true; lock(true);
+      const saved = await onQuickDefectsChange(next, item.id);
+      if (saved !== true) throw Error('Quick defect was not saved. The saved list is unchanged; try again.');
+      library = next;
+      if (!disposed) render();
+    } catch (cause) { if (!disposed) showError(cause); }
+    finally { saving = false; if (!disposed) lock(false); }
+  }
+  function quickRows() {
+    const query = quickQuery.trim().toLocaleLowerCase();
+    const matches = library.filter(item => !query || [item.title, item.description, item.recommendation, item.severity].some(value => value.toLocaleLowerCase().includes(query)));
+    return matches.map(item => `<div class="quick-defect-choice" data-quick-defect-id="${esc(item.id)}"><div><strong>${esc(item.title)}</strong>${item.description ? `<p>${esc(item.description)}</p>` : ''}</div><button type="button" data-use-quick-defect="${esc(item.id)}" aria-label="Add quick defect: ${esc(item.title)}">Add</button></div>`).join('') || `<p class="remark-empty">${library.length ? 'No saved quick defects match.' : 'Star a saved remark to use it again.'}</p>`;
+  }
+  function bindQuickChoices() {
+    root.querySelectorAll('[data-use-quick-defect]').forEach(button => {
+      button.onclick = () => begin(instantiateQuickDefect(library.find(item => item.id === button.dataset.useQuickDefect)));
+    });
+  }
   function renderList() {
-    return `<div class="remark-section-head"><div><h3>Device remarks</h3><p class="muted">${records.items.length} recorded for ${esc(asset?.reference || asset?.type || 'this device')}</p></div><button type="button" data-remark-action="add" aria-label="Add remark">＋ Add remark</button></div>${choosing ? `<section class="remark-template-picker" aria-label="Remark type"><div class="remark-template-head"><strong>Choose a remark</strong><button type="button" data-remark-action="close-picker">Cancel</button></div><div class="remark-template-grid">${templates.map(template => `<button type="button" data-remark-template="${esc(template)}">${esc(template)}</button>`).join('')}</div></section>` : ''}<div class="remark-card-grid">${records.items.map(item => `<article class="remark-card" data-remark-id="${esc(item.id)}"><div class="remark-card-head"><h3>${esc(item.title)}</h3><span class="remark-status ${item.status === 'Resolved' ? 'resolved' : ''}">${esc(item.status)}</span></div>${item.description ? `<p class="remark-summary-text">${esc(item.description)}</p>` : ""}<p class="remark-summary-meta">${[item.location, item.severity].filter(Boolean).map(esc).join(" · ")}</p>${item.beforePhotos.length || item.resolvedPhotos.length || item.products.length ? `<p class="remark-evidence-count">${[[item.beforePhotos.length, "before photos"], [item.resolvedPhotos.length, "resolved photos"], [item.products.length, "products"]].filter(([count]) => count).map(([count, label]) => `${count} ${label}`).join(" · ")}</p>` : ""}<button type="button" data-edit-remark="${esc(item.id)}">Edit remark</button></article>`).join('') || '<p class="remark-empty">Add a finding, advice or supporting photos for this device.</p>'}</div>`;
+    const cards = records.items.map(item => {
+      const starred = !!findQuickDefect(library, item);
+      return `<article class="remark-card" data-remark-id="${esc(item.id)}"><div class="remark-card-head"><h3>${esc(item.title)}</h3><span class="remark-status ${item.status === 'Resolved' ? 'resolved' : ''}">${esc(item.status)}</span></div>${item.description ? `<p class="remark-summary-text">${esc(item.description)}</p>` : ''}<p class="remark-summary-meta">${[item.location, item.severity].filter(Boolean).map(esc).join(' · ')}</p>${item.beforePhotos.length || item.resolvedPhotos.length || item.products.length ? `<p class="remark-evidence-count">${[[item.beforePhotos.length, 'before photos'], [item.resolvedPhotos.length, 'resolved photos'], [item.products.length, 'products']].filter(([count]) => count).map(([count, label]) => `${count} ${label}`).join(' · ')}</p>` : ''}<div class="remark-card-actions"><button type="button" data-edit-remark="${esc(item.id)}">Edit remark</button><button type="button" class="remark-quick-star" data-star-remark="${esc(item.id)}" aria-label="${starred ? 'Remove quick defect' : 'Save as quick defect'}" aria-pressed="${starred}" title="${starred ? 'Remove from saved quick defects' : 'Save as a quick defect for next time'}"><span aria-hidden="true">${starred ? '★' : '☆'}</span></button></div></article>`;
+    }).join('');
+    return `<div class="remark-section-head"><div><h3>Device remarks</h3><p class="muted">${records.items.length} recorded for ${esc(asset?.reference || asset?.type || 'this device')}</p></div><button type="button" data-remark-action="add" aria-label="Add remark">＋ Add remark</button></div>${choosing ? `<section class="remark-template-picker" aria-label="Remark type"><div class="remark-template-head"><strong>Choose a remark</strong><button type="button" data-remark-action="close-picker">Cancel</button></div><div class="remark-template-grid">${templates.map(template => `<button type="button" data-remark-template="${esc(template)}">${esc(template)}</button>`).join('')}</div><section class="saved-quick-defects"><h4>Saved quick defects</h4>${library.length > 5 ? `<label class="quick-defect-search">Find quick defects<input type="search" data-quick-search aria-label="Find quick defects" value="${esc(quickQuery)}" placeholder="Title or description"></label>` : ''}<div class="quick-defect-choices">${quickRows()}</div></section></section>` : ''}<div class="remark-card-grid">${cards || '<p class="remark-empty">Add a finding, advice or supporting photos for this device.</p>'}</div>`;
   }
   function renderEditor() {
     return `<form data-remark-form data-dirty="${dirty}"><div class="remark-editor-head"><div><h3>Edit remark</h3><small>${esc(asset?.reference || asset?.type || 'Device')}</small></div><button type="button" data-remark-action="cancel">Cancel</button></div><div class="remark-editor-columns"><section class="remark-section"><h4>Remark details</h4><div class="remark-section-body"><h5 class="remark-photo-heading">Before photos</h5>${imagesMarkup(draft.beforePhotos, 'beforePhotos', true)}${field('Remark title', 'title', draft.title, { required: true, max: 200 })}${field('Location', 'location', draft.location, { max: 1000 })}${field('Description', 'description', draft.description, { area: true })}${choice('Severity', 'severity', draft.severity, SEVERITIES)}${field('Internal note', 'internalNote', draft.internalNote, { area: true, hint: 'Kept out of the service report' })}${field('Last verified', 'lastVerified', draft.lastVerified, { type: 'date' })}</div></section><section class="remark-section"><h4>Resolution</h4><div class="remark-section-body"><h5 class="remark-photo-heading">Resolved photos</h5>${imagesMarkup(draft.resolvedPhotos, 'resolvedPhotos', true)}${field('Recommendation', 'recommendation', draft.recommendation, { area: true })}${choice('Remark status', 'status', draft.status, REMARK_STATUSES)}<div class="remark-products-head"><h4>Products</h4><button type="button" data-remark-action="add-product" aria-label="Add product">＋ Add product</button></div><div class="remark-products">${draft.products.map(product => `<div class="remark-product-row" data-remark-product="${esc(product.id)}"><label class="remark-product-description">Product description<input data-product-field="description" aria-label="Product description" maxlength="1000" value="${esc(product.description)}" required></label><label>Quantity<input data-product-field="quantity" aria-label="Quantity" type="number" min="0" max="1000000000" step="any" value="${esc(product.quantity)}" required></label><label>Unit<input data-product-field="unit" aria-label="Unit" maxlength="80" value="${esc(product.unit)}"></label><button type="button" data-remove-product="${esc(product.id)}">Remove product</button></div>`).join('')}</div></div></section></div><div class="remark-save-bar"><span class="remark-save-state" role="status">${dirty ? 'Unsaved remark changes' : 'Save when ready'}</span><button type="submit" class="primary">Save remark</button></div></form>`;
@@ -105,11 +135,19 @@ export function renderDeviceRemarks({ result, asset, onSave, onDirty = () => {},
   function render() {
     if (disposed) return;
     root.innerHTML = `<div class="remark-error notice error" role="alert" hidden></div>${draft ? renderEditor() : renderList()}`;
-    root.querySelector('[data-remark-action="add"]')?.addEventListener('click', () => { choosing = !choosing; render(); });
+    root.querySelector('[data-remark-action="add"]')?.addEventListener('click', () => { choosing = !choosing; quickQuery = ''; render(); });
     root.querySelector('[data-remark-action="close-picker"]')?.addEventListener('click', () => { choosing = false; render(); });
     root.querySelector('[data-remark-action="cancel"]')?.addEventListener('click', cancel);
     root.querySelectorAll('[data-remark-template]').forEach(button => { button.onclick = () => begin(newDeviceRemark(button.dataset.remarkTemplate)); });
     root.querySelectorAll('[data-edit-remark]').forEach(button => { button.onclick = () => begin(records.items.find(item => item.id === button.dataset.editRemark)); });
+    root.querySelectorAll('[data-star-remark]').forEach(button => { button.onclick = () => toggleQuickDefect(records.items.find(item => item.id === button.dataset.starRemark)); });
+    bindQuickChoices();
+    const search = root.querySelector('[data-quick-search]');
+    if (search) search.oninput = () => {
+      quickQuery = search.value;
+      root.querySelector('.quick-defect-choices').innerHTML = quickRows();
+      bindQuickChoices();
+    };
     const form = root.querySelector('form');
     if (!form) return;
     form.addEventListener('input', changed);

@@ -29,7 +29,7 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await page.goto('/');
   await page.locator('#job-file').setInputFiles({ name: 'grid.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
   await openJobSection(page, 'Devices');
-  const cards = page.locator('.device-browser-grid > button');
+  const cards = page.locator('.device-browser-grid > .device-row');
   const pageSize = await page.evaluate(() => window.matchMedia('(max-width: 700px)').matches ? 4 : 8);
   await expect(cards).toHaveCount(pageSize);
   await expect(cards.first()).toContainText('SD-01');
@@ -41,7 +41,7 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
 
   await page.locator('#device-search').fill('SD-37');
   await expect(cards).toHaveCount(1);
-  await cards.click();
+  await cards.locator('.device-open').click();
   await expect(page.locator('.device-editor h2')).toHaveText('SD-37');
   await expect.poll(async () => {
     const back = await page.getByRole('button', { name: /Back to devices/ }).boundingBox();
@@ -58,7 +58,7 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await expect(cards).toHaveCount(pageSize);
   await expect(cards.first()).toContainText('SD-02');
   await page.locator('#device-state').selectOption('');
-  await cards.first().click();
+  await cards.first().locator('.device-open').click();
   await expect(page.locator('.device-editor h2')).toHaveText('SD-01');
 
   await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Keep this draft until I save it.');

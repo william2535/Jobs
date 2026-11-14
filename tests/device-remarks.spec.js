@@ -24,7 +24,7 @@ async function createVisit(page) {
 }
 async function openDevice(page) {
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid > button').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.getByRole('button', { name: 'Defects', exact: true }).click();
 }

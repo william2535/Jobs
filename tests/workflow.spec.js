@@ -142,7 +142,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await fillJobCreation(page, { jobType: 'Call out', description: 'Investigate intermittent power fault.' });
   await saveJobCreation(page);
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
   await page.getByRole('textbox', { name: 'Reading name', exact: true }).fill('Supply voltage');
@@ -159,7 +159,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.reload();
   await page.getByTestId('job-card').click();
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Locked plant room; key holder unavailable.');
   await page.getByRole('button', { name: '‹ Home', exact: true }).click();
@@ -167,7 +167,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await fillJobCreation(page);
   await saveJobCreation(page);
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
 });
@@ -187,7 +187,7 @@ test('conflicts preserve local work and unusual IDs remain text', async ({ page 
   await expect(page.getByTestId('job-card')).toHaveCount(2);
   await page.getByTestId('job-card').first().click();
   await openJobSection(page, 'Devices');
-  await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
+  await page.locator('.device-browser-grid .device-open').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.locator('#job-file').setInputFiles(file);
   await expect(page.locator('#notice')).toContainText('already saved');
