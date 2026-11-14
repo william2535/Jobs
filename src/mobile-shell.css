@@ -323,12 +323,17 @@
     opacity: 0.6;
     font-size: 11px;
   }
+  .mobile-workspace .mw-job-card-shell {
+    position: relative;
+    min-width: 0;
+  }
   .mobile-workspace .mw-job-card {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 7px;
+    width: 100%;
     padding: 13px 13px 11px 16px;
     min-width: 0;
     border: 1px solid #e2e5ed;
@@ -342,6 +347,32 @@
   }
   .mobile-workspace .mw-job-card.mw-complete {
     border-left-color: #7c8ca4;
+  }
+  .mobile-workspace .mw-job-card .mw-card-head {
+    padding-right: 38px;
+    min-height: 30px;
+  }
+  .mobile-workspace .mw-job-settings {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--mw-link);
+  }
+  .mobile-workspace .mw-job-settings:hover {
+    background: #edf3fa;
+  }
+  .mobile-workspace .mw-job-settings svg {
+    width: 21px;
+    height: 21px;
   }
   .mobile-workspace .mw-card-head {
     display: flex;

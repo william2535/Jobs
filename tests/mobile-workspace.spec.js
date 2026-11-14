@@ -7,7 +7,7 @@ async function importPackage(page, site, job) {
   const pack = await createJobPackage(site, job);
   await page.locator('#job-file').setInputFiles({ name: 'synthetic-dashboard.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
-  await page.locator('[data-action="home"]').first().click();
+  await page.locator('[data-action="home"]:visible').first().click();
 }
 
 async function capture(page, path) {
@@ -59,8 +59,8 @@ test('mobile dashboard navigation and schedule reflect the saved records', async
   await capture(page, testInfo.outputPath('mobile-tasks.png'));
   await page.getByTestId('job-card').click();
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
-  await expect(page.locator('.wf-card').filter({ hasText: 'DASH-02' })).toBeVisible();
-  await page.locator('[data-action="home"]').first().click();
+  await expect(page.locator('.job-notes').getByRole('textbox', { name: 'Job title', exact: true })).toHaveValue('Synthetic planned repair');
+  await page.locator('[data-action="home"]:visible').first().click();
   await nav.getByRole('button', { name: 'Stock', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Stock & materials', exact: true })).toBeVisible();
   await expect(page.locator('.mw-record-card')).toContainText('Synthetic cable');

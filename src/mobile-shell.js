@@ -95,6 +95,10 @@ const paths = {
   plan: ["M4 3h7v6h9v12H4z", "M4 12h7v9", "M14 9v6h6"],
   import: ["M12 3v12", "M7 10l5 5 5-5", "M4 16v5h16v-5"],
   sites: ["M3 11l9-8 9 8", "M5 10v11h14V10", "M10 21v-7h4v7"],
+  settings: [
+    "M10 3h4l.6 2.4 2 1.2 2.4-.7 2 3.5-1.8 1.7v2.3l1.8 1.7-2 3.5-2.4-.7-2 1.2L14 21h-4l-.6-2.4-2-1.2-2.4.7-2-3.5 1.8-1.7v-2.3L3 8.9l2-3.5 2.4.7 2-1.2z",
+    "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+  ],
   chevron: ["M9 5l7 7-7 7"],
   calendar: [
     "M4 5h16v16H4z",
@@ -179,10 +183,6 @@ export function renderMobileWorkspace({
     ]) {
       const button = control("", () => onAction(action));
       button.dataset.action = action;
-      if (action === "create" && !list(state.sites).length) {
-        button.disabled = true;
-        button.title = "Create a site first";
-      }
       button.append(icon(symbol), node("span", label));
       quick.append(button);
     }
@@ -207,6 +207,7 @@ export function renderMobileWorkspace({
   }
   function jobCard(job, appointment) {
     const row = node("div", undefined, "mw-timeline-row");
+    const site = siteFor(job);
     const time = node("div", undefined, "mw-time");
     if (appointment?.start) {
       time.append(node("span", appointment.start));
@@ -226,16 +227,13 @@ export function renderMobileWorkspace({
     card.dataset.testid = "job-card";
     card.dataset.action = `job:${job.id}`;
     const head = node("div", undefined, "mw-card-head");
-    head.append(
-      node("strong", siteFor(job)?.name || "Site not set"),
-      icon("chevron"),
-    );
+    head.append(node("strong", site?.name || job.workflow?.details?.title || "Untitled job"));
     const meta = node("div", undefined, "mw-card-meta");
     meta.append(
       node("span", job.workflow?.details?.reference || job.id.slice(0, 8)),
       node("span", job.status, "mw-status"),
     );
-    card.append(head, node("span", jobTitle(job), "mw-job-title"), meta);
+    card.append(head, node("span", site ? jobTitle(job) : "No site", "mw-job-title"), meta);
     const description = job.workflow?.details?.description || job.scope;
     if (description) card.append(node("span", description, "mw-description"));
     if (job.importConflict)
@@ -246,7 +244,15 @@ export function renderMobileWorkspace({
       icon("calendar"),
     );
     card.append(footer);
-    row.append(time, card);
+    const shell = node("div", undefined, "mw-job-card-shell");
+    const settings = control("", () => onAction(`job-settings:${job.id}`), "mw-job-settings");
+    settings.dataset.action = `job-settings:${job.id}`;
+    settings.dataset.testid = "job-settings";
+    settings.setAttribute("aria-label", `Settings for ${job.workflow?.details?.title || site?.name || "Untitled job"}`);
+    settings.title = "Job settings";
+    settings.append(icon("settings"));
+    shell.append(card, settings);
+    row.append(time, shell);
     return row;
   }
   function jobsSection() {
@@ -359,7 +365,7 @@ export function renderMobileWorkspace({
               : "Ready for your first job",
             dateFilter || onlyOverdue || query
               ? "Choose another day or All to see your saved jobs."
-              : "Create a site or import a Zone Sketch drawing to start.",
+              : "Create a job to start writing. You can add a site in job settings.",
           ),
         );
     }
@@ -466,7 +472,7 @@ export function renderMobileWorkspace({
             `${entry.quantity} ${entry.unit || "each"} · ${entry.complete ? "Used / complete" : "Planned"}`,
             "mw-record-value",
           ),
-          node("small", siteFor(job)?.name || "Site not set"),
+          node("small", siteFor(job)?.name || "No site"),
         );
         return card;
       },
@@ -484,7 +490,7 @@ export function renderMobileWorkspace({
         const card = control("", () => goJob(job), "mw-record-card");
         const heading = node("div", undefined, "mw-card-head");
         heading.append(
-          node("strong", siteFor(job)?.name || "Site not set"),
+          node("strong", siteFor(job)?.name || jobTitle(job)),
           icon("chevron"),
         );
         card.append(

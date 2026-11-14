@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { validateJobPackage } from '../src/packages.js';
-import { fillJobCreation } from './helpers/job-creation.js';
+import { fillJobCreation, saveJobCreation, openJobSection, clickExportJob } from './helpers/job-creation.js';
 
 const zoneFixture = resolve('public/demo.zonesketch.json');
 const zoneSave = JSON.parse(await readFile(zoneFixture, 'utf8'));
@@ -18,14 +18,12 @@ async function createSite(page, name = 'Synthetic site folder') {
 async function createJob(page) {
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page);
-  await page.locator('[data-form="job"]').getByRole('button', { name: 'Create job', exact: true }).click();
+  await saveJobCreation(page);
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
 }
 async function exportJob(page) {
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('.job-toolbar').getByRole('button', { name: 'Export job', exact: true }).click();
-  const download = await downloadPromise;
+  const download = await clickExportJob(page);
   const input = await readFile(await download.path(), 'utf8');
   return { input, data: validateJobPackage(input) };
 }
@@ -124,9 +122,9 @@ test('saving one site form protects the other unfinished draft until explicitly 
   expect(equipmentSaved[0].drawings.at(-1).assets[0]).toMatchObject({ reference: 'SAVED-02', type: 'Manual call point' });
 });
 
-test('site folder comes first, supplies recorded details, and jobs edit and reopen offline without empty boxes', async ({ page, context, browser }, testInfo) => {
+test('site defaults supply recorded details and advanced job records reopen offline without empty boxes', async ({ page, context, browser }, testInfo) => {
   await page.goto('/');
-  await expect(page.locator('[data-action="create"]').first()).toBeDisabled();
+  await expect(page.locator('[data-action="create"]').first()).toBeEnabled();
   await expect(page.locator('[data-action="create-blank"]')).toHaveCount(0);
   await expect(page.locator('[data-form="job"]')).toHaveCount(0);
   await createSite(page);
@@ -141,7 +139,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await expect(page.getByRole('textbox', { name: 'Instructions', exact: true })).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'System reference', exact: true })).toHaveCount(0);
   await fillJobCreation(page);
-  await page.locator('[data-form="job"]').getByRole('button', { name: 'Create job', exact: true }).click();
+  await saveJobCreation(page);
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
   const initial = await exportJob(page);
   expect(initial.data.site.name).toBe('Synthetic site folder');
@@ -203,6 +201,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await page.getByRole('button', { name: '‹ Home', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-page', 'home');
   await page.getByTestId('job-card').click();
+  await openJobSection(page, 'Details');
   await page.locator('[data-wf-action="edit:instructions"]').click();
   await expect(page.getByRole('combobox', { name: 'Job type', exact: true })).toHaveValue('Maintenance');
   await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Synthetic engineer');
@@ -212,7 +211,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await context.setOffline(true);
   await page.reload();
   await page.getByTestId('job-card').click();
-  await expect(page.getByRole('heading', { name: 'Synthetic editable site visit', exact: true })).toBeVisible();
+  await expect(page.locator('.job-notes').getByRole('textbox', { name: 'Job title', exact: true })).toHaveValue('Synthetic editable site visit');
   const edited = await exportJob(page);
   expect(edited.data.job.id).toBe(initial.data.job.id);
   expect(edited.data.site.id).toBe(initial.data.site.id);
@@ -229,7 +228,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
     const reopened = await receiving.newPage();
     await reopened.goto('/');
     await reopened.locator('#job-file').setInputFiles({ name: 'site-job.jobs.json', mimeType: 'application/json', buffer: Buffer.from(edited.input) });
-    await expect(reopened.getByRole('heading', { name: 'Synthetic editable site visit', exact: true })).toBeVisible();
+    await expect(reopened.locator('.job-notes').getByRole('textbox', { name: 'Job title', exact: true })).toHaveValue('Synthetic editable site visit');
     const returned = await exportJob(reopened);
     expect(returned.data.job.id).toBe(edited.data.job.id);
     expect(returned.data.site.id).toBe(edited.data.site.id);
@@ -242,12 +241,6 @@ test('a site job receives its Zone Sketch plan without duplicating the named fol
   await createSite(page);
   await createJob(page);
   const initial = await exportJob(page);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
-  await page.locator('.job-title [data-job-edit="finalisation"]').focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('combobox', { name: 'Visit status', exact: true })).toBeFocused();
-  await expect(page.getByRole('combobox', { name: 'Visit status', exact: true })).toHaveValue('Open');
-  await page.locator('.wf-editor').getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: 'Plan', exact: true }).click();
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Import Zone Sketch plan', exact: true }).click();
@@ -265,7 +258,7 @@ test('a site job receives its Zone Sketch plan without duplicating the named fol
   expect(drawing.assets).toHaveLength(4);
   expect(withPlan.data.job.results).toHaveLength(4);
   expect(withPlan.data.job.results.every(result => result.state === 'Not tested')).toBe(true);
-  await page.locator('[data-action="home"]').first().click();
+  await page.locator('[data-action="home"]:visible').first().click();
   await expect(page.getByTestId('job-card')).toHaveCount(1);
   await page.locator('[data-action="sites"]').first().click();
   await expect(page.locator('.site-card')).toHaveCount(1);

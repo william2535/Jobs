@@ -4,7 +4,7 @@
 
 An independent, local-first job workspace for fire and security engineers. First working milestone: import a Zone Sketch drawing, review equipment, create a visit, record evidence, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
-[Desktop preview](docs/screenshots/desktop-details.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)
+[Desktop notes](docs/screenshots/desktop-notes-job.png) · [Mobile notes](docs/screenshots/mobile-notes-job.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)
 
 ## Run locally
 
@@ -28,33 +28,33 @@ To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses 
 
 ## Workflow
 
-Start with **Sites → Create site manually**, or import a Zone Sketch save to create the site folder. Add the reusable contact, access and work details once, then choose **Create job**. Create job is greyed out until at least one site has been saved. Recorded details fill the new job automatically; unfilled boxes and empty report sections stay hidden. Hold a filled field for **3 seconds** to edit it, or use **Edit**. Use **Add details** to fill a missing section. Each job keeps its selected plan revision and included PNG through local saving and package export.
+1. Choose **Create job** to open blank **Notes**. From Home, a site, title, discipline, job type and description are optional; from a site folder the site is already linked. Write immediately, add pictures or leave the note blank, then press **Save**. Nothing is added to saved jobs until an explicit save succeeds; **Save settings** also saves the job.
+2. Open a job card to return to its notes. Use headings, lists, bold, italic, underline, text sizes, colours, highlights and alignment. Pictures and captions are included in local storage and exports. Save failures keep the editor open for retry.
+3. Use the **gear icon** on a job card or inside the job for optional site selection, title, status and **More details**. Discipline choices are Fire, Security, Intruder, CCTV, Access control and Custom; job types are Maintenance, Small works, Install, Take over visit, Call out and Custom. Only a selected Custom option requires a custom name.
+4. Set up a reusable site through **Sites** or **Import Zone Sketch**. Its contact, access and work settings apply to linked jobs; changes to shared settings appear across those jobs unless a field has a job-specific override. **Use site settings for this job** restores inheritance. Linking a standalone job adds the site's current drawing and fresh **Not tested** results without replacing its notes. Plans and recorded results are never automatically replaced when site settings change.
+5. Open **Plan** for the job's saved drawing revision, included PNGs, equipment and issued records. For a saved, site-linked job, **Devices** provides observations, readings with units, notes, defects, photographs and explicit outcomes. Non-satisfactory/access/exclusion states require an explanation. Working drawings and issued snapshots remain distinct. Device **Defects** adds structured remarks with before/resolution photographs, severity, recommendations and products; the engineer saves test outcomes separately.
+6. Open **Finalisation** for the report, **Print report** and **Export job**. The `.jobs.json` includes saved notes, pictures and any site, drawing and work evidence. Standalone jobs export without a fabricated site. **Import job** validates the complete package before saving; identical reimports reopen the existing job and conflicts preserve both versions. Export works offline after the app is prepared.
 
-Inside a job, **‹ Home** returns to the dashboard. Tap the **site name in the header** to open that site's folder, plans and other jobs. Both routes protect unsaved form edits.
+The main job sections are **Notes**, **Plan** and **Finalisation**. After saving, the gear's **More job tools** keeps Work, Products, POs and Visit records available; site-linked jobs also have Details, Devices, Results and Quick checklist. The checklist records evidence and gaps; it never passes equipment or issues a certificate. See the [standards reference notes](docs/checklist-standards.md).
 
-**Quick checklist** selects short record prompts for the job's discipline and work type. It reuses recorded scope and engineer details, keeps incomplete items visible, and feeds the draft report and job export. It never passes equipment. The [standards reference notes](docs/checklist-standards.md) explain the UK starting points and why the forms remain drafts pending validation of full templates and requirements.
-
-1. **Import Zone Sketch** and review the site mapping, floors, devices and warnings; choose **Save site**. Alternatively open **Sites**, create a site and add equipment manually.
-2. Choose **Create job**. Pick **Site**, **Discipline** and **Job type** from the dropdowns, add a **Description**, then create. Discipline choices are Fire, Security, Intruder, CCTV, Access control and Custom. Job types are Maintenance, Small works, Install, Take over visit, Call out and Custom. Custom opens a required name field. The selected site’s recorded details and saved plan are included; every device result starts **Not tested**.
-3. Use **Plan** for floors, working drawings and issued snapshots; tap working devices to open **Devices**. Or choose a card in the searchable **Devices** grid (four per page on phones, eight on desktop), filter by result, and move between records with Previous/Next or Choose device. Issued views remain historical evidence.
-4. Record outcomes, observations, readings with units, notes, defects and photographs. Save each form explicitly. Unsaved changes and save failures are visible. Non-satisfactory/access/exclusion states require an explanation.
-5. **Finalisation → Export job** (also in the job toolbar) downloads a `.jobs.json` containing the saved job, work records, stable IDs, drawing data, included PNG plans and photographs. Export works offline, including after marking the visit Complete. **Import job** validates it before saving. Identical reimports reopen the existing job; conflicts preserve both versions for review.
-6. **Draft service report** prints the actual recorded visit. It is not a validated certificate. **Original drawing** exports the preserved Zone Sketch JSON content.
+Inside a job, **‹ Home** returns to the dashboard. For a linked job, the **site name in the header** opens its site folder. Both routes protect unsaved changes. Detailed records retain their three-second hold-to-edit shortcut and visible Edit/Add controls. Empty optional fields and report sections stay hidden.
 
 Home offers **Explore demonstration site** when there are no jobs. `public/demo.zonesketch.json` is a synthetic save verified by importing it into the actual Zone Sketch application and using its real exporter. The customer example added by the repository owner was used only for local validation; it is not copied into `public/`, the build or test fixtures.
 
 ## Interface direction
 
-Deep contrasting blue provides the headers and accents. The mobile workspace follows the supplied field-service layout: a compact dashboard, actual local work totals, scheduled job cards and fixed bottom navigation. Job sections use clear grouped rows and editable records. The desktop sidebar, grids and workspace layout stay in place. Create/import/site choices remain compact grids; devices stay paged, with included photographs available on each record. Site name and save status remain visible.
+Deep contrasting blue provides the headers and accents. The mobile workspace follows the supplied field-service layout: a compact dashboard, actual local work totals, scheduled job cards and fixed bottom navigation. Job cards open a compact notes editor; optional settings and detailed records stay behind their controls. The desktop sidebar, grids and workspace layout stay in place. Create/import/site choices remain compact grids; devices stay paged, with included photographs available on each record. The linked site name or job title and save status remain visible.
 
 [Mobile device grid](docs/screenshots/mobile-device-grid.png) · [Desktop device grid](docs/screenshots/desktop-device-grid.png)
 
 ## Architecture and contracts
 
 - `src/main.js`, `src/style.css`: touch-friendly application, explicit save flow and printable report.
-- `src/model.js`: stable identities, required creation fields and inherited visit defaults.
+- `src/model.js`: stable identities, optional-site drafts and safe first site assignment.
 - `src/job-options.js`: shared discipline/job-type choices, custom names and compatibility with earlier job types.
-- `src/site-profile.js`: reusable site folder information; recorded values are copied into new jobs without changing earlier visits.
+- `src/site-profile.js`, `src/job-settings.js`: reusable site setup, live shared defaults and explicit per-job overrides; drawing and result history remain separate.
+- `src/job-notes.js`: structured rich notes, embedded pictures, validation and report rendering.
+- `src/device-remarks.js`, `src/device-remarks-ui.js`: validated device remarks, before/resolution evidence, products and retained history.
 - `src/storage.js`: versioned IndexedDB, atomic writes and concurrent-tab protection.
 - `src/zone-import.js`: independently implemented current/legacy importer and drawing comparison.
 - `src/plan-preview.js`: embedded PNG floor previews, issued records and device navigation; `src/plan.js` independently renders imported drawings when a Zone Sketch PNG is unavailable.
@@ -66,7 +66,7 @@ Deep contrasting blue provides the headers and accents. The mobile workspace fol
 - `src/panel-context.js`: future Panel Pal handoff contract, separate engineer evidence and AI proposals.
 - `vite.config.js`: self-contained, build-versioned offline application cache.
 
-See [mobile workspace](docs/mobile-workspace.md), [PNG previews](docs/plan-previews.md), [Zone Sketch schema](docs/zone-sketch.md), [job package contract](docs/job-package.md), [Panel Pal contract](docs/panel-pal-context.md), [viewer scope](docs/plan-viewer.md), and [verification](docs/VERIFICATION.md). The owner's [full build brief](docs/BUILD_BRIEF.md) describes later milestones too; it is not a claim that those later features are implemented.
+See [job notes](docs/job-notes.md), [device remarks](docs/device-remarks.md), [mobile workspace](docs/mobile-workspace.md), [PNG previews](docs/plan-previews.md), [Zone Sketch schema](docs/zone-sketch.md), [job package contract](docs/job-package.md), [Panel Pal contract](docs/panel-pal-context.md), [viewer scope](docs/plan-viewer.md), and [verification](docs/VERIFICATION.md). The owner's [full build brief](docs/BUILD_BRIEF.md) describes later milestones too; it is not a claim that those later features are implemented.
 
 ## Verify
 
@@ -88,7 +88,7 @@ That check uses the reference application's actual import and backup export UI; 
 
 ## Editable job workflow and drawings
 
-The job now uses **Details, Work, Products, POs and Finalisation**. Edit reference/title, client/contact/access information, authorisation, scope/assignment, appointments, safety/service requirements and notes in focused card forms. Work actions, products, local purchase-order records, timesheets and typed client acknowledgements save with the job and travel in its export. PO records do not send orders to suppliers; acknowledgement records are not digital signatures or certificates.
+The primary workspace is **Notes, Plan and Finalisation**. The gear opens optional job settings and **More job tools**. Detailed tools still support client/contact/access information, authorisation, scope/assignment, appointments, safety/service requirements and visit records in focused forms. Work actions, products, local purchase-order records, timesheets and typed client acknowledgements save with the job and travel in its export. PO records do not send orders to suppliers; acknowledgement records are not digital signatures or certificates.
 
 **Plan** and **Sites** show a saved PNG for each floor, alongside equipment. Working drawings and issued records stay separate. **Edit site** opens the actual Zone Sketch app in another window and sends the selected editable project automatically; **Save to Jobs** returns the drawing and updates the PNG/equipment list. There is no file picker in the connected flow. Matching results stay intact, added equipment begins Not tested, and removed-device evidence is archived. Existing visits retain their drawing revisions. Manual assets without plan positions remain in the Jobs register without invented coordinates.
 
@@ -101,8 +101,8 @@ The automatic connection requires the small companion receiver on the Zone Sketc
 - FINDR integration is **export contract only**. No adapter, AI connection, model download or Panel Pal job loader exists in this build. No AI output changes engineer results.
 - Reports are drafts, with no signatures, issued certificate numbers or compliance claims. Template validation and document issuance are future work.
 - Initial imports use an independent PNG renderer; connected saves can include PNGs from the actual Zone Sketch renderer. Original data and snapshots remain in packages. Jobs can view included plans, record work and export offline. Cold-opening the external Zone Sketch web editor offline depends on that app’s own caching; the inspected public Zone Sketch app has no service worker.
-- One drawing and its complete equipment set define a visit. Rich system registers, asset selection/exclusion, cross-visit defect resolution, validated task templates, acceptance/merge of conflict versions, office scheduling and multi-engineer synchronization remain future work.
-- Job package v2 stores repeated image payloads once and restores them to their exact paths on import; v1 remains accepted. Local drawing history retains complete snapshots. Streaming ZIP packages and local blob-store deduplication are future work. Zone Sketch imports are limited to 32 MiB; job imports to 100 MiB.
+- A site-linked visit retains one selected drawing and its complete equipment set; a standalone note job has neither until a site is chosen. Rich system registers, asset selection/exclusion, cross-visit defect resolution, validated task templates, acceptance/merge of conflict versions, office scheduling and multi-engineer synchronization remain future work.
+- Job package v3 supports standalone jobs and stores repeated image payloads once, restoring their exact paths on import; v1 and v2 remain accepted. Local drawing history retains complete snapshots. Streaming ZIP packages and local blob-store deduplication are future work. Zone Sketch imports are limited to 32 MiB; job imports to 100 MiB.
 - Headless Chromium mobile emulation is tested; physical iPhone/Android installation, storage-pressure behavior and platform share sheets still require device validation.
 
 ## Licensing

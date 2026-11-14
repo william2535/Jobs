@@ -2,12 +2,15 @@ import { validateWorkflow } from "./job-workflow.js";
 import { validateSiteProfile } from "./site-profile.js";
 import { validateJobClassification } from "./job-options.js";
 import { validateJobChecklist } from "./job-checklist.js";
+import { validateNotesDocument } from "./job-notes.js";
+import { validateJobSettings } from "./job-settings.js";
+import { validateDeviceRemarks } from "./device-remarks.js";
 const hasClassification = (job) =>
   (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
   ["discipline", "customDiscipline", "customWorkType"].some((key) => job[key] !== undefined);
 
 export const PACKAGE_FORMAT = "JobsPackage";
-export const PACKAGE_VERSION = 2;
+export const PACKAGE_VERSION = 3;
 export const RESULT_STATES = [
   "Not tested",
   "Satisfactory",
@@ -219,6 +222,11 @@ function resultRecords(values, selected, path) {
         fail("reading.value must be finite.");
     }
     photos(result.photos || [], "result.photos");
+    try {
+      validateDeviceRemarks(result.remarks);
+    } catch (error) {
+      fail(`${path}: ${error.message}`);
+    }
   }
   if (resultsFor.size !== assetIds.size)
     fail("each asset must have a result, initially Not tested.");
@@ -288,10 +296,14 @@ function unpackImages(input) {
   }
   const expanded = {
     format: PACKAGE_FORMAT,
-    version: 1,
+    version: input.version === 3 && input.site === null ? 3 : 1,
     site: clone(input.site),
     job: clone(input.job),
   };
+  if (expanded.version === 3) {
+    expanded.attachments = [];
+    expanded.attachmentRefs = [];
+  }
   if (input.packageId !== undefined) expanded.packageId = input.packageId;
   const seenPaths = new Set(),
     used = new Set();
@@ -411,46 +423,55 @@ export function validateJobPackage(input) {
   object(input, "root");
   if (
     input.format !== PACKAGE_FORMAT ||
-    ![1, PACKAGE_VERSION].includes(input.version)
+    ![1, 2, PACKAGE_VERSION].includes(input.version)
   )
     fail("unsupported format or version.");
-  if (input.version === PACKAGE_VERSION) {
+  const wireVersion = input.version;
+  if (input.version >= 2) {
     measuredBytes(input, MAX_PACKAGE_BYTES);
     input = unpackImages(input);
   }
   measuredBytes(input, MAX_EXPANDED_BYTES);
-  object(input.site, "site");
   object(input.job, "job");
+  const standalone = input.site === null;
+  if (standalone && wireVersion !== 3) fail("standalone jobs require package version 3.");
+  if (!standalone) object(input.site, "site");
   const { site, job } = input;
   const checklist = validateJobChecklist(job.checklist);
+  const notesDocument = validateNotesDocument(job.notesDocument);
+  const settings = validateJobSettings(job.settings);
   const classification = hasClassification(job) ? validateJobClassification(job) : null;
-  string(site.id, "site.id");
-  string(site.name, "site.name");
-  if (site.profile !== undefined) validateSiteProfile(site.profile);
-  if (site.address != null) string(site.address, "site.address", false);
-  if (site.sourceKeys != null) {
-    array(site.sourceKeys, "site.sourceKeys");
-    site.sourceKeys.forEach((key) => string(key, "site.sourceKeys entry"));
-  }
-  if (site.importedMetadata != null) {
-    array(site.importedMetadata, "site.importedMetadata");
-    for (const item of site.importedMetadata) {
-      object(item, "site.importedMetadata entry");
-      string(item.fingerprint, "site.importedMetadata.fingerprint");
-      object(item.site, "site.importedMetadata.site");
-      string(item.site.name, "site.importedMetadata.site.name");
-      if (item.site.address != null)
-        string(item.site.address, "site.importedMetadata.site.address", false);
+  if (!standalone) {
+    string(site.id, "site.id");
+    string(site.name, "site.name");
+    if (site.profile !== undefined) validateSiteProfile(site.profile);
+    if (site.address != null) string(site.address, "site.address", false);
+    if (site.sourceKeys != null) {
+      array(site.sourceKeys, "site.sourceKeys");
+      site.sourceKeys.forEach((key) => string(key, "site.sourceKeys entry"));
     }
+    if (site.importedMetadata != null) {
+      array(site.importedMetadata, "site.importedMetadata");
+      for (const item of site.importedMetadata) {
+        object(item, "site.importedMetadata entry");
+        string(item.fingerprint, "site.importedMetadata.fingerprint");
+        object(item.site, "site.importedMetadata.site");
+        string(item.site.name, "site.importedMetadata.site.name");
+        if (item.site.address != null)
+          string(item.site.address, "site.importedMetadata.site.address", false);
+      }
+    }
+    array(site.drawings, "site.drawings");
+    unique(site.drawings, "site.drawings");
+    site.drawings.forEach((value, index) =>
+      drawing(value, `site.drawings[${index}]`),
+    );
   }
-  array(site.drawings, "site.drawings");
-  unique(site.drawings, "site.drawings");
-  site.drawings.forEach((value, index) =>
-    drawing(value, `site.drawings[${index}]`),
-  );
   string(job.id, "job.id");
-  if (job.siteId !== site.id) fail("job references another site.");
-  const selected = site.drawings.find((value) => value.id === job.drawingId);
+  if (standalone && (job.siteId !== null || job.drawingId !== null))
+    fail("a standalone job must have null site and drawing references.");
+  if (!standalone && job.siteId !== site.id) fail("job references another site.");
+  const selected = standalone ? { assets: [] } : site.drawings.find((value) => value.id === job.drawingId);
   if (!selected) fail("job references a missing drawing.");
   if (!Number.isSafeInteger(job.revision) || job.revision < 1)
     fail("job.revision must be a positive integer.");
@@ -469,14 +490,14 @@ export function validateJobPackage(input) {
       fail(`job.${field} must be a date.`);
   }
   resultRecords(job.results, selected, "job.results");
-  const drawings = new Map(site.drawings.map((value) => [value.id, value]));
+  const drawings = new Map((site?.drawings || []).map((value) => [value.id, value]));
   if (checklist) {
     for (const record of [checklist, ...checklist.history]) {
       if (!drawings.has(record.drawingId))
         fail("checklist record references a missing drawing.");
     }
   }
-  for (const value of site.drawings)
+  for (const value of site?.drawings || [])
     if (value.basedOnDrawingId && !drawings.has(value.basedOnDrawingId))
       fail("edited drawing references a missing base drawing.");
   if (job.drawingChanges != null) {
@@ -560,10 +581,14 @@ export function validateJobPackage(input) {
   array(job.aiProposals || [], "job.aiProposals");
   const normalized = clone(input);
   if (checklist !== undefined) normalized.job.checklist = checklist;
+  if (notesDocument !== undefined) normalized.job.notesDocument = notesDocument;
+  if (settings !== undefined) normalized.job.settings = settings;
   if (classification) Object.assign(normalized.job, classification);
   if (workflow !== undefined) normalized.job.workflow = workflow;
-  normalized.site.address ??= "";
-  normalized.site.sourceKeys ??= [];
+  if (normalized.site) {
+    normalized.site.address ??= "";
+    normalized.site.sourceKeys ??= [];
+  }
   const normalizeDrawing = (value) => {
     value.issuedSnapshots ??= [];
     value.assets.forEach((asset) => {
@@ -571,7 +596,7 @@ export function validateJobPackage(input) {
     });
     value.issuedSnapshots.forEach(normalizeDrawing);
   };
-  normalized.site.drawings.forEach(normalizeDrawing);
+  normalized.site?.drawings.forEach(normalizeDrawing);
   normalized.job.aiProposals ??= [];
   for (const result of normalized.job.results) {
     result.photos ??= [];
@@ -579,7 +604,18 @@ export function validateJobPackage(input) {
     result.notes ??= "";
     result.defects ??= "";
   }
+  normalizeDeviceRemarks(normalized.job);
   return normalized;
+}
+
+function normalizeDeviceRemarks(job) {
+  const results = [
+    ...(job.results || []),
+    ...(job.drawingChanges || []).flatMap(change => change.previousResults || []),
+    ...(job.archivedResults || []).map(entry => entry.result),
+  ];
+  for (const result of results)
+    if (result.remarks !== undefined) result.remarks = validateDeviceRemarks(result.remarks);
 }
 
 function canonical(value) {
@@ -603,9 +639,12 @@ async function digest(value) {
 
 function cleanJob(job) {
   const value = clone(job);
+  if (value.notesDocument !== undefined) value.notesDocument = validateNotesDocument(value.notesDocument);
+  if (value.settings !== undefined) value.settings = validateJobSettings(value.settings);
   if (value.checklist !== undefined) value.checklist = validateJobChecklist(value.checklist);
   if (hasClassification(value)) Object.assign(value, validateJobClassification(value));
   if (value.workflow !== undefined) value.workflow = validateWorkflow(value.workflow);
+  normalizeDeviceRemarks(value);
   delete value.importHistory;
   value.aiProposals ??= [];
   for (const result of value.results || []) {
@@ -620,9 +659,10 @@ function cleanJob(job) {
 export async function createJobPackage(site, job) {
   const normalized = validateJobPackage({
     format: PACKAGE_FORMAT,
-    version: 1,
-    site,
+    version: site == null ? 3 : 1,
+    site: site ?? null,
     job: cleanJob(job),
+    ...(site == null ? { attachments: [], attachmentRefs: [] } : {}),
   });
   const payload = await packImages(normalized.site, normalized.job);
   payload.packageId = `package-${await digest(payload)}`;
@@ -702,14 +742,17 @@ function mergePreviewCache(current, incoming) {
 export async function importJobPackage(state, input) {
   const imported = validateJobPackage(input);
   const wire = typeof input === "string" ? JSON.parse(input) : input;
-  if (wire.version === PACKAGE_VERSION) {
+  if (wire.version >= 2) {
     for (const item of wire.attachments)
       if (item.id !== `image-${await digest(item.image)}`)
         fail("attachment content does not match its ID.");
   }
   // Fingerprint the canonical pooled representation to avoid serializing the same
-  // large image once per preserved drawing revision. v1 and v2 imports converge.
-  const fingerprint = `pooled:${await digest(await packImages(imported.site, cleanJob(imported.job)))}`;
+  // large image once per preserved drawing revision. Preserve the v2 fingerprint
+  // version for associated jobs so existing import receipts still prevent duplicates.
+  const fingerprintPayload = await packImages(imported.site, cleanJob(imported.job));
+  if (imported.site) fingerprintPayload.version = 2;
+  const fingerprint = `pooled:${await digest(fingerprintPayload)}`;
   let legacyFingerprint;
   if (
     wire.version === 1 &&
@@ -739,7 +782,7 @@ export async function importJobPackage(state, input) {
     };
   const next = clone(state);
   const existing = next.jobs.find((job) => job.id === imported.job.id);
-  const localSite = next.sites.find((site) => site.id === imported.site.id);
+  const localSite = imported.site ? next.sites.find((site) => site.id === imported.site.id) : null;
   const sameJob =
     existing &&
     canonical(cleanJob(existing)) === canonical(cleanJob(imported.job));
@@ -749,10 +792,10 @@ export async function importJobPackage(state, input) {
   let siteConflict = false;
   const drawingMap = new Map();
   const copiedDrawings = [];
-  if (!site) {
+  if (imported.site && !site) {
     site = clone(imported.site);
     next.sites.push(site);
-  } else {
+  } else if (site) {
     const localMetadata = { ...site };
     delete localMetadata.drawings;
     delete localMetadata.importedMetadata;

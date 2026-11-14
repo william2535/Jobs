@@ -75,7 +75,7 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
     return options.customFor ? `<div data-site-custom-choice="${options.customFor}"${options.disabled ? ' hidden' : ''}>${labelHtml}</div>` : labelHtml;
   };
   root.innerHTML = `
-    <div class="section-head"><div><h2>Site folder details</h2><p class="muted">Recorded details fill new jobs. Existing visits keep their own records.</p></div></div>
+    <div class="section-head"><div><h2>Site settings</h2><p class="muted">Set this up once for jobs at this site. Job overrides, notes and recorded work are kept.</p></div></div>
     <div class="site-profile-message notice" role="status" hidden></div>
     <form class="site-profile-form">
       <fieldset class="site-profile-fields">
@@ -107,8 +107,8 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
             </div>
           </section>
           <section class="site-profile-group" aria-labelledby="${prefix}-defaults">
-            <h3 id="${prefix}-defaults">New job defaults</h3>
-            <p class="muted">Optional. Add only information that applies to the next visit.</p>
+            <h3 id="${prefix}-defaults">Shared job settings</h3>
+            <p class="muted">Optional. Jobs at this site follow these values unless you change a setting for one job.</p>
             <div class="site-profile-inputs">
               ${input('System', 'system', profile.system, { list: 'systems' })}
               ${input('Discipline', 'discipline', profile.discipline, { options: DISCIPLINES, placeholder: 'No default discipline' })}
@@ -122,7 +122,7 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
           </section>
         </div>
         <datalist id="${prefix}-systems"><option value="Fire alarm"></option><option value="Intruder alarm"></option><option value="CCTV"></option><option value="Access control"></option></datalist>
-        <div class="site-profile-actions"><button class="primary" type="submit">Save site details</button><p class="muted">Only the site name is required. Empty optional fields stay out of new jobs.</p></div>
+        <div class="site-profile-actions"><button class="primary" type="submit">Save site details</button><p class="muted">Only the site name is required. Shared settings apply across this site's jobs.</p></div>
       </fieldset>
     </form>`;
 

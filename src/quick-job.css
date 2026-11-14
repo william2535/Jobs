@@ -1,0 +1,55 @@
+/* Keep the dashboard familiar; make the open job a focused notebook. */
+.job-card-shell { position: relative; min-width: 0; }
+.job-card-shell > .job-card { width: 100%; padding-right: 68px; grid-template-columns: auto minmax(0, 1fr) auto; }
+.job-card-settings, .job-settings-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; padding: 8px;
+  border: 0; background: transparent; color: var(--accent-dark);
+}
+.job-card-settings { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+.quick-job-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.quick-job-top .job-home-link { padding-left: 0; }
+.job-main-nav.quick-job-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.quick-section-title, .finalisation-actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.quick-section-title h1, .finalisation-actions h1 { font-size: 26px; margin: 5px 0; }
+.finalisation-actions p { margin: 5px 0; font-size: 13px; color: var(--muted); }
+.quick-job-tools { margin: 16px 0; }
+.quick-job-tools > summary { padding: 12px 0; }
+.quick-tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.quick-tool-grid button { min-height: 44px; }
+.job-report-preview { max-width: 1000px; margin-inline: auto; overflow-wrap: anywhere; }
+.job-report-content h1 { font-size: 28px; margin: 8px 0 12px; }
+.job-report-content h2 { font-size: 20px; }
+.job-report-content h3 { font-size: 16px; }
+.job-report-content p { white-space: pre-wrap; line-height: 1.6; }
+.report-heading { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.report-heading small, .report-disclaimer { color: var(--muted); font-size: 12px; }
+.job-report-content .workflow-report:empty { display: none; }
+.empty-job-plan { padding: 28px; }
+.empty-job-plan p { color: var(--muted); line-height: 1.6; }
+@media (max-width: 700px) {
+  body[data-page="job"] .sidebar { display: none; }
+  body[data-page="job"] .workspace > header { min-height: 74px; padding: 10px 16px; }
+  body[data-page="job"] main { padding: 0 12px 20px; }
+  body[data-page="job"] footer { display: none; }
+  .quick-job-top { margin: 4px 0; }
+  .job-main-nav.quick-job-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .quick-job-nav button[data-action="tab:Notes"] {
+    --job-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h6'/%3E%3C/svg%3E");
+  }
+  .quick-job-nav button[data-action="tab:Plan"] {
+    --job-nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16'/%3E%3C/svg%3E");
+  }
+  .quick-section-title, .finalisation-actions { display: block; }
+  .finalisation-actions { padding: 12px 4px; }
+  .finalisation-actions .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .job-report-preview { padding: 18px; background: #fff; }
+  .quick-tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .job-card-shell > .job-card { padding-right: 58px; }
+  .job-card-settings { right: 4px; }
+}
+@media print {
+  .job-report-content { color: #111; font-size: 11pt; }
+  .job-report-content img { max-width: 100%; break-inside: avoid; }
+  .report-heading { break-after: avoid; }
+}

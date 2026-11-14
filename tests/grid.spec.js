@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { newSite, newJob } from '../src/model.js';
 import { createJobPackage } from '../src/packages.js';
+import { openJobSection } from './helpers/job-creation.js';
 
 async function gridPackage() {
   const site = newSite('Synthetic equipment grid');
@@ -27,7 +28,7 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   const pack = await gridPackage();
   await page.goto('/');
   await page.locator('#job-file').setInputFiles({ name: 'grid.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   const cards = page.locator('.device-browser-grid > button');
   const pageSize = await page.evaluate(() => window.matchMedia('(max-width: 700px)').matches ? 4 : 8);
   await expect(cards).toHaveCount(pageSize);
@@ -79,12 +80,12 @@ test('device grid finds equipment without a long list and keeps edits safe betwe
   await page.screenshot({ path: testInfo.outputPath('device-grid-40.png'), fullPage: true });
 
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await expect(cards).toHaveCount(4);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   const gridBox = await page.locator('.device-browser-grid').boundingBox();
   expect(gridBox.height).toBeLessThan(700);
-  await page.locator('[data-action="home"]').first().click();
+  await page.locator('[data-action="home"]:visible').first().click();
   const actions = page.locator('.quick-actions > button, .mw-shortcuts > button');
   await expect(actions).toHaveCount(4);
   const first = await actions.nth(0).boundingBox();

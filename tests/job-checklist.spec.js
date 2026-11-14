@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { validateJobPackage } from '../src/packages.js';
-import { fillJobCreation } from './helpers/job-creation.js';
+import { fillJobCreation, saveJobCreation, openJobSection, clickExportJob } from './helpers/job-creation.js';
 
 const fixture = resolve('public/demo.zonesketch.json');
 
@@ -18,20 +18,18 @@ async function createVisit(page) {
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page, { description: 'Synthetic scheduled fire alarm maintenance' });
-  await page.locator('[data-form="job"]').getByRole('button', { name: 'Create job', exact: true }).click();
+  await saveJobCreation(page);
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
 }
 
 async function openChecklist(page) {
-  await page.getByRole('navigation', { name: 'Drawing and equipment' }).getByRole('button', { name: 'Quick checklist', exact: true }).click();
+  await openJobSection(page, 'Checklist');
   await expect(page.locator('.job-checklist')).toBeVisible();
   return page.locator('.job-checklist');
 }
 
 async function exportJob(page) {
-  const downloaded = page.waitForEvent('download');
-  await page.locator('.job-toolbar').getByRole('button', { name: 'Export job', exact: true }).click();
-  const download = await downloaded;
+  const download = await clickExportJob(page);
   expect(download.suggestedFilename()).toMatch(/\.jobs\.json$/);
   const input = await readFile(await download.path(), 'utf8');
   return { input, data: validateJobPackage(input) };

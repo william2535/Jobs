@@ -486,7 +486,7 @@ test("drawing conflicts remap historical references and edited-drawing ancestry 
   assert.equal(second.job.drawingId, imported.job.drawingId);
 });
 
-test("v2 image pool deduplicates attachments and expands the original project exactly; legacy v1 remains accepted", async () => {
+test("current image pool deduplicates attachments and expands the original project exactly; legacy v1 remains accepted", async () => {
   const { site, job } = fixture();
   const image = site.drawings[0].assets[0].photos[0].image;
   site.drawings[0].source = {
@@ -502,7 +502,7 @@ test("v2 image pool deduplicates attachments and expands the original project ex
       id: `drawing-${i}`,
     });
   const v2 = await createJobPackage(site, job);
-  assert.equal(v2.version, 2);
+  assert.equal(v2.version, 3);
   assert.equal(v2.attachments.length, 1);
   assert.equal(v2.attachments[0].image, image);
   assert.equal(v2.attachmentRefs.length, 16);

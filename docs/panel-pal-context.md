@@ -29,8 +29,9 @@ No FINDR application source, manuals, model weights, images or vendor components
 | `workRequested` | Selected discipline and custom name/display label, system reference, job type and custom name/display label, description, scope, instructions, assigned engineer and visit status. |
 | `drawingReferences` | Drawing identity, revision, source provenance and retained floor data. |
 | `equipment` | Selected asset records, including stable asset IDs, source floor/device mappings, references, positions and included photos. Unrecorded manufacturer, model, loop and address are `null`. |
-| `engineerEvidence.results` | Results for those assets, retaining result IDs, states, observations, readings with units, notes, defects and included photographs. |
-| `engineerEvidence.faults` | An index of recorded defects and unsatisfactory results, referring back to result and asset IDs. This is not an AI diagnosis. |
+| `engineerEvidence.results` | Results for those assets, retaining result IDs, states, observations, readings with units, notes, defects, structured remarks and included photographs. Remark internal notes are omitted. |
+| `engineerEvidence.notesDocument` | Saved structured job notes and included pictures, or `null` when absent. |
+| `engineerEvidence.faults` | An index of recorded defects, unsatisfactory results and devices with described remarks or explicit defect severities, referring back to result and asset IDs. Remarks retain their recorded severity, Open/Resolved status, location, recommendation, products and before/resolved pictures. This is not an AI diagnosis or an assertion that every remark is a fault. |
 | `aiProposals` | Separate unconfirmed proposals; never merged into engineer results. Empty for this milestone. |
 | `interpretation` | Explicit constraints against auto-confirming results, treating drawing status as today's result or inferring missing equipment facts. |
 
@@ -49,3 +50,5 @@ The default export includes every asset in the job's pinned drawing. An optional
 7. Verify offline operation against the actual FINDR app, conflict behavior, corrections, large attachments, privacy and model-scope boundaries before displaying a connected state.
 
 Editable workflow extension: `workRequested` includes the entered reference/title, work actions and safety/service requirements. `engineerEvidence` includes visit/technician notes, the saved `visitChecklist` (or `null`), and drawing-change/removed-device history, clearly separate from current selected-device results and AI proposals. Checklist entries are engineer-recorded draft evidence, not compliance declarations. Supplier orders, internal office notes and invoice notes are not included by this extension.
+
+Structured notes and device remarks are optional v1 context fields. Remark `internalNote` is excluded from current, historical and archived result copies as well as the fault index; the complete job package retains it. A resolved remark keeps its explicit status and never promotes a device result to Satisfactory. The exporter still requires a real site-linked job and does not invent a Panel Pal connection for standalone notes.

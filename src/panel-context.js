@@ -7,6 +7,16 @@ const clone = (value) => structuredClone(value);
 const present = (value) =>
   value === undefined || value === "" ? null : clone(value);
 
+const contextResult = (result) => {
+  const value = clone(result);
+  // Internal office notes stay in the job package, outside the assistance context.
+  for (const remark of [
+    ...list(value.remarks?.items),
+    ...list(value.remarks?.history).map(entry => entry.item),
+  ]) if (remark) delete remark.internalNote;
+  return value;
+};
+
 export function panelContext(
   site,
   job,
@@ -96,15 +106,22 @@ export function panelContext(
     engineerEvidence: {
       provenance: "engineer-recorded",
       visitChecklist: present(job.checklist),
-      results: clone(results),
+      notesDocument: present(job.notesDocument),
+      results: results.map(contextResult),
       visitNotes: job.visitNotes || "",
       technicianNote: job.workflow?.finalisation?.technicianNote || "",
-      drawingChanges: clone(list(job.drawingChanges)),
-      archivedResults: clone(list(job.archivedResults)),
+      drawingChanges: list(job.drawingChanges).map(change => ({
+        ...clone(change), previousResults: list(change.previousResults).map(contextResult),
+      })),
+      archivedResults: list(job.archivedResults).map(entry => ({
+        ...clone(entry), result: entry.result ? contextResult(entry.result) : entry.result,
+      })),
       faults: results
         .filter(
           (result) =>
-            result.defects?.length || result.state === "Unsatisfactory",
+            result.defects?.length || result.state === "Unsatisfactory" ||
+            list(result.remarks?.items).some(remark => remark.description?.trim() ||
+              ['Minor defect', 'Major defect', 'Critical defect'].includes(remark.severity)),
         )
         .map((result) => ({
           resultId: result.id,
@@ -112,6 +129,19 @@ export function panelContext(
           state: result.state,
           defects: clone(result.defects || []),
           observations: clone(result.observations || ""),
+          remarks: list(result.remarks?.items).map(remark => ({
+            id: remark.id,
+            title: remark.title,
+            location: remark.location,
+            description: remark.description,
+            severity: remark.severity,
+            status: remark.status,
+            lastVerified: remark.lastVerified,
+            recommendation: remark.recommendation,
+            beforePhotos: clone(list(remark.beforePhotos)),
+            resolvedPhotos: clone(list(remark.resolvedPhotos)),
+            products: clone(list(remark.products)),
+          })),
         })),
     },
     aiProposals: clone(list(job.aiProposals)),

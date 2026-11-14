@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { validateJobPackage } from '../src/packages.js';
-import { fillJobCreation } from './helpers/job-creation.js';
+import { fillJobCreation, saveJobCreation, openJobSection, clickExportJob } from './helpers/job-creation.js';
 
 const fixture = resolve('public/demo.zonesketch.json');
 const sample = JSON.parse(await readFile(fixture, 'utf8'));
@@ -17,21 +17,19 @@ async function createJob(page) {
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page, { description: 'Synthetic complete workflow' });
-  await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
+  await saveJobCreation(page);
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
 }
 async function section(page, name) {
-  await page.getByRole('navigation', { name: 'Job workflow' }).getByRole('button', { name, exact: true }).click();
+  await openJobSection(page, name === 'Finalisation' ? 'Visit records' : name);
 }
 async function saveEditor(page, name) {
   await page.locator('.wf-editor').getByRole('button', { name, exact: true }).click();
   await expect(page.locator('.wf-editor')).toHaveCount(0);
   await expect(page.getByTestId('save-status')).toContainText('Saved');
 }
-async function exportJob(page, container = '.job-toolbar') {
-  const downloaded = page.waitForEvent('download');
-  await page.locator(container).getByRole('button', { name: 'Export job', exact: true }).click();
-  const download = await downloaded;
+async function exportJob(page) {
+  const download = await clickExportJob(page);
   expect(download.suggestedFilename()).toMatch(/^job-.+\.jobs\.json$/);
   const input = await readFile(await download.path(), 'utf8');
   return { input, data: validateJobPackage(input) };
@@ -292,8 +290,8 @@ test('manual equipment stays unplaced and an unrelated supplied plan preserves i
   await page.getByRole('button', { name: 'Add device', exact: true }).click();
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page);
-  await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await saveJobCreation(page);
+  await openJobSection(page, 'Devices');
   await page.getByRole('button', { name: /SD-MANUAL/ }).first().click();
   await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Manual check recorded before a supplied plan.');
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
@@ -341,7 +339,7 @@ test('manual equipment stays unplaced and an unrelated supplied plan preserves i
 
 test('an in-progress local save prevents typing that could otherwise be lost', async ({ page }) => {
   await createJob(page);
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid > button').first().click();
   const notes = page.getByRole('textbox', { name: 'Notes', exact: true });
   await notes.fill('The engineer-confirmed note to save.');
@@ -377,7 +375,7 @@ test('an in-progress local save prevents typing that could otherwise be lost', a
   await expect.poll(() => page.locator('main').evaluate(main => main.inert)).toBe(false);
   await page.reload();
   await page.getByTestId('job-card').first().click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid > button').first().click();
   await expect(page.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('The engineer-confirmed note to save.');
 });

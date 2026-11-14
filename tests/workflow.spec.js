@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { fillJobCreation } from './helpers/job-creation.js';
+import { fillJobCreation, saveJobCreation, openJobSection, clickExportJob } from './helpers/job-creation.js';
 
 const fixture = resolve('public/demo.zonesketch.json');
 const sample = JSON.parse(await readFile(fixture, 'utf8'));
@@ -21,7 +21,7 @@ async function createVisit(page) {
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page, { siteName: 'Westfield Training Centre', description: 'Synthetic maintenance visit' });
-  await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
+  await saveJobCreation(page);
   await expect(page.getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
 }
 async function capture(page, path) {
@@ -30,9 +30,7 @@ async function capture(page, path) {
   await page.screenshot({ path, fullPage: true });
 }
 async function exportPackage(page) {
-  const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export job', exact: true }).click();
-  const download = await downloaded;
+  const download = await clickExportJob(page);
   return { path: await download.path(), data: JSON.parse(await readFile(await download.path(), 'utf8')) };
 }
 
@@ -77,7 +75,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await context.setOffline(true);
   await page.reload();
   await page.getByTestId('job-card').first().click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await page.getByRole('button', { name: /FAP-01/ }).first().click();
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Battery voltage below expected value.');
   await page.locator('.device-context > summary').click();
@@ -97,8 +95,8 @@ test('drawing → visit → offline recording → package → fresh import prese
     const reopened = await fresh.newPage();
     await reopened.goto('/');
     await reopened.locator('#job-file').setInputFiles(exported.path);
-    await expect(reopened.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
-    await reopened.getByRole('button', { name: 'Devices', exact: true }).click();
+    await expect(reopened.locator('.job-notes')).toBeVisible();
+    await openJobSection(reopened, 'Devices');
     await reopened.getByRole('button', { name: /FAP-01/ }).first().click();
     await expect(reopened.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Unsatisfactory');
     await expect(reopened.getByRole('textbox', { name: 'Notes', exact: true })).toHaveValue('Recorded while offline.');
@@ -110,20 +108,20 @@ test('drawing → visit → offline recording → package → fresh import prese
     expect(again.data.job.results).toEqual(exported.data.job.results);
     expect(again.data.site.drawings).toEqual(exported.data.site.drawings);
     expect(again.data.job.results.find(r => r.state === 'Unsatisfactory').photos).toHaveLength(1);
-    await reopened.locator('[data-action="home"]').first().click();
+    await reopened.locator('[data-action="home"]:visible').first().click();
     await expect(reopened.getByTestId('job-card')).toHaveCount(1);
     await reopened.locator('#job-file').setInputFiles(exported.path);
-    await expect(reopened.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
-    await reopened.locator('[data-action="home"]').first().click();
+    await expect(reopened.locator('.job-notes')).toBeVisible();
+    await reopened.locator('[data-action="home"]:visible').first().click();
     await expect(reopened.getByTestId('job-card')).toHaveCount(1);
     await reopened.locator('#job-file').setInputFiles({ name: 'invalid.jobs.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wrong"}') });
     await expect(reopened.locator('#notice')).toContainText('Job import rejected');
     await expect(reopened.getByTestId('job-card')).toHaveCount(1);
     await expect.poll(() => reopened.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
-    await reopened.locator('[data-action="home"]').first().click();
+    await reopened.locator('[data-action="home"]:visible').first().click();
     await capture(reopened, testInfo.outputPath('home.png'));
     await reopened.getByTestId('job-card').click();
-    await reopened.getByRole('button', { name: 'Devices', exact: true }).click();
+    await openJobSection(reopened, 'Devices');
     await capture(reopened, testInfo.outputPath('device-grid.png'));
     await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
     await capture(reopened, testInfo.outputPath('plan.png'));
@@ -142,8 +140,8 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.getByRole('button', { name: 'Add device', exact: true }).click();
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page, { jobType: 'Call out', description: 'Investigate intermittent power fault.' });
-  await page.getByRole('button', { name: 'Create job', exact: true }).click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await saveJobCreation(page);
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
@@ -160,14 +158,15 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
   await page.reload();
   await page.getByTestId('job-card').click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Locked plant room; key holder unavailable.');
-  await page.locator('[data-action="create"]').first().click();
+  await page.getByRole('button', { name: '‹ Home', exact: true }).click();
+  await page.locator('[data-action="create"]:visible').first().click();
   await fillJobCreation(page);
-  await page.getByRole('button', { name: 'Create job', exact: true }).click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await saveJobCreation(page);
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
@@ -184,25 +183,27 @@ test('conflicts preserve local work and unusual IDs remain text', async ({ page 
   const file = { name: 'conflict.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(changed)) };
   await page.locator('#job-file').setInputFiles(file);
   await expect(page.locator('#notice')).toContainText('preserved version');
-  await page.locator('[data-action="home"]').first().click();
+  await page.locator('[data-action="home"]:visible').first().click();
   await expect(page.getByTestId('job-card')).toHaveCount(2);
   await page.getByTestId('job-card').first().click();
-  await page.getByRole('button', { name: 'Devices', exact: true }).click();
+  await openJobSection(page, 'Devices');
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.locator('#job-file').setInputFiles(file);
   await expect(page.locator('#notice')).toContainText('already saved');
-  await page.locator('[data-action="home"]').first().click();
+  await page.locator('[data-action="home"]:visible').first().click();
   await expect(page.getByTestId('job-card')).toHaveCount(2);
   const unusual = structuredClone(exported.data);
   unusual.job.id = 'job"><img src=x onerror="window.__injected=1">';
   await page.locator('#job-file').setInputFiles({ name: 'unusual-id.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(unusual)) });
-  await expect(page.getByRole('button', { name: 'Devices', exact: true })).toBeVisible();
-  await page.locator('[data-action="home"]').first().click();
+  await expect(page.locator('.job-notes')).toBeVisible();
+  await page.locator('[data-action="home"]:visible').first().click();
   await expect(page.getByTestId('job-card')).toHaveCount(3);
   await expect(page.locator('img[src="x"]')).toHaveCount(0);
   expect(await page.evaluate(() => window.__injected)).toBeUndefined();
   await page.getByTestId('job-card').first().click();
+  await openJobSection(page, 'Settings');
+  await page.getByText('More job tools', { exact: true }).click();
   await expect(page.getByText('FINDR adapter: future work.')).toBeVisible();
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export Panel Pal context', exact: true }).click();
@@ -213,7 +214,8 @@ test('conflicts preserve local work and unusual IDs remain text', async ({ page 
   expect(panel.adapter.status).toBe('future');
   expect(panel.identity.jobId).toBe(exported.data.job.id);
   await page.evaluate(() => { window.print = () => { window.__printText = document.querySelector('#print-report').innerText; }; });
-  await page.getByRole('button', { name: 'Draft service report', exact: true }).click();
+  await openJobSection(page, 'Finalisation');
+  await page.getByRole('button', { name: 'Print report', exact: true }).click();
   const report = await page.evaluate(() => window.__printText);
   expect(report).toContain('Draft service report');
   expect(report).toContain('Not a certificate of compliance');
