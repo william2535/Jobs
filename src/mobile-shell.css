@@ -504,6 +504,16 @@
     width: 23px;
     height: 23px;
   }
+  .mobile-workspace .mw-bottom-nav .mw-zone-sketch {
+    gap: 1px;
+    color: var(--mw-link);
+  }
+  .mobile-workspace .mw-zone-sketch-logo {
+    display: block;
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+  }
   .mobile-workspace .mw-empty {
     padding: 25px 16px;
     text-align: center;

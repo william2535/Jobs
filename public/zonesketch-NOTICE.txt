@@ -1,4 +1,4 @@
-Zone Sketch engine geometry extracts
+Zone Sketch engine geometry extracts and launcher artwork
 Copyright © 2026 Will Flood. All rights reserved.
 
 This component retains the proprietary licence in zonesketch-LICENSE.txt.
@@ -12,6 +12,12 @@ pointInPoly (2119), cbPlanToBoard (2710), cbBoardToPlan (2711),
 cbEditProjectToSegment (2774). Circuit constants: line 2593.
 
 The function bodies are unchanged. ES-module exports and isolated constants
-were added for integration. Only these geometry helpers are reused; the full
-Zone Sketch application, renderer, symbol artwork and workflows are not bundled.
+were added for integration. Only these geometry helpers and the app logo listed below are reused; the full
+Zone Sketch application, renderer, device symbol artwork and workflows are not bundled.
 Jobs' importer remains an independently implemented data reader.
+
+Owner-requested coloured launcher artwork:
+Source asset: assets/zone-sketch-complete-house-v2.png at the same commit above.
+Distributed unchanged as: zone-sketch-logo.png
+SHA-256: 330941de836307d0b0f47d3e9ea49b43805677626110f5d774f7912ea4b782d1
+The original proprietary licence and copyright apply to this branding.

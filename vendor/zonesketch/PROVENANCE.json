@@ -50,5 +50,13 @@
     "CB_INSET": 0.045,
     "CB_SPAN": 0.91
   },
-  "changes": "ES-module exports and isolated constants only; original function bodies unchanged."
+  "changes": "ES-module exports and isolated constants only; original function bodies unchanged.",
+  "artwork": [
+    {
+      "sourcePath": "assets/zone-sketch-complete-house-v2.png",
+      "destination": "public/zone-sketch-logo.png",
+      "sha256": "330941de836307d0b0f47d3e9ea49b43805677626110f5d774f7912ea4b782d1",
+      "modified": false
+    }
+  ]
 }

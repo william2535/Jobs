@@ -585,12 +585,17 @@ export function renderMobileWorkspace({
       ["About", "about"],
     ]) {
       if (label === "Zone Sketch") {
-        const link = node("a");
+        const link = node("a", undefined, "mw-zone-sketch");
         link.href = DEFAULT_ZONE_SKETCH_URL;
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.title = "Open Zone Sketch";
-        link.append(icon(symbol), node("span", label));
+        const logo = node("img", undefined, "mw-zone-sketch-logo");
+        logo.src = "./zone-sketch-logo.png";
+        logo.alt = "";
+        logo.width = 26;
+        logo.height = 26;
+        link.append(logo, node("span", label));
         navigation.append(link);
         continue;
       }

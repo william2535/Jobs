@@ -10,3 +10,7 @@ The repository owner's pre-existing files and instructions are retained. The sup
 ## FINDR launcher artwork
 
 The owner-requested mobile launcher uses `public/findr-logo.png`, copied unchanged from FINDR `public/app/icons/icon-192.png` at commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. SHA-256: `b42a020989445ecabf16bd74d431c866353c28da60b3cc6351a12214a6f23dbb`. This is the owner's FINDR branding, not a newly open-source-licensed component; no licence is changed or granted by its inclusion. It is cached with the Jobs shell for offline display. The shortcut opens the existing FINDR app at `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; it does not transfer job data or implement the future Panel Pal adapter. No FINDR application code is bundled.
+
+## Zone Sketch launcher artwork
+
+The mobile Zone Sketch button uses `public/zone-sketch-logo.png`, copied unchanged from `assets/zone-sketch-complete-house-v2.png` at Zone Sketch commit `dca2eff063f52a9980c2aed255879a65cc579379`. This is the original coloured house-and-flame logo already used by that app, included at the owner's explicit request. SHA-256: `330941de836307d0b0f47d3e9ea49b43805677626110f5d774f7912ea4b782d1`. The existing proprietary licence remains intact; the artwork is not relicensed. The source/hash is also retained in `vendor/zonesketch/PROVENANCE.json` and the distributed notice. The logo is cached locally with the app shell.
