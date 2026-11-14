@@ -7,21 +7,23 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_7fa90634ea30819181e4aace78f50e1b` (notes and device remarks update)
-- Successful deployment: `appgdep_6af7bca8c728819183c57fc5e876c767`
-- Application source: Jobs commit `3349e39b511c5397ae73b99acd2ca5c1aeba5641`
-- Sanitized hosting-source commit: `1a701a12ca98d551ac8921cf27142448722445d6`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_d425118224e08191a9d08650d5f77855` (FINDR dashboard launcher)
+- Successful deployment: `appgdep_6af8621f3d8881918fb1a68366390edf`
+- Application source: Jobs commit `543a647a5468b810fd9c775adf050001170e1650`
+- Sanitized hosting-source commit: `ce824d49f2783c76d052071e49467318896435be`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
-The latest 14 November update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
+The notes and device-remarks update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
 
-The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. Verification includes 163 passing unit tests and a full browser run with 41 passed / 1 intentional desktop skip. After the final compact-editor adjustment, all 8 affected Notes/remarks cases passed again on desktop and mobile. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
+The latest update adds the original circular FINDR logo directly beneath Toolbox. It opens `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; no job context is transferred. The native deployment reported **succeeded**, and all 12 published files matched the production build byte-for-byte. The existing mobile dashboard browser case passed, and a focused browser check verified a real app launch, the logo's offline cache, a 44px touch target and 320px layout.
+
+The preceding milestone passed 163 unit tests and 41 applicable browser cases, followed by all 8 affected Notes/remarks checks after its final layout adjustment. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
-Only the compiled `dist/` is served: application JS/CSS, index, service worker, manifest/icons, original component licence notices and the synthetic demonstration. The deployment archive was checked byte-for-byte against the verified production build. It contains no uploaded customer example or repository history.
+Only the compiled `dist/` is served: application JS/CSS, index, service worker, manifest/icons, original component licence notices, the FINDR launcher icon and the synthetic demonstration. The deployment archive was checked byte-for-byte against the verified production build. It contains no uploaded customer example or repository history.
 
 The separate hosting source was prepared from an explicit allowlist: `src`, `public`, `vendor`, `tests`, package manifests, Vite/Playwright configuration, `index.html` and `.gitignore`, plus its own hosting manifest and source provenance. It does not contain the customer example stored in the canonical repository root. For later publication, use this sanitized source checkout or regenerate it with the same allowlist; do not copy or publish the canonical repository root wholesale. Keep the existing Site identity and audience unless the user requests a change.
 
