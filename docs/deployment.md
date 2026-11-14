@@ -8,10 +8,10 @@ The website uses Sites hosting and is public to anyone with the link, following 
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
 - Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_19b907cea754819193351b1baab367da` (version 12, coloured Zone Sketch launcher)
-- Successful deployment: `appgdep_6af8e04452c48191820155be1922bb61`
-- Application source: Jobs commit `fe03e28ece6d319ec9ef97c0afd4bda6b5d843f9`
-- Sanitized hosting-source commit: `b505af1440fbc87fc8d9cfc3c2f126dc6dbd1010`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_8c61c1450ecc81918a55980a53281dfa` (version 13, embedded FINDR Toolbox)
+- Successful deployment: `appgdep_6af8e45b27f48191a6cd46767c9b4918`
+- Application source: Jobs commit `a6c78f368b71e7e79b1eafe330a39ac1af7a077f`
+- Sanitized hosting-source commit: `f52018c3259bdbe69bf298b95f2dc9362d9db1f5`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
@@ -28,7 +28,11 @@ Timesheets provides an editable daily timeline on mobile and desktop. Sessions c
 
 The preceding timesheets deployment reported **succeeded**, and all **12 published files matched the verified production build byte-for-byte**. **195 unit tests passed**. The complete browser run passed 62 cases with one intentional skip and exposed one first-install offline-startup race. After fixing active-worker claiming, all **18 affected desktop/mobile cases passed**, including the failing case and two new recovery regressions. All **65 applicable browser cases passed across these runs**. Checks include offline saves/reopening, timed and legacy entries, job reassignment, local receipts, download-failure recovery, retained deletion evidence, package round trips and 320px layout. See [the full test results](VERIFICATION.md) and [timesheet instructions](timesheets.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
-The current logo update uses Zone Sketch's original coloured 256×256 house-and-flame artwork in the mobile navigation. The original bytes and proprietary licence are preserved; the image is included in the offline precache. Source syntax, the build and all four existing engine/licence checks passed. The 13-file deployment build matched the verified local build byte-for-byte, and native public publication of version 12 reported **succeeded**. Fresh browser visual QA was unavailable because the managed cloud-browser tool was not present.
+The preceding logo update uses Zone Sketch's original coloured 256×256 house-and-flame artwork in the mobile navigation. The original bytes and proprietary licence are preserved; the image is included in the offline precache. Source syntax, the build and all four existing engine/licence checks passed. The 13-file deployment build matched the verified local build byte-for-byte, and native public publication of version 12 reported **succeeded**. Fresh browser visual QA was unavailable because the managed cloud-browser tool was not present.
+
+The current Toolbox update embeds FINDR's four core calculators, six extra calculators, six picture guides, Resistor Lab and FESS revision (31 subject quizzes, 20 mocks and 10 full papers). All pack content is bundled locally. Separate tool storage retains inputs and practice progress without writing to job results. Original source provenance, ownership notices, formulas and practice-only labels are retained. The FINDR app itself is unchanged.
+
+**235 automated unit/DOM tests passed**, followed by a final **14/14 focused interaction checks with network requests denied**. The production build passed, all **15 build files matched** the sanitized hosting build byte-for-byte, and every app asset is included in its offline precache. Native public publication of **version 13 succeeded**. Fresh real-browser visual/offline testing was unavailable because the managed browser tool was not present; Happy DOM checks are not represented as browser QA. See [Toolbox instructions](toolbox.md) and [verification](VERIFICATION.md).
 
 ## Deployment contents and updates
 
@@ -38,7 +42,7 @@ The separate hosting source was prepared from an explicit allowlist: `src`, `pub
 
 The optional Zone Sketch receiver is in [companion PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40). Commit `ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f` adds this exact hosted Jobs origin alongside GitHub Pages and passed the real-engine cross-origin loading/return test. That PR remains unmerged and undeployed, so the public Zone Sketch application cannot yet accept automatic loading. File import, local job editing, saved PNG viewing and package export work independently of that connection.
 
-Physical-device installation and the hosting sign-in flow still require owner testing. Do not describe the external Zone Sketch web editor as ready for a cold offline launch: it has no offline service worker in the inspected source.
+Physical-device installation still requires owner testing. Do not describe the external Zone Sketch web editor as ready for a cold offline launch: it has no offline service worker in the inspected source.
 
 ## Shareable link verification
 
