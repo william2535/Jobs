@@ -216,6 +216,7 @@ test('conflicts preserve local work and unusual IDs remain text', async ({ page 
   await page.evaluate(() => { window.print = () => { window.__printText = document.querySelector('#print-report').innerText; }; });
   await openJobSection(page, 'Finalisation');
   await page.getByRole('button', { name: 'Print report', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => typeof window.__printText)).toBe('string');
   const report = await page.evaluate(() => window.__printText);
   expect(report).toContain('Draft service report');
   expect(report).toContain('Not a certificate of compliance');

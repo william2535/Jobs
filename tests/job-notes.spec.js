@@ -74,7 +74,7 @@ test('formatted notes and included pictures save offline and appear in Finalisat
   await expect(report.locator('img')).toHaveAttribute('src', photo);
   await page.evaluate(() => { window.print = () => { window.__printedNotes = document.querySelector('#print-report')?.textContent || ''; }; });
   await page.getByRole('button', { name: 'Print report', exact: true }).click();
-  expect(await page.evaluate(() => window.__printedNotes)).toContain('Further observations saved offline.');
+  await expect.poll(() => page.evaluate(() => window.__printedNotes)).toContain('Further observations saved offline.');
   await openJobSection(page, 'Notes');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
   await page.evaluate(() => window.scrollTo(0, 0));

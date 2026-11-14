@@ -33,9 +33,11 @@ To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses 
 3. Use the **gear icon** on a job card or inside the job for optional site selection, title, status and **More details**. Discipline choices are Fire, Security, Intruder, CCTV, Access control and Custom; job types are Maintenance, Small works, Install, Take over visit, Call out and Custom. Only a selected Custom option requires a custom name.
 4. Set up a reusable site through **Sites** or **Import Zone Sketch**. Its contact, access and work settings apply to linked jobs; changes to shared settings appear across those jobs unless a field has a job-specific override. **Use site settings for this job** restores inheritance. Linking a standalone job adds the site's current drawing and fresh **Not tested** results without replacing its notes. Plans and recorded results are never automatically replaced when site settings change.
 5. Open **Plan → Assets on this floor** for the job's saved drawing and equipment. Working rows have **Pass / Fail / N/A** in the middle and a pencil at the far right to open **Defects**. Missing explanations are requested before Fail or N/A saves; saving keeps the floor, page and zoom. The **Devices** grid retains these controls too. Issued snapshots and site-only plans have no visit-result controls. Defects include before/resolution photographs, severity, recommendations and products. Save a remark, then tap **☆** to reuse its wording through **Add remark → Saved quick defects** on later jobs in this browser. Prior visit evidence and test outcomes are never copied by the shortcut. Full device records retain observations, readings with units, notes and all result states.
-6. Open **Finalisation** for the report, **Print report** and **Export job**. The `.jobs.json` includes saved notes, pictures and any site, drawing and work evidence. Standalone jobs export without a fabricated site. **Import job** validates the complete package before saving; identical reimports reopen the existing job and conflicts preserve both versions. Export works offline after the app is prepared.
+6. Open **Finalisation** for the A4 draft report, **Print report** and **Export job**. The report brings together saved notes, pictures, device results, findings and recorded repairs. Fire maintenance jobs also offer **Maintenance questions** for system, panel and battery checks. Save a partial record and return later; unanswered checks remain Not recorded. The `.jobs.json` includes saved notes, pictures and any site, drawing and work evidence. Standalone jobs export without a fabricated site. **Import job** validates the complete package before saving; identical reimports reopen the existing job and conflicts preserve both versions. Export works offline after the app is prepared.
 
-The main job sections are **Notes**, **Plan** and **Finalisation**. After saving, the gear's **More job tools** keeps Work, Products, POs and Visit records available; site-linked jobs also have Details, Devices, Results and Quick checklist. The checklist records evidence and gaps; it never passes equipment or issues a certificate. See the [standards reference notes](docs/checklist-standards.md).
+The main job sections are **Notes**, **Plan** and **Finalisation**. After saving, the gear's **More job tools** keeps Work, Products, POs and Visit records available; site-linked jobs also have Details, Devices, Results and Quick checklist. **Fire maintenance questions** is available there for explicit selection on any saved job. The maintenance prompts were derived from the supplied report example, not a complete standard or validated certificate specification. Neither checklist passes equipment or issues a certificate. See [fire maintenance and printing](docs/fire-maintenance.md) and the [standards reference notes](docs/checklist-standards.md).
+
+Use the app's **Print report** button for reports with pictures: it prepares the included images before opening the browser's print / Save as PDF sheet. Browser-menu printing refreshes saved report data but cannot wait for image decoding. Native iPhone printing still needs device validation.
 
 Inside a job, **‹ Home** returns to the dashboard. For a linked job, the **site name in the header** opens its site folder. Both routes protect unsaved changes. Detailed records retain their three-second hold-to-edit shortcut and visible Edit/Add controls. Empty optional fields and report sections stay hidden.
 
@@ -56,6 +58,8 @@ Deep contrasting blue provides the headers and accents. The mobile workspace fol
 - `src/job-notes.js`: structured rich notes, embedded pictures, validation and report rendering.
 - `src/device-remarks.js`, `src/device-remarks-ui.js`: validated device remarks, before/resolution evidence, products and retained history.
 - `src/device-results.js`, `src/quick-defects.js`: explicit single-device outcomes and a local library of reusable defect wording, separate from visit evidence.
+- `src/fire-maintenance.js`, `src/fire-maintenance-ui.js`: versioned system, panel and battery answers, readings and retained maintenance revisions.
+- `src/service-report.js`, `src/print-report.js`: saved-evidence report layout and prepared-image print lifecycle.
 - `src/storage.js`: versioned IndexedDB, atomic writes and concurrent-tab protection.
 - `src/zone-import.js`: independently implemented current/legacy importer and drawing comparison.
 - `src/plan-preview.js`: embedded PNG floor previews, issued records and device navigation; `src/plan.js` independently renders imported drawings when a Zone Sketch PNG is unavailable.
@@ -78,6 +82,8 @@ npm run test:e2e
 ```
 
 Browser tests use Chromium at `/usr/bin/chromium` when present, `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when set, or Playwright's Chromium. On a new development machine run `npx playwright install chromium` once if needed. The browser suite runs against a production build on port 4173, with desktop and mobile viewport projects. Do not rebuild `dist/` during a browser run.
+
+The report browser tests also use Poppler's `pdfinfo`, `pdftotext` and `pdftoppm` to inspect the generated PDF. Install `poppler-utils` on Debian/Ubuntu or `poppler` with Homebrew on macOS. These are test tools only; the app prints through the browser without them.
 
 Optional compatibility check against your separate checkout of Zone Sketch:
 

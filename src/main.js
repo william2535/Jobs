@@ -7,7 +7,7 @@ import { renderSiteProfile, validateSiteProfile } from "./site-profile.js";
 import { DISCIPLINES, JOB_TYPES, disciplineLabel, jobTypeLabel } from "./job-options.js";
 import "./job-create.css";
 import "./job-checklist.css";
-import { renderJobChecklist, renderChecklistReport, checklistReportTitle, validateJobChecklist } from "./job-checklist.js";
+import { renderJobChecklist, validateJobChecklist } from "./job-checklist.js";
 import "./job-notes.css";
 import "./job-settings.css";
 import "./quick-job.css";
@@ -18,7 +18,7 @@ import { validateQuickDefects } from "./quick-defects.js";
 import { applyQuickDeviceResult } from "./device-results.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
 import { renderDeviceRemarks, renderDeviceRemarkReport, renderRemarkProducts, renderRemarkPhotos, renderRemarkHistory } from "./device-remarks-ui.js";
-import { renderJobNotes, renderNotesReport, validateNotesDocument } from "./job-notes.js";
+import { renderJobNotes, validateNotesDocument } from "./job-notes.js";
 import { renderJobSettings, effectiveJob, adoptSiteSettings, captureJobOverrides } from "./job-settings.js";
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
@@ -41,7 +41,13 @@ import "./plan-asset-controls.css";
 import { buildEditableZoneSketch } from "./drawing-editor.js";
 import { createZoneHandoff, DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
 import { prepareZoneLaunch, applyZoneReturn } from "./zone-return.js";
-import { renderWorkflowSection, renderWorkflowReport } from "./job-workflow.js";
+import { renderWorkflowSection } from "./job-workflow.js";
+import { isFireMaintenanceJob, validateFireMaintenance } from "./fire-maintenance.js";
+import { renderFireMaintenance } from "./fire-maintenance-ui.js";
+import { renderServiceReport } from "./service-report.js";
+import { installReportPrinting, printServiceReport } from "./print-report.js";
+import "./fire-maintenance-ui.css";
+import "./service-report.css";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
 const $ = (s) => document.querySelector(s),
@@ -520,6 +526,7 @@ function render() {
   document.querySelector(".job-notes")?.dispose?.();
   document.querySelector(".job-settings")?.dispose?.();
   document.querySelector(".device-remarks")?.dispose?.();
+  document.querySelector(".fire-maintenance")?.dispose?.();
   disposeJobHold?.();
   disposeJobHold = null;
   const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
@@ -679,6 +686,17 @@ function render() {
   }
   if (page === "job" && j && $("#job-report-root"))
     $("#job-report-root").append(jobReport(s, j));
+  if (page === "job" && j && $("#fire-maintenance-root")) {
+    $("#fire-maintenance-root").append(renderFireMaintenance({
+      site: s || null, job: j, drawing: drawingOf(s, j) || null,
+      onDirty: markDirty,
+      onSave: record => {
+        const updated = structuredClone(currentJob());
+        updated.fireMaintenance = validateFireMaintenance(record);
+        return saveJob(updated);
+      },
+    }));
+  }
   if (page === "job" && j && $("#checklist-root")) {
     $("#checklist-root").append(renderJobChecklist({
       site: s,
@@ -777,13 +795,13 @@ function importReview() {
 }
 function jobTools(j, s) {
   if (draftJob) return '<p class="muted">Save this job to use the detailed work tools.</p>';
-  const tools = [...(s ? [["Job details", "Details"], ["Devices", "Devices"], ["Results", "Results"], ["Checklist", "Quick checklist"]] : []), ["Work", "Work"], ["Products", "Products"], ["POs", "POs"], ["Visit records", "Visit records"]];
+  const tools = [...(s ? [["Job details", "Details"], ["Devices", "Devices"], ["Results", "Results"], ["Checklist", "Quick checklist"]] : []), ["Maintenance", "Fire maintenance questions"], ["Work", "Work"], ["Products", "Products"], ["POs", "POs"], ["Visit records", "Visit records"]];
   return `<details class="quick-job-tools"><summary>More job tools</summary><div class="quick-tool-grid">${tools.map(([key, label]) => button(label, "tab:" + key)).join("")}${s ? button("Site settings", "site:" + s.id) : ""}</div>${s ? `<div class="integration-note"><span>FINDR adapter: future work.</span>${button("Export Panel Pal context", "panel-export")}</div>` : ""}</details>`;
 }
 function jobView(j, s) {
   if (!j) return "";
   const d = drawingOf(s, j);
-  const mainSection = ["Plan", "Devices", "Results"].includes(tab) ? "Plan" : ["Finalisation", "Checklist", "Visit records"].includes(tab) ? "Finalisation" : "Notes";
+  const mainSection = ["Plan", "Devices", "Results"].includes(tab) ? "Plan" : ["Finalisation", "Checklist", "Maintenance", "Visit records"].includes(tab) ? "Finalisation" : "Notes";
   const primary = `<nav class="job-main-nav quick-job-nav" aria-label="Job workflow">${["Notes", "Plan", "Finalisation"].map(label => button(label, "tab:" + label, label === mainSection ? "active" : "")).join("")}</nav>`;
   const top = `<div class="quick-job-top">${button("‹ Home", "home", "text-button job-home-link")}<button class="job-settings-icon" data-action="job-settings:${esc(j.id)}" aria-label="Job settings" title="Job settings">${settingsIcon}</button></div>`;
   let content;
@@ -791,7 +809,8 @@ function jobView(j, s) {
   else if (tab === "Settings") content = `<div id="job-settings-root"></div>${jobTools(j, s)}`;
   else if (tab === "Finalisation") content = draftJob
     ? `<section class="panel"><h1>Finalisation</h1><p>Save your job to prepare its report.</p>${button("Return to notes", "tab:Notes", "primary")}</section>`
-    : `<section class="finalisation-actions"><div><span class="eyebrow">FINALISATION</span><h1>Job report</h1><p>Prepared from your saved notes, pictures and recorded work.</p></div><div class="actions">${button("Print report", "print", "primary")}${button("Export job", "export")}</div></section><div id="job-report-root" class="job-report-preview panel"></div>`;
+    : `<section class="finalisation-actions"><div><span class="eyebrow">FINALISATION</span><h1>Job report</h1><p>Prepared from your saved notes, pictures and recorded work.</p></div><div class="actions">${isFireMaintenanceJob(j) || j.fireMaintenance ? button("Maintenance questions", "tab:Maintenance") : ""}${button("Print report", "print", "primary")}${button("Export job", "export")}</div></section><div id="job-report-root" class="job-report-preview panel"></div>`;
+  else if (tab === "Maintenance" && !draftJob) content = `<div class="quick-section-title">${button("Back to report", "tab:Finalisation", "text-button")}</div><div id="fire-maintenance-root"></div>`;
   else if (["Job details", "Work", "Products", "POs", "Visit records"].includes(tab)) content = `<div class="quick-section-title"><h1>${esc(tab === "Job details" ? "Details" : tab)}</h1>${button("Settings & tools", "job-settings:" + j.id, "text-button")}</div><div id="workflow-root"></div>`;
   else if (tab === "Checklist" && s) content = '<div id="checklist-root"></div>';
   else if (tab === "Plan" && d) content = `<section class="plan-actions panel"><div><h1>Plan</h1><p>Drawing ${esc(d.revision || "Unlabelled")}</p></div>${draftJob ? '<p class="muted">Save the job before recording work on this plan.</p>' : `<div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${button("Devices", "tab:Devices")}${button("Results", "tab:Results")}</div><details><summary>Drawing tools</summary>${drawingConnection(d)}<div class="actions">${button("Export editable drawing", "edited-source-export")}${d.source ? button("Original drawing", "source-export") : ""}</div></details>`}</section><div id="plan-root" class="panel"></div>`;
@@ -1246,8 +1265,18 @@ async function action(a) {
   if (a === "panel-export")
     return download(panelContext(s, j), `job-${j.id}.panel-context.json`);
   if (a === "print") {
-    printReport(s, j);
-    return;
+    message = "Preparing report and photographs…";
+    error = "";
+    const notice = $("#notice");
+    if (notice) {
+      notice.className = "notice";
+      notice.setAttribute("role", "status");
+      notice.textContent = message;
+    }
+    const prepared = await printServiceReport(() => jobReport(s, j));
+    message = "Report prepared. Use the print dialog to print or save as PDF.";
+    if (notice?.isConnected) notice.textContent = message;
+    return prepared;
   }
 }
 async function submit(form) {
@@ -1390,33 +1419,18 @@ function download(data, name) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-function jobReport(s, j) {
-  const d = drawingOf(s, j), report = document.createElement("section");
-  report.className = "job-report-content";
-  report.innerHTML = `<div class="report-heading"><span class="eyebrow">DRAFT SERVICE REPORT</span><h1>${esc(j.workflow?.details?.title || (disciplineLabel(j) ? checklistReportTitle(j) : "Job report"))}</h1>${s ? `<h2>${esc(s.name)}</h2>${s.address ? `<p>${esc(s.address)}</p>` : ""}` : ""}<p>${[disciplineLabel(j), jobTypeLabel(j), j.engineer].filter(Boolean).map(esc).join(" · ")}</p><small>Job ${esc(j.id)} · revision ${j.revision}${d ? ` · drawing ${esc(d.revision)}` : ""}${s?.profileRevision ? ` · site settings ${s.profileRevision}` : ""}</small></div>`;
-  report.append(renderNotesReport(j));
-  const detail = document.createElement("section");
-  detail.innerHTML = `${j.scope ? `<h3>Scope</h3><p>${esc(j.scope)}</p>` : ""}${j.instructions ? `<h3>Instructions</h3><p>${esc(j.instructions)}</p>` : ""}${j.visitNotes ? `<h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>` : ""}`;
-  report.append(detail, renderWorkflowReport(j));
-  if (j.checklist && s) report.append(renderChecklistReport(s, j));
-  if (d && j.results.length) {
-    const evidence = document.createElement("section");
-    evidence.innerHTML = results(j, d);
-    report.append(evidence);
-  }
-  const footer = document.createElement("p");
-  footer.className = "report-disclaimer";
-  footer.textContent = "Draft service report. Not a certificate of compliance. Engineer review required.";
-  report.append(footer);
-  return report;
+function jobReport(site, job) {
+  return renderServiceReport({ site: site || null, job, drawing: drawingOf(site, job) || null });
 }
-function printReport(s, j) {
-  const print = jobReport(s, j);
-  print.id = "print-report";
-  document.body.append(print);
-  window.print();
-  print.remove();
-}
+installReportPrinting({
+  getReport: () => {
+    const saved = state.jobs.find(job => job.id === activeJob);
+    if (page !== "job" || !saved || draftJob) return null;
+    const site = siteOf(saved);
+    return jobReport(site, effectiveJob(saved, site));
+  },
+  onError: cause => reportError(cause.message || "Could not prepare the report."),
+});
 
 window.addEventListener("beforeunload", (event) => {
   if (dirty) {

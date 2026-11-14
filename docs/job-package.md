@@ -78,6 +78,14 @@ A standalone v3 package has `site: null`, `job.siteId: null`, `job.drawingId: nu
 
 `job.checklist` version 1 contains the saved discipline/job-type checklist, stable checklist ID and revision, prompt-template version, drawing reference and supporting job revision, recorded fields and item states, saved timestamp, and retained earlier classification/drawing records. It is validated before import writes. Older packages without this extension remain supported. Checklist evidence travels alongside the unchanged device results; it never implies a passed result or an issued certificate. See [checklist contract](job-checklist.md) for the workflow and validation boundary.
 
+## Optional fire maintenance record
+
+`job.fireMaintenance` version 1 is preserved by the existing version-3 package without changing its envelope. It contains a stable `id`, `revision`, `templateVersion`, `drawingId`, `drawingRevision`, `basedOnJobRevision`, `savedAt`, `fields`, `systemAnswers`, `equipment` and `history`. Earlier packages without this field remain accepted. Standalone jobs may record checks with a null drawing reference.
+
+Answers are keyed by stable question IDs and contain `{value, notes}`. An unanswered value is `null`; a numeric zero is a recorded reading. Supported choices and units come from template version 1. Fail and N/A answers require notes. Partial records are valid and never change the separate device results. Visit details include scope, limitations, condition left, next actions and optional typed acknowledgement names; these names are not digital signatures.
+
+Equipment checks have `{id, templateId, assetId, label, answers}`. Each stable record uses the fire-panel or battery template and either explicitly links to an asset in its referenced drawing or has `assetId: null` and an entered visit label. A manually labelled check creates no drawing asset. A saved change retains the previous maintenance snapshot in `history`; unchanged saves add no history entry. Validation checks current and historical drawing/asset references and rejects unsupported versions, malformed answers, missing Fail/N/A reasons and future supporting job revisions before storage changes. Drawing conflicts remap the retained maintenance references with the rest of the imported job. See [fire maintenance](fire-maintenance.md) for the prompt source and limits.
+
 ## Attachment pool and decoding
 
 Versions 2 and 3 replace repeated image strings in the wire `site` and `job` with `null`, and list their exact locations separately:

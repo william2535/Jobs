@@ -5,6 +5,7 @@ import { validateJobChecklist } from "./job-checklist.js";
 import { validateNotesDocument } from "./job-notes.js";
 import { validateJobSettings } from "./job-settings.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
+import { validateFireMaintenance } from "./fire-maintenance.js";
 const hasClassification = (job) =>
   (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
   ["discipline", "customDiscipline", "customWorkType"].some((key) => job[key] !== undefined);
@@ -438,6 +439,7 @@ export function validateJobPackage(input) {
   if (!standalone) object(input.site, "site");
   const { site, job } = input;
   const checklist = validateJobChecklist(job.checklist);
+  const fireMaintenance = validateFireMaintenance(job.fireMaintenance);
   const notesDocument = validateNotesDocument(job.notesDocument);
   const settings = validateJobSettings(job.settings);
   const classification = hasClassification(job) ? validateJobClassification(job) : null;
@@ -495,6 +497,18 @@ export function validateJobPackage(input) {
     for (const record of [checklist, ...checklist.history]) {
       if (!drawings.has(record.drawingId))
         fail("checklist record references a missing drawing.");
+    }
+  }
+  if (fireMaintenance) {
+    for (const record of [fireMaintenance, ...fireMaintenance.history]) {
+      if (record.basedOnJobRevision > job.revision)
+        fail("fire maintenance references a future job revision.");
+      const sourceDrawing = record.drawingId === null ? null : drawings.get(record.drawingId);
+      if (record.drawingId !== null && !sourceDrawing)
+        fail("fire maintenance record references a missing drawing.");
+      for (const item of record.equipment)
+        if (item.assetId !== null && !sourceDrawing?.assets.some(asset => asset.id === item.assetId))
+          fail("fire maintenance equipment references a missing asset.");
     }
   }
   for (const value of site?.drawings || [])
@@ -581,6 +595,7 @@ export function validateJobPackage(input) {
   array(job.aiProposals || [], "job.aiProposals");
   const normalized = clone(input);
   if (checklist !== undefined) normalized.job.checklist = checklist;
+  if (fireMaintenance !== undefined) normalized.job.fireMaintenance = fireMaintenance;
   if (notesDocument !== undefined) normalized.job.notesDocument = notesDocument;
   if (settings !== undefined) normalized.job.settings = settings;
   if (classification) Object.assign(normalized.job, classification);
@@ -642,6 +657,7 @@ function cleanJob(job) {
   if (value.notesDocument !== undefined) value.notesDocument = validateNotesDocument(value.notesDocument);
   if (value.settings !== undefined) value.settings = validateJobSettings(value.settings);
   if (value.checklist !== undefined) value.checklist = validateJobChecklist(value.checklist);
+  if (value.fireMaintenance !== undefined) value.fireMaintenance = validateFireMaintenance(value.fireMaintenance);
   if (hasClassification(value)) Object.assign(value, validateJobClassification(value));
   if (value.workflow !== undefined) value.workflow = validateWorkflow(value.workflow);
   normalizeDeviceRemarks(value);
@@ -867,6 +883,12 @@ export async function importJobPackage(state, input) {
   }
   if (job.checklist) {
     for (const record of [job.checklist, ...job.checklist.history]) {
+      if (drawingMap.has(record.drawingId))
+        record.drawingId = drawingMap.get(record.drawingId);
+    }
+  }
+  if (job.fireMaintenance) {
+    for (const record of [job.fireMaintenance, ...job.fireMaintenance.history]) {
       if (drawingMap.has(record.drawingId))
         record.drawingId = drawingMap.get(record.drawingId);
     }

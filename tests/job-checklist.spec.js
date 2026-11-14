@@ -117,6 +117,7 @@ test('quick checklist produces truthful draft documents and travels with the off
     window.print = () => { window.__checklistPrinted = document.querySelector('#print-report')?.textContent || ''; };
   });
   await checklist.getByRole('button', { name: 'Print draft report', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => typeof window.__checklistPrinted)).toBe('string');
   const printed = await page.evaluate(() => window.__checklistPrinted);
   expect(printed).toContain('Draft Fire maintenance report');
   expect(printed).toContain('Not a certificate of compliance');

@@ -28,6 +28,12 @@ Maintenance, installation, small works, takeover and call-out records have diffe
 
 Quick checklist summaries can reduce repeated entry and prefill known site/job/equipment/drawing references. They cannot replace the complete applicable inspection schedule, manufacturer instructions, competent judgement or scheme requirements. A valid findings record may contain defects and limitations; “make every device satisfactory” must never be used as a shortcut to completion.
 
+## Supplied fire maintenance report reference
+
+The separate [fire maintenance form](fire-maintenance.md) derives 21 prompt types from pages 2–4 of the PDF supplied by the user: eight system questions, seven panel questions and six battery questions. The reference also informed the A4 report arrangement. It is an example of a visit record, not the full text of BS 5839 or a validated set of compliance rules. Panel and battery checks are added explicitly for the equipment actually checked; the software does not assume they exist from the selected discipline.
+
+The example's three-year battery check is not treated as a universal replacement limit. Jobs asks whether service life was checked against the actual manufacturer's criteria, and records the engineer's answer and readings. It does not infer acceptable voltage ranges, capacity or service life. The sample's customer information, logos, accreditation marks and terms are not copied into application fixtures or report templates.
+
 ## Why generated documents remain drafts
 
 These public catalogues and explanations establish identifiers and broad scope. They do not provide a complete, rights-cleared certificate template or the complete normative field, test, declaration and exception rules. No licensed full standard or specialist-reviewed certificate template was validated during this research. No proprietary standards text or third-party branded certificate was copied into Jobs.
