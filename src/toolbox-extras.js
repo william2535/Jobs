@@ -37,7 +37,7 @@ export function createToolboxExtraStorage({ indexedDB = globalThis.indexedDB } =
 }
 
 /** Local routes retain the original controller flow without changing the app URL or hash. */
-export function renderToolboxExtra(kind, { onBack = () => {}, read, write, audio } = {}) {
+export function renderToolboxExtra(kind, { onBack = () => {}, onNavigate = () => {}, read, write, audio } = {}) {
   if (!['resistor-lab', 'fess'].includes(kind)) throw Error('This extra tool is not available.');
   const root = document.createElement('section');
   root.className = 'toolbox-extra'; root.dataset.toolboxExtra = kind;
@@ -47,7 +47,7 @@ export function renderToolboxExtra(kind, { onBack = () => {}, read, write, audio
   const app = document.createElement('div'); app.className = 'toolbox-extra-content';
   root.append(notice, app);
   const storage = createToolboxExtraStorage();
-  let disposed = false, controller, currentRoute = kind === 'fess' ? '#quizzes' : '#resistor-lab';
+  let disposed = false, controller, navigation = 0, currentRoute = kind === 'fess' ? '#quizzes' : '#resistor-lab';
   const yields = new Map();
   const yieldControl = () => new Promise(resolve => {
     const timer = setTimeout(() => { yields.delete(timer); resolve(); }, 0);
@@ -65,9 +65,10 @@ export function renderToolboxExtra(kind, { onBack = () => {}, read, write, audio
   };
   function renderRoute() {
     if (disposed) return;
+    const ownNavigation = ++navigation;
     notice.hidden = true;
     const id = currentRoute.includes('/') ? currentRoute.slice(currentRoute.indexOf('/') + 1) : '';
-    root.ready = Promise.resolve(controller.render(id)).catch(showError);
+    root.ready = Promise.resolve(controller.render(id)).then(() => { if (!disposed && ownNavigation === navigation) onNavigate(); }).catch(showError);
   }
   function navigate(destination, fromSavedAction = false) {
     if (disposed || (!fromSavedAction && !canLeave())) return;

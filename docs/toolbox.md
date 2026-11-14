@@ -1,6 +1,6 @@
 # Toolbox
 
-Open **Toolbox** from the mobile Dashboard button or the desktop sidebar. The compact grid uses Jobs' deep-blue interface and opens the tools locally. The smaller FINDR logo remains a separate launcher for the FINDR website.
+Open **Toolbox** from the mobile Dashboard button or the desktop sidebar. It grows from the button into a compact deep-blue chest over the current overview, keeping the dashboard visible. Tools open inside the scrollable tray rather than replacing the page. Use the close button, press Escape or click Toolbox again to fold it away; your overview and scroll position remain in place. The opening animation respects reduced-motion preferences. The smaller FINDR logo remains a separate launcher for the FINDR website.
 
 These tools reuse selected code and original content from FINDR commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`, inspected at the owner's request. The FINDR repository and its live app are unchanged. Existing ownership, source references and copy/adaptation details are retained in the [calculator/guide provenance](../vendor/findr-tools/PROVENANCE.json), [Resistor Lab/FESS provenance](../vendor/findr-extras/PROVENANCE.json) and [third-party notes](THIRD_PARTY.md); no new licence is imposed on those components.
 

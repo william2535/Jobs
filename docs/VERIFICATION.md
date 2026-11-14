@@ -140,3 +140,11 @@ The current FINDR source and repository instructions were inspected at `8bdd8b03
 The production build passed. Its lazy Toolbox chunk includes the complete question bank and six embedded SVG guides, and every build asset except the service worker itself is listed in the offline precache. No external download is needed for tool calculations or practice content; source-reference links remain external. Original component notices are included in the build. No customer data was added.
 
 These new interaction checks run in Happy DOM under Node, not a real browser. Fresh mobile visual and browser-offline QA could not run because the managed browser tool was unavailable in this environment. Earlier browser results above concern their stated releases and do not constitute new Toolbox browser verification. Physical-device verification remains outstanding.
+
+## Overview tool chest — 14 November 2026
+
+Toolbox now opens as a bounded, non-modal chest over the existing overview instead of navigating to a full-page tool workspace. The background stays mounted and usable; tools render inside a scrollable tray with a close button, Escape handling, trigger state and focus return. The opening motion respects reduced-motion preferences, and the panel uses available viewport height while reserving space around the overview. Tool navigation resets the tray and focuses the destination; editing answers and inputs does not reset the tray.
+
+`npm test`: **241 passed**. Six new event-driven Happy DOM checks cover retained overview content, close/focus behaviour, unsaved-close rejection, stale lazy-load races, retry/disposal and a real calculator round trip inside the chest. The existing FESS paper check now confirms navigation notification only after the new destination renders and no navigation reset on answering. All **20 focused Toolbox checks** passed before the final full run. The production build passed; all 15 build files were inspected and every application asset remains in the offline precache.
+
+Fresh real-browser animation, layout and mobile keyboard checks were unavailable because this managed environment has no supported browser tool. These DOM tests do not measure visual geometry. Phone visual verification remains outstanding.

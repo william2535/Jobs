@@ -134,10 +134,10 @@ export function renderMobileWorkspace({
   let summary = mobileWorkspaceSummary(state, today), timesheetView = null, timesheetViewState = null;
   let disposed = false;
   const confirmLeave = () => !timesheetView || timesheetView.confirmLeave?.() !== false;
-  const onAction = (action) => {
+  const onAction = (action, source) => {
     if (!confirmLeave()) return;
     onDirty(false);
-    handleAction(action);
+    handleAction(action, source);
   };
   const persistTimesheet = (callback) => async (payload) => {
     if (typeof callback !== "function") throw Error("Timesheet saving is unavailable. Your changes have not been saved.");
@@ -409,7 +409,11 @@ export function renderMobileWorkspace({
       ),
     );
     const tools = node("div", undefined, "mw-toolbox");
-    const toolbox = control("", () => onAction("toolbox"));
+    const toolbox = control("", (event) => onAction("toolbox", event.currentTarget));
+    toolbox.setAttribute("data-toolbox-trigger", "");
+    toolbox.setAttribute("aria-haspopup", "dialog");
+    toolbox.setAttribute("aria-controls", "toolbox-chest");
+    toolbox.setAttribute("aria-expanded", String(!!document.getElementById("toolbox-chest")));
     toolbox.append(icon("toolbox"), node("strong", "Toolbox"));
     const findr = node("a", undefined, "mw-findr");
     findr.href = "https://findr-fault-finder.floodyyy21.chatgpt.site/app/";

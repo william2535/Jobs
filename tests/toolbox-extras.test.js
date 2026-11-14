@@ -208,18 +208,29 @@ test('FESS practice keeps failed answers for retry and records corrections separ
 
 test('full-paper UI keeps choices unmarked until explicit submission and preserves unanswered questions', async t => {
   installToolboxDOM(t);
-  const store = memory();
-  const root = mountToolbox(t, renderToolboxExtra('fess', { ...storageOptions(store), audio: silentAudio() }));
+  const store = memory(), navigations = [];
+  const root = mountToolbox(t, renderToolboxExtra('fess', {
+    ...storageOptions(store), audio: silentAudio(),
+    onNavigate: () => navigations.push(root.querySelector('h1')?.textContent),
+  }));
   await root.ready;
+  assert.equal(navigations.length, 1);
+  assert.equal(navigations.at(-1), root.querySelector('h1').textContent, 'Navigation fires after the destination is rendered');
   await route(root, '#fess-papers');
+  assert.equal(navigations.length, 2);
+  assert.equal(navigations.at(-1), root.querySelector('h1').textContent);
   assert.equal(root.querySelectorAll('[data-fess-action="start-paper"]').length, 10);
   assert.match(root.textContent, /not official Highfield papers/);
   click(root, '[data-fess-action="start-paper"]');
   await until(() => root.querySelector('#fess-paper-clock'));
+  await root.ready;
+  assert.equal(navigations.at(-1), root.querySelector('h1').textContent);
+  const routesAfterStart = navigations.length;
   const initial = store.records.get(FESS_STORE_KEY).runs[0], question = initial.questions[0];
   const wrong = question.options.find(option => option.id !== question.correctOptionId).id;
   click(root, `[data-fess-action="paper-answer"][data-option="${wrong}"]`);
   await until(() => !root.hasUnsavedChanges());
+  assert.equal(navigations.length, routesAfterStart, 'Answering within a tool must not reset the surrounding tray');
   assert.equal(root.querySelector('.fess-option.is-correct'), null);
   assert.equal(root.querySelector('.fess-explanation'), null);
   assert.equal(paperScore(store.records.get(FESS_STORE_KEY).runs[0]).correct, null);

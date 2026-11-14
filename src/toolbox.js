@@ -45,8 +45,8 @@ const button=(action,label,extra='',style='secondary')=>`<button type="button" c
 
 /** Calculator drafts are a separate convenience store, never diagnostic tests
  * or confirmed findings. No model, network request or job mutation is used. */
-export function renderToolbox({onHome=()=>{}}={}){
- const app=document.createElement('section');app.className='jobs-toolbox';
+export function renderToolbox({onHome=()=>{},embedded=false}={}){
+ const app=document.createElement('section');app.className='jobs-toolbox'+(embedded?' toolbox-embedded':'');
  const controller=new AbortController();let disposed=false,extraView=null;
  const listen=(type,callback)=>app.addEventListener(type,callback,{signal:controller.signal});
  let selected='',drafts=structuredClone(defaults),result=null,storageWarning='',loaded=false,draftsUnsaved=false;
@@ -103,13 +103,13 @@ export function renderToolbox({onHome=()=>{}}={}){
  }
  function saveStatus(){return `<p id="toolbox-save-status" class="toolbox-footnote${storageWarning?' toolbox-storage-warning':''}" role="${storageWarning?'alert':'status'}">${esc(storageWarning||'Inputs kept on this device · separate from job results')}</p>`;}
  function pageFrame(title,description,content,type=''){
-  return `<section class="toolbox-page"><nav class="toolbox-top" aria-label="Toolbox navigation">${button('back','‹ Toolbox')}${button('home','Home')}</nav><div class="toolbox-heading">${type?`<span class="toolbox-icon">${icon(type)}</span>`:''}<h1>${esc(title)}</h1></div>${description?`<p class="toolbox-lead">${esc(description)}</p>`:''}${content}<p class="toolbox-attribution">FINDR calculations and original guides · included in Jobs</p></section>`;
+  return `<section class="toolbox-page"><nav class="toolbox-top" aria-label="Toolbox navigation">${button('back','‹ Toolbox')}${embedded?'':button('home','Home')}</nav><div class="toolbox-heading">${type?`<span class="toolbox-icon">${icon(type)}</span>`:''}<h1>${esc(title)}</h1></div>${description?`<p class="toolbox-lead">${esc(description)}</p>`:''}${content}<p class="toolbox-attribution">FINDR calculations and original guides · included in Jobs</p></section>`;
  }
  function toolCard(slug,title,description,type='ohm'){
   return `<button type="button" class="toolbox-card" data-toolbox-open="${esc(slug)}" aria-label="${esc(title)}"><span class="toolbox-icon">${icon(type)}</span><strong>${esc(title)}</strong><span class="toolbox-card-description">${esc(description)}</span></button>`;
  }
  function landing(){
-  return `<section class="toolbox-page"><nav class="toolbox-top" aria-label="Toolbox navigation">${button('home','‹ Home')}</nav><div class="toolbox-heading"><h1>Toolbox</h1><span class="toolbox-included">Included offline</span></div><p class="toolbox-lead">Quick calculations, picture guides and training tools for the job in front of you.</p><h2 class="toolbox-section-title">Core tools</h2><div class="toolbox-grid">${toolRows.map(([slug,,title,description,type])=>toolCard(slug,title,description,type)).join('')}</div><h2 class="toolbox-section-title">On-site calculators</h2><div class="toolbox-grid">${packData.tools.map(tool=>toolCard('pack:'+tool.id,tool.title,tool.description,tool.id.includes('resistor')?'resistor':'bolt')).join('')}</div><h2 class="toolbox-section-title">More tools</h2><div class="toolbox-grid">${toolCard('extra:resistor-lab','Resistor lab','Find resistor combinations for a target, or build a series/parallel circuit.','resistor')}${toolCard('extra:fess','FESS quick mocks','Practice questions, explanations, mock tests and full papers.','ohm')}</div><h2 class="toolbox-section-title">Picture guides</h2><div class="toolbox-grid toolbox-guide-grid">${packData.guides.map(guide=>`<button type="button" class="toolbox-card toolbox-guide-card" data-toolbox-open="guide:${esc(guide.id)}" aria-label="${esc(guide.title)}"><img src="${esc(guideImages[guide.image])}" alt="${esc(guide.alt)}" loading="lazy"><strong>${esc(guide.title)}</strong></button>`).join('')}</div>${saveStatus()}<p class="toolbox-footnote">Use the actual equipment and cable documentation for required limits. Calculator results are separate from engineer-confirmed job records.</p><p class="toolbox-attribution">${esc(packData.license)}</p></section>`;
+  return `<section class="toolbox-page"><nav class="toolbox-top" aria-label="Toolbox navigation">${embedded?'':button('home','‹ Home')}</nav><div class="toolbox-heading"><h1>Toolbox</h1><span class="toolbox-included">Included offline</span></div><p class="toolbox-lead">Quick calculations, picture guides and training tools for the job in front of you.</p><h2 class="toolbox-section-title">Core tools</h2><div class="toolbox-grid">${toolRows.map(([slug,,title,description,type])=>toolCard(slug,title,description,type)).join('')}</div><h2 class="toolbox-section-title">On-site calculators</h2><div class="toolbox-grid">${packData.tools.map(tool=>toolCard('pack:'+tool.id,tool.title,tool.description,tool.id.includes('resistor')?'resistor':'bolt')).join('')}</div><h2 class="toolbox-section-title">More tools</h2><div class="toolbox-grid">${toolCard('extra:resistor-lab','Resistor lab','Find resistor combinations for a target, or build a series/parallel circuit.','resistor')}${toolCard('extra:fess','FESS quick mocks','Practice questions, explanations, mock tests and full papers.','ohm')}</div><h2 class="toolbox-section-title">Picture guides</h2><div class="toolbox-grid toolbox-guide-grid">${packData.guides.map(guide=>`<button type="button" class="toolbox-card toolbox-guide-card" data-toolbox-open="guide:${esc(guide.id)}" aria-label="${esc(guide.title)}"><img src="${esc(guideImages[guide.image])}" alt="${esc(guide.alt)}" loading="lazy"><strong>${esc(guide.title)}</strong></button>`).join('')}</div>${saveStatus()}<p class="toolbox-footnote">Use the actual equipment and cable documentation for required limits. Calculator results are separate from engineer-confirmed job records.</p><p class="toolbox-attribution">${esc(packData.license)}</p></section>`;
  }
  function packSources(ids){
   return `<details class="toolbox-more"><summary>Sources & assumptions</summary><ul>${ids.map(id=>packData.sources[id]).filter(Boolean).map(source=>{const url=safeURL(source.url);return `<li>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)} ↗</a>`:esc(source.title)}</li>`;}).join('')}</ul><p>Reference links need a connection. The calculation and original picture are included locally. Source review: ${esc(packData.checkedAt)}. These aids do not establish compliance or replace the equipment’s instructions.</p></details>`;
@@ -142,11 +142,17 @@ export function renderToolbox({onHome=()=>{}}={}){
   output.innerHTML=`<h2>Calculated estimate</h2><dl class="toolbox-values">${calculated.results.map(([label,value,unit])=>`<div><dt>${esc(label)}</dt><dd>${esc(new Intl.NumberFormat('en-GB',{maximumSignificantDigits:8}).format(value))} <span>${esc(unit)}</span></dd></div>`).join('')}</dl>${calculated.notes.map(note=>`<p class="toolbox-note">${esc(note)}</p>`).join('')}`;
   output.focus({preventScroll:true});output.scrollIntoView?.({block:'nearest'});
  }
+ const notifyView=()=>app.dispatchEvent(new CustomEvent('toolboxviewchange',{bubbles:true}));
  function render(slug=''){
+  const before=selected;paint(slug);
+  if(before!==selected&&!selected.startsWith('extra:'))notifyView();
+ }
+ function paint(slug=''){
   if(disposed)return;
   if(extraView){if(extraView.confirmLeave?.()===false)return;extraView.dispose?.();extraView=null;}
+  app.dataset.toolboxView=slug?'tool':'landing';
   if(slug==='extra:resistor-lab'||slug==='extra:fess'){
-   selected=slug;app.replaceChildren();extraView=renderToolboxExtra(slug.slice(6),{onBack:()=>render()});app.append(extraView);return;
+   selected=slug;app.replaceChildren();extraView=renderToolboxExtra(slug.slice(6),{onBack:()=>render(),onNavigate:notifyView});app.append(extraView);return;
   }
   load();selected=slug;result=null;
   if(slug.startsWith('pack:')){const tool=packData.tools.find(tool=>tool.id===slug.slice(5));if(tool){app.innerHTML=pageFrame(tool.title,tool.description,packToolForm(tool));return;}}
