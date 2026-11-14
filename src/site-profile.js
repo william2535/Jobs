@@ -1,11 +1,13 @@
 /** Reusable site information, kept separate from the records of an individual visit. */
+import { DISCIPLINES, JOB_TYPES, LEGACY_JOB_TYPES, validateJobClassification } from './job-options.js';
+
 const detailFields = [
   'client', 'contactName', 'contactPhone', 'contactEmail',
   'accessHours', 'accessProcedure', 'safetyRequirements', 'serviceRequirements',
 ];
-const coreFields = ['system', 'workType', 'engineer', 'scope', 'instructions'];
+const classificationFields = ['discipline', 'customDiscipline', 'workType', 'customWorkType'];
+const coreFields = ['system', ...classificationFields, 'engineer', 'scope', 'instructions'];
 const profileFields = [...detailFields, ...coreFields];
-const workTypes = ['Fire alarm maintenance', 'General fault or repair work'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
 /** Return an independent profile containing only explicitly recorded, nonblank strings. */
@@ -26,10 +28,12 @@ export function validateSiteProfile(profile) {
       throw new Error(`Site profile ${key} must be text of at most 10,000 characters.`);
     }
     const trimmed = value.trim();
-    if (key === 'workType' && trimmed && !workTypes.includes(trimmed)) {
-      throw new Error('Choose a supported site work type.');
-    }
     if (trimmed) normalized[key] = trimmed;
+  }
+  const classification = validateJobClassification(normalized);
+  for (const key of classificationFields) {
+    delete normalized[key];
+    if (classification[key]) normalized[key] = classification[key];
   }
   return normalized;
 }
@@ -63,11 +67,12 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
     const id = `${prefix}-${name}`;
     const attributes = `id="${id}" name="${name}" maxlength="${options.maxLength || 10000}"${options.required ? ' required' : ''}`;
     const field = options.options
-      ? `<select id="${id}" name="${name}" aria-labelledby="${id}-label"><option value="">No default work type</option>${options.options.map(option => `<option value="${escapeHtml(option)}"${value === option ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}</select>`
+      ? `<select id="${id}" name="${name}" aria-labelledby="${id}-label"><option value="">${escapeHtml(options.placeholder || 'No default')}</option>${options.options.map(option => `<option value="${escapeHtml(option)}"${value === option ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}</select>`
       : options.area
         ? `<textarea ${attributes} rows="2">${escapeHtml(value)}</textarea>`
-        : `<input ${attributes} type="${options.type || 'text'}" value="${escapeHtml(value)}"${options.list ? ` list="${prefix}-${options.list}"` : ''}>`;
-    return `<label for="${id}"${options.area ? ' class="site-profile-wide"' : ''}><span id="${id}-label">${label}</span>${field}</label>`;
+        : `<input ${attributes} type="${options.type || 'text'}" value="${escapeHtml(value)}"${options.list ? ` list="${prefix}-${options.list}"` : ''}${options.disabled ? ' disabled' : ''}>`;
+    const labelHtml = `<label for="${id}"${options.area ? ' class="site-profile-wide"' : ''}><span id="${id}-label">${label}</span>${field}</label>`;
+    return options.customFor ? `<div data-site-custom-choice="${options.customFor}"${options.disabled ? ' hidden' : ''}>${labelHtml}</div>` : labelHtml;
   };
   root.innerHTML = `
     <div class="section-head"><div><h2>Site folder details</h2><p class="muted">Recorded details fill new jobs. Existing visits keep their own records.</p></div></div>
@@ -106,7 +111,10 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
             <p class="muted">Optional. Add only information that applies to the next visit.</p>
             <div class="site-profile-inputs">
               ${input('System', 'system', profile.system, { list: 'systems' })}
-              ${input('Work type', 'workType', profile.workType, { options: workTypes })}
+              ${input('Discipline', 'discipline', profile.discipline, { options: DISCIPLINES, placeholder: 'No default discipline' })}
+              ${input('Custom discipline', 'customDiscipline', profile.customDiscipline, { customFor: 'discipline', required: profile.discipline === 'Custom', disabled: profile.discipline !== 'Custom', maxLength: 120 })}
+              ${input('Job type', 'workType', profile.workType, { options: [...JOB_TYPES, ...LEGACY_JOB_TYPES], placeholder: 'No default job type' })}
+              ${input('Custom job type', 'customWorkType', profile.customWorkType, { customFor: 'workType', required: profile.workType === 'Custom', disabled: profile.workType !== 'Custom', maxLength: 120 })}
               ${input('Assigned engineer', 'engineer', profile.engineer)}
               ${input('Scope of work', 'scope', profile.scope, { area: true })}
               ${input('Instructions', 'instructions', profile.instructions, { area: true })}
@@ -127,6 +135,20 @@ export function renderSiteProfile({ site, onSave, onDirty = () => {} }) {
     message.classList.toggle('error', error);
     message.setAttribute('role', error ? 'alert' : 'status');
   };
+  for (const choice of ['discipline', 'workType']) {
+    const control = form.elements.namedItem(choice);
+    const custom = form.querySelector(`[data-site-custom-choice="${choice}"]`);
+    control.addEventListener('change', () => {
+      const selected = control.value === 'Custom';
+      custom.hidden = !selected;
+      const customInput = custom.querySelector('input');
+      customInput.disabled = !selected;
+      customInput.required = selected;
+      message.hidden = true;
+      root.dataset.dirty = 'true';
+      onDirty(true);
+    });
+  }
   form.addEventListener('input', () => {
     message.hidden = true;
     root.dataset.dirty = 'true';

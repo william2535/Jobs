@@ -26,7 +26,7 @@ No FINDR application source, manuals, model weights, images or vendor components
 | `adapter` | Target name, `status: "future"`, `connected: false`. Capability disclosure, not a live connection. |
 | `identity` | Stable master site ID, job ID, job revision, selected drawing ID and drawing revision. |
 | `site` | Site identity, name, address and source correlation keys. |
-| `workRequested` | Selected system, work type, scope, instructions, assigned engineer and visit status. |
+| `workRequested` | Selected discipline and custom name/display label, system reference, job type and custom name/display label, description, scope, instructions, assigned engineer and visit status. |
 | `drawingReferences` | Drawing identity, revision, source provenance and retained floor data. |
 | `equipment` | Selected asset records, including stable asset IDs, source floor/device mappings, references, positions and included photos. Unrecorded manufacturer, model, loop and address are `null`. |
 | `engineerEvidence.results` | Results for those assets, retaining result IDs, states, observations, readings with units, notes, defects and included photographs. |

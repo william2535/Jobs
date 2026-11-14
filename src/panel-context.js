@@ -1,4 +1,5 @@
 /** Jobs-owned handoff contract. This is not a FINDR adapter or a Panel Pal backup. */
+import { disciplineLabel, jobTypeLabel } from "./job-options.js";
 export const PANEL_CONTEXT_VERSION = 1;
 
 const list = (value) => (Array.isArray(value) ? value : []);
@@ -52,8 +53,14 @@ export function panelContext(
       sourceKeys: clone(list(site.sourceKeys)),
     },
     workRequested: {
+      discipline: job.discipline || "",
+      customDiscipline: present(job.customDiscipline),
+      disciplineLabel: disciplineLabel(job),
       system: present(job.system),
       workType: job.workType || "",
+      customWorkType: present(job.customWorkType),
+      workTypeLabel: jobTypeLabel(job),
+      description: job.workflow?.details?.description || "",
       reference: job.workflow?.details?.reference || "",
       title: job.workflow?.details?.title || "",
       actions: clone(list(job.workflow?.tasks)),

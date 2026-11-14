@@ -1,4 +1,5 @@
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
+import { jobTypeLabel } from "./job-options.js";
 const list = (value) => (Array.isArray(value) ? value : []);
 const pad = (value) => String(value).padStart(2, "0");
 const node = (tag, text, className) => {
@@ -143,7 +144,7 @@ export function renderMobileWorkspace({
   const siteFor = (job) =>
     list(state.sites).find((site) => site.id === job.siteId);
   const jobTitle = (job) =>
-    job.workflow?.details?.title || job.workType || "Untitled job";
+    job.workflow?.details?.title || jobTypeLabel(job) || "Untitled job";
   const goJob = (job) => onAction(`job:${job.id}`);
   const empty = (title, detail) => {
     const box = node("div", undefined, "mw-empty");
@@ -178,6 +179,10 @@ export function renderMobileWorkspace({
     ]) {
       const button = control("", () => onAction(action));
       button.dataset.action = action;
+      if (action === "create" && !list(state.sites).length) {
+        button.disabled = true;
+        button.title = "Create a site first";
+      }
       button.append(icon(symbol), node("span", label));
       quick.append(button);
     }

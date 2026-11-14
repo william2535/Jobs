@@ -28,10 +28,10 @@ To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses 
 
 ## Workflow
 
-Start with **Sites → Create site manually**, or import a Zone Sketch save to create the site folder. Add the reusable contact, access and work details once, then choose **Create job** inside that site. Recorded details fill the new job automatically; unfilled boxes and empty report sections stay hidden. Hold a filled field for **3 seconds** to edit it, or use **Edit**. Use **Add details** to fill a missing section. Each job keeps its selected plan revision and included PNG through local saving and package export.
+Start with **Sites → Create site manually**, or import a Zone Sketch save to create the site folder. Add the reusable contact, access and work details once, then choose **Create job**. Create job is greyed out until at least one site has been saved. Recorded details fill the new job automatically; unfilled boxes and empty report sections stay hidden. Hold a filled field for **3 seconds** to edit it, or use **Edit**. Use **Add details** to fill a missing section. Each job keeps its selected plan revision and included PNG through local saving and package export.
 
 1. **Import Zone Sketch** and review the site mapping, floors, devices and warnings; choose **Save site**. Alternatively open **Sites**, create a site and add equipment manually.
-2. Choose **Create job**. Enter the system reference, scope, instructions and engineer. This milestone includes all equipment in the chosen drawing; every result starts **Not tested**.
+2. Choose **Create job**. Pick **Site**, **Discipline** and **Job type** from the dropdowns, add a **Description**, then create. Discipline choices are Fire, Security, Intruder, CCTV, Access control and Custom. Job types are Maintenance, Small works, Install, Take over visit, Call out and Custom. Custom opens a required name field. The selected site’s recorded details and saved plan are included; every device result starts **Not tested**.
 3. Use **Plan** for floors, working drawings and issued snapshots; tap working devices to open **Devices**. Or choose a card in the searchable **Devices** grid (four per page on phones, eight on desktop), filter by result, and move between records with Previous/Next or Choose device. Issued views remain historical evidence.
 4. Record outcomes, observations, readings with units, notes, defects and photographs. Save each form explicitly. Unsaved changes and save failures are visible. Non-satisfactory/access/exclusion states require an explanation.
 5. **Export job** creates a `.jobs.json` containing stable IDs, drawing data and embedded media. **Import job** validates it before saving. Identical reimports reopen the existing job; conflicts preserve both versions for review.
@@ -48,7 +48,8 @@ Deep contrasting blue provides the headers and accents. The mobile workspace fol
 ## Architecture and contracts
 
 - `src/main.js`, `src/style.css`: touch-friendly application, explicit save flow and printable report.
-- `src/model.js`: stable site/job/result identities, named-site creation guard and inherited visit defaults.
+- `src/model.js`: stable identities, required creation fields and inherited visit defaults.
+- `src/job-options.js`: shared discipline/job-type choices, custom names and compatibility with earlier job types.
 - `src/site-profile.js`: reusable site folder information; recorded values are copied into new jobs without changing earlier visits.
 - `src/storage.js`: versioned IndexedDB, atomic writes and concurrent-tab protection.
 - `src/zone-import.js`: independently implemented current/legacy importer and drawing comparison.

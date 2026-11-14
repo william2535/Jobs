@@ -24,7 +24,10 @@ Keep exports as backups: browser storage is local to an origin and browser profi
     "drawingId": "included-drawing-id",
     "revision": 1,
     "system": "Fire alarm",
-    "workType": "Fire alarm maintenance",
+    "discipline": "Fire",
+    "customDiscipline": "",
+    "workType": "Maintenance",
+    "customWorkType": "",
     "scope": "",
     "instructions": "",
     "engineer": "",
@@ -45,9 +48,13 @@ Every active asset has one visit result, initialized to `Not tested`. A result h
 
 ### Site folders and job defaults
 
-Every job belongs to a named permanent site folder. Optional `site.profile` version 1 stores only recorded reusable fields: `client`, `contactName`, `contactPhone`, `contactEmail`, `accessHours`, `accessProcedure`, `safetyRequirements`, `serviceRequirements`, `system`, `workType`, `engineer`, `scope` and `instructions`. Values are bounded strings; empty values are omitted. Work type is one of the two supported visit types when recorded. The profile is validated before package import changes local records.
+Every job belongs to a named permanent site folder. Optional `site.profile` version 1 stores only recorded reusable fields: `client`, `contactName`, `contactPhone`, `contactEmail`, `accessHours`, `accessProcedure`, `safetyRequirements`, `serviceRequirements`, `system`, `discipline`, `customDiscipline`, `workType`, `customWorkType`, `engineer`, `scope` and `instructions`. Values are bounded strings; empty values are omitted. Recorded disciplines and job types use the shared classification choices below; existing legacy job types remain supported. The profile is validated before package import changes local records.
 
 A new job copies the recorded profile values into its own core fields and `workflow.details`. Subsequent job edits do not change the site's defaults, and editing the defaults does not change older visits. Empty fields are omitted from the displayed job and printable report; `Add details` remains available to enter them. Internal empty defaults needed by the package's core schema are still accepted for compatibility.
+
+New job creation requires an existing named site, a discipline, a job type and a nonblank description. `job.discipline` is Fire, Security, Intruder, CCTV, Access control or Custom. `job.workType` is Maintenance, Small works, Install, Take over visit, Call out or Custom. A Custom value requires `customDiscipline` or `customWorkType` respectively, each at most 120 characters. The entered description is `job.workflow.details.description` (up to 10,000 characters). These choices describe the visit; they do not change the drawing's system, geometry or equipment results. Empty custom-name fields are cleared when a standard choice is selected.
+
+Older job packages without discipline still import. Their existing Fire alarm maintenance and General fault or repair work values stay unchanged and editable. New creation uses only the new lists. Site defaults may remain unclassified, while the creation form requires the engineer's explicit selections.
 
 The job's `drawingId` pins its own saved map revision. That drawing's geometry, source envelope, PNG and photographs are included in the package; they do not depend on the latest site plan or a remote link. Updating the site plan appends a revision and leaves existing visits on their saved map. Importing a revised plan explicitly inside a job creates its reviewed drawing change/history instead.
 

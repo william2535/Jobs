@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { validateJobPackage } from '../src/packages.js';
+import { fillJobCreation } from './helpers/job-creation.js';
 
 const fixture = resolve('public/demo.zonesketch.json');
 const sample = JSON.parse(await readFile(fixture, 'utf8'));
@@ -10,9 +11,12 @@ async function createJob(page) {
   await page.locator('#zone-file').setInputFiles(fixture);
   await page.getByRole('button', { name: 'Save site', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
+  await page.locator('.site-profile').getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
+  await page.locator('.site-profile').getByRole('textbox', { name: 'Scope of work', exact: true }).fill('Synthetic complete workflow');
+  await page.locator('.site-profile').getByRole('button', { name: 'Save site details', exact: true }).click();
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
-  await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
-  await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Synthetic complete workflow');
+  await fillJobCreation(page, { description: 'Synthetic complete workflow' });
   await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
 }
@@ -278,6 +282,7 @@ test('manual equipment stays unplaced and an unrelated supplied plan preserves i
   await page.getByRole('textbox', { name: 'Device type', exact: true }).fill('smoke');
   await page.getByRole('button', { name: 'Add device', exact: true }).click();
   await page.locator('[data-action="create"]').last().click();
+  await fillJobCreation(page);
   await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
   await page.getByRole('button', { name: /SD-MANUAL/ }).first().click();

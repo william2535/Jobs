@@ -1,5 +1,13 @@
 /** Local editable visit workflow. No supplier submission, certification or AI actions. */
 import { attachHoldToEdit } from "./hold-to-edit.js";
+import {
+  DISCIPLINES,
+  JOB_TYPES,
+  LEGACY_JOB_TYPES,
+  validateJobClassification,
+  disciplineLabel,
+  jobTypeLabel,
+} from "./job-options.js";
 
 const clone = (value) => structuredClone(value);
 const arrays = [
@@ -287,6 +295,8 @@ const area = (label, name, value = "") =>
   `<label>${label}<textarea name="${name}" rows="3">${esc(value)}</textarea></label>`;
 const select = (label, name, options, value) =>
   `<label>${label}<select name="${name}">${options.map((option) => { const [key, title] = Array.isArray(option) ? option : [option, option]; return `<option value="${esc(key)}" ${key === value ? "selected" : ""}>${esc(title)}</option>`; }).join("")}</select></label>`;
+const customChoiceInput = (label, name, value, choice, selected) =>
+  `<div data-custom-choice="${choice}" ${selected ? "" : "hidden"}><label>${label}<input name="${name}" value="${esc(value)}" type="text" maxlength="120" ${selected ? "required" : "disabled"}></label></div>`;
 const check = (label, name, value) =>
   `<label class="wf-check"><input type="checkbox" name="${name}" ${value ? "checked" : ""}>${label}</label>`;
 const button = (label, action, extra = "") =>
@@ -320,7 +330,8 @@ const groups = {
     fields: [
       ["System reference", "system"],
       ["Assigned engineer", "engineer"],
-      ["Work type", "workType", "workType"],
+      ["Discipline", "discipline", "discipline"],
+      ["Job type", "workType", "workType"],
       ["Visit date", "visitDate", "date"],
       ["Scope", "scope", "area"],
       ["Instructions", "instructions", "area"],
@@ -424,7 +435,11 @@ export function renderWorkflowSection(
     }
   }
   function summaryCard(key, group, details) {
-    const fields = group.fields.map(([label, name]) => editableValue(key, name, label, details[name])).join("");
+    const fields = group.fields.map(([label, name]) => {
+      const value = name === "discipline" ? disciplineLabel(details) : name === "workType" ? jobTypeLabel(details) : details[name];
+      const target = name === "discipline" && details.discipline === "Custom" ? "customDiscipline" : name === "workType" && details.workType === "Custom" ? "customWorkType" : name;
+      return editableValue(key, target, label, value);
+    }).join("");
     const status = key === "overview" ? editableValue("finalisation", "status", "Visit status", current.status) : "";
     if (!fields && !status) return "";
     return `<article class="wf-card wf-details-card" ${holdAttributes(key, "", "", group.title, false)}><div class="section-head"><h3>${group.title}</h3>${button("Edit", `edit:${key}`)}</div><dl>${fields}${status}</dl></article>`;
@@ -478,13 +493,12 @@ export function renderWorkflowSection(
         .map(([label, name, type]) =>
           type === "area"
             ? area(label, name, source[name])
-            : type === "workType"
-              ? select(
-                  label,
-                  name,
-                  [["", "Choose work type"], "Fire alarm maintenance", "General fault or repair work"],
-                  source[name],
-                )
+            : type === "discipline"
+              ? select(label, name, [["", "Choose discipline"], ...DISCIPLINES], source[name]) +
+                customChoiceInput("Custom discipline", "customDiscipline", source.customDiscipline, "discipline", source.discipline === "Custom")
+              : type === "workType"
+                ? select(label, name, [["", "Choose job type"], ...JOB_TYPES, ...LEGACY_JOB_TYPES], source[name]) +
+                  customChoiceInput("Custom job type", "customWorkType", source.customWorkType, "workType", source.workType === "Custom")
               : input(label, name, source[name], type || "text"),
         )
         .join("");
@@ -628,6 +642,18 @@ export function renderWorkflowSection(
     const form = root.querySelector("form");
     if (form) {
       form.addEventListener("input", () => setDirty(true));
+      for (const choice of ["discipline", "workType"]) {
+        const control = form.elements.namedItem(choice);
+        const custom = form.querySelector(`[data-custom-choice="${choice}"]`);
+        if (control && custom) control.addEventListener("change", () => {
+          const selected = control.value === "Custom";
+          custom.hidden = !selected;
+          const input = custom.querySelector("input");
+          input.disabled = !selected;
+          input.required = selected;
+          setDirty(true);
+        });
+      }
       form.onsubmit = async (event) => {
         event.preventDefault();
         if (saving) return;
@@ -648,20 +674,12 @@ export function renderWorkflowSection(
             for (const name of [
               "system",
               "engineer",
-              "workType",
               "visitDate",
               "scope",
               "instructions",
             ])
               next[name] = text(values[name], name);
-            if (
-              ![
-                "",
-                "Fire alarm maintenance",
-                "General fault or repair work",
-              ].includes(next.workType)
-            )
-              throw Error("Choose a supported work type.");
+            Object.assign(next, validateJobClassification(values));
             date(next.visitDate, "Visit date");
             next = updateWorkflow(next, "details", {});
           } else if (groups[key])

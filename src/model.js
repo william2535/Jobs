@@ -1,4 +1,5 @@
 import { jobDefaultsFromSite } from "./site-profile.js";
+import { validateJobClassification } from "./job-options.js";
 
 export const states = [
   "Not tested",
@@ -69,4 +70,18 @@ export function newJob(site, values = {}) {
     })),
     aiProposals: [],
   };
+}
+
+/** Explicit creation flow: a site, discipline, type and description are all required. */
+export function createVisitJob(site, values) {
+  const classification = validateJobClassification(values, { required: true, allowLegacy: false });
+  if (typeof values.description !== "string" || !values.description.trim() || values.description.length > 10000)
+    throw Error("Add a description of up to 10,000 characters.");
+  const job = newJob(site, classification);
+  job.workflow = {
+    ...job.workflow,
+    version: 1,
+    details: { ...job.workflow?.details, description: values.description.trim() },
+  };
+  return job;
 }

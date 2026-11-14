@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fillJobCreation } from './helpers/job-creation.js';
 
 const fixture = resolve('public/demo.zonesketch.json');
 const sample = JSON.parse(await readFile(fixture, 'utf8'));
@@ -14,10 +15,12 @@ async function importSite(page) {
   await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
 }
 async function createVisit(page) {
+  await page.locator('.site-profile').getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
+  await page.locator('.site-profile').getByRole('textbox', { name: 'Scope of work', exact: true }).fill('Synthetic maintenance visit');
+  await page.locator('.site-profile').getByRole('button', { name: 'Save site details', exact: true }).click();
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
-  await page.getByRole('combobox', { name: 'Site', exact: true }).selectOption({ label: 'Westfield Training Centre' });
-  await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Synthetic maintenance visit');
-  await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Test Engineer');
+  await fillJobCreation(page, { siteName: 'Westfield Training Centre', description: 'Synthetic maintenance visit' });
   await page.getByRole('button', { name: 'Create job', exact: true }).last().click();
   await expect(page.getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
 }
@@ -138,8 +141,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.getByRole('textbox', { name: 'Device type', exact: true }).fill('Power supply');
   await page.getByRole('button', { name: 'Add device', exact: true }).click();
   await page.locator('[data-action="create"]').last().click();
-  await page.getByRole('combobox', { name: 'Work type', exact: true }).selectOption('General fault or repair work');
-  await page.getByRole('textbox', { name: 'Scope', exact: true }).fill('Investigate intermittent power fault.');
+  await fillJobCreation(page, { jobType: 'Call out', description: 'Investigate intermittent power fault.' });
   await page.getByRole('button', { name: 'Create job', exact: true }).click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();
@@ -163,6 +165,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Inaccessible');
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Locked plant room; key holder unavailable.');
   await page.locator('[data-action="create"]').first().click();
+  await fillJobCreation(page);
   await page.getByRole('button', { name: 'Create job', exact: true }).click();
   await page.getByRole('button', { name: 'Devices', exact: true }).click();
   await page.locator('.device-browser-grid [data-action^="asset:"]').first().click();

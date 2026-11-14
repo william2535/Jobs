@@ -2,6 +2,8 @@
 
 Jobs uses the supplied application screenshots as a workflow reference. It does not include their customer details or reproduce a connection to the reference application's services.
 
+**Create job** remains disabled until a site exists. Creation uses only the Site, Discipline and Job type dropdowns, followed by Description and Create job. Custom choices reveal a required name field. Other recorded site details are copied automatically and can be edited after creation. Scope & assignment uses the same classification choices; previously saved legacy job types remain editable.
+
 The job workspace separates **Details**, **Work**, **Products**, **POs** and **Finalisation**. Related fields open in small editable groups; devices and other repeated records use compact cards. Plans, device evidence and results remain linked to the existing job and selected drawing revision.
 
 Create the permanent site folder first, then create its visit jobs. A new job can inherit the site's saved defaults without inventing missing client, contact, access or equipment information. Details shows populated fields and actual visit status; empty fields and empty groups are omitted. The **Add details** picker exposes every supported editor, including groups that are not yet shown. A populated group's Edit button also lets the engineer add or clear its fields. Clearing a field removes its readout after saving; zero-valued estimates remain visible.

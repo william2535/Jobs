@@ -1,5 +1,9 @@
 import { validateWorkflow } from "./job-workflow.js";
 import { validateSiteProfile } from "./site-profile.js";
+import { validateJobClassification } from "./job-options.js";
+const hasClassification = (job) =>
+  (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
+  ["discipline", "customDiscipline", "customWorkType"].some((key) => job[key] !== undefined);
 
 export const PACKAGE_FORMAT = "JobsPackage";
 export const PACKAGE_VERSION = 2;
@@ -417,6 +421,7 @@ export function validateJobPackage(input) {
   object(input.site, "site");
   object(input.job, "job");
   const { site, job } = input;
+  const classification = hasClassification(job) ? validateJobClassification(job) : null;
   string(site.id, "site.id");
   string(site.name, "site.name");
   if (site.profile !== undefined) validateSiteProfile(site.profile);
@@ -546,6 +551,7 @@ export function validateJobPackage(input) {
   }
   array(job.aiProposals || [], "job.aiProposals");
   const normalized = clone(input);
+  if (classification) Object.assign(normalized.job, classification);
   if (workflow !== undefined) normalized.job.workflow = workflow;
   normalized.site.address ??= "";
   normalized.site.sourceKeys ??= [];
@@ -588,6 +594,8 @@ async function digest(value) {
 
 function cleanJob(job) {
   const value = clone(job);
+  if (hasClassification(value)) Object.assign(value, validateJobClassification(value));
+  if (value.workflow !== undefined) value.workflow = validateWorkflow(value.workflow);
   delete value.importHistory;
   value.aiProposals ??= [];
   for (const result of value.results || []) {

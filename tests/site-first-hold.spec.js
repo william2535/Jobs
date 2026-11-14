@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { validateJobPackage } from '../src/packages.js';
+import { fillJobCreation } from './helpers/job-creation.js';
 
 const zoneFixture = resolve('public/demo.zonesketch.json');
 const zoneSave = JSON.parse(await readFile(zoneFixture, 'utf8'));
@@ -16,6 +17,7 @@ async function createSite(page, name = 'Synthetic site folder') {
 }
 async function createJob(page) {
   await page.locator('[data-action="create"]').last().click();
+  await fillJobCreation(page);
   await page.locator('[data-form="job"]').getByRole('button', { name: 'Create job', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
@@ -124,7 +126,7 @@ test('saving one site form protects the other unfinished draft until explicitly 
 
 test('site folder comes first, supplies recorded details, and jobs edit and reopen offline without empty boxes', async ({ page, context, browser }, testInfo) => {
   await page.goto('/');
-  await page.locator('[data-action="create"]').first().click();
+  await expect(page.locator('[data-action="create"]').first()).toBeDisabled();
   await expect(page.locator('[data-action="create-blank"]')).toHaveCount(0);
   await expect(page.locator('[data-form="job"]')).toHaveCount(0);
   await createSite(page);
@@ -136,18 +138,20 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await profile.getByRole('button', { name: 'Save site details', exact: true }).click();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await page.locator('[data-action="create"]').last().click();
-  await expect(page.getByRole('textbox', { name: 'Instructions', exact: true })).toHaveValue('Confirm access before the visit.');
-  await expect(page.getByRole('textbox', { name: 'System reference', exact: true })).toHaveValue('');
-  await expect(page.getByRole('combobox', { name: 'Work type', exact: true })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Instructions', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'System reference', exact: true })).toHaveCount(0);
+  await fillJobCreation(page);
   await page.locator('[data-form="job"]').getByRole('button', { name: 'Create job', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Job workflow' })).toBeVisible();
   const initial = await exportJob(page);
   expect(initial.data.site.name).toBe('Synthetic site folder');
   expect(initial.data.job.siteId).toBe(initial.data.site.id);
-  expect(initial.data.job.workType).toBe('');
+  expect(initial.data.job.discipline).toBe('Fire');
+  expect(initial.data.job.workType).toBe('Maintenance');
+  expect(initial.data.job.instructions).toBe('Confirm access before the visit.');
   expect(initial.data.job.system).toBe('');
   expect(initial.data.job.engineer).toBe('');
-  expect(initial.data.job.visitDate).toBe('');
+  expect(initial.data.job.visitDate || '').toBe('');
   expect(initial.data.job.results).toEqual([]);
   expect(initial.data.job.workflow.details.client).toBe('Synthetic Training Client');
   expect(initial.data.job.workflow.details.contactPhone).toBe('01234 000000');
@@ -194,7 +198,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await page.getByRole('textbox', { name: 'Site address', exact: true }).fill('Updated training address');
   await saveEditor(page, 'Save site details');
   await page.locator('[data-wf-action="edit:instructions"]').click();
-  await expect(page.getByRole('combobox', { name: 'Work type', exact: true })).toHaveValue('');
+  await expect(page.getByRole('combobox', { name: 'Job type', exact: true })).toHaveValue('Maintenance');
   await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Synthetic engineer');
   await saveEditor(page, 'Save scope & assignment');
 
@@ -209,7 +213,7 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   expect(edited.data.site.name).toBe('Synthetic site folder');
   expect(edited.data.site.address).toBe('Updated training address');
   expect(edited.data.site.profile.contactPhone).toBe('01234 000000');
-  expect(edited.data.job.workType).toBe('');
+  expect(edited.data.job.workType).toBe('Maintenance');
   expect(edited.data.job.system).toBe('');
   expect(edited.data.job.engineer).toBe('Synthetic engineer');
   expect(edited.data.job.results).toEqual([]);

@@ -3,7 +3,9 @@ import "./mobile-job.css";
 import "./mobile-shell.css";
 import "./job-fields.css";
 import "./site-profile.css";
-import { renderSiteProfile, jobDefaultsFromSite, validateSiteProfile } from "./site-profile.js";
+import { renderSiteProfile, validateSiteProfile } from "./site-profile.js";
+import { DISCIPLINES, JOB_TYPES, disciplineLabel, jobTypeLabel } from "./job-options.js";
+import "./job-create.css";
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
 import { renderMobileWorkspace } from "./mobile-shell.js";
@@ -26,7 +28,7 @@ import { createZoneHandoff, DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
 import { prepareZoneLaunch, applyZoneReturn } from "./zone-return.js";
 import { renderWorkflowSection, renderWorkflowReport } from "./job-workflow.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
-import { newSite, newJob, siteLabel, id, now, states } from "./model.js";
+import { newSite, createVisitJob, siteLabel, id, now, states } from "./model.js";
 const $ = (s) => document.querySelector(s),
   esc = (v) =>
     String(v ?? "").replace(
@@ -68,15 +70,15 @@ const field = (label, name, value = "", type = "text", required = false) =>
   `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${required ? "required" : ""}></label>`;
 const area = (label, name, value = "") =>
   `<label>${label}<textarea name="${name}" rows="3">${esc(value)}</textarea></label>`;
-const select = (label, name, options, value) =>
-  `<label>${label}<select name="${name}">${options
+const select = (label, name, options, value, required = false) =>
+  `<label>${label}<select name="${name}" ${required ? "required" : ""}>${options
     .map((o) => {
       const [v, l] = Array.isArray(o) ? o : [o, o];
       return `<option value="${esc(v)}" ${v === value ? "selected" : ""}>${esc(l)}</option>`;
     })
     .join("")}</select></label>`;
 const button = (text, action, cls = "secondary") =>
-  `<button class="${cls}" data-action="${esc(action)}">${text}</button>`;
+  `<button class="${cls}" data-action="${esc(action)}" ${action === "create" && !state.sites.length ? 'disabled title="Create a site first"' : ""}>${text}</button>`;
 const badge = (s) =>
   `<span class="badge ${s === "Unsatisfactory" ? "bad" : s === "Satisfactory" ? "good" : ""}">${esc(s)}</span>`;
 async function runTask(fn) {
@@ -453,13 +455,19 @@ function render() {
         runTask(() => submit(f));
       }),
   );
-  if (page === "create" && $("[name=siteId]"))
-    $("[name=siteId]").onchange = (e) => {
-      activeSite = e.target.value;
-      dirty = false;
-      saveLabel = "Saved on this device";
-      render();
-    };
+  if (page === "create" && $('[data-form="job"]')) {
+    for (const [choice, custom] of [["discipline", "customDiscipline"], ["workType", "customWorkType"]]) {
+      const update = () => {
+        const visible = $(`[name="${choice}"]`).value === "Custom";
+        const input = $(`[name="${custom}"]`);
+        input.closest("label").hidden = !visible;
+        input.disabled = !visible;
+        input.required = visible;
+      };
+      $(`[name="${choice}"]`).onchange = update;
+      update();
+    }
+  }
   if (page === "job" && tab === "Devices" && j && $("#device-search")) {
     const update = () => {
       deviceQuery = $("#device-search").value;
@@ -544,22 +552,18 @@ function home() {
   if (window.matchMedia("(max-width: 700px)").matches)
     return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
-  return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create"><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${state.jobs.map((j) => `<button class="job-card" data-testid="job-card" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(siteLabel(siteOf(j)))}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${j.workType ? esc(j.workType) + " · " : ""}${esc(j.engineer || "Unassigned")}</small></span><span class="job-meta">${badge(j.status)}<small>${new Date(j.updatedAt).toLocaleDateString()}</small></span><span>→</span></button>`).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
+  return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ${!state.sites.length ? 'disabled title="Create a site first"' : ""}><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${state.jobs.map((j) => `<button class="job-card" data-testid="job-card" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(siteLabel(siteOf(j)))}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${jobTypeLabel(j) ? esc(jobTypeLabel(j)) + " · " : ""}${esc(j.engineer || "Unassigned")}</small></span><span class="job-meta">${badge(j.status)}<small>${new Date(j.updatedAt).toLocaleDateString()}</small></span><span>→</span></button>`).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
 function sites() {
   return `<section class="page-title"><div><span class="eyebrow">PERMANENT RECORDS</span><h1>Sites</h1><p>Open a site folder for its details, plans and job files.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="two-column"><section class="panel"><h2>Create site manually</h2><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}"><strong>${esc(siteLabel(s))}</strong><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span><small>${esc(s.address || "Address not recorded")}</small></button>`).join("") || '<p class="muted">No sites saved yet.</p>'}</section></div>`;
 }
 function createForm() {
-  const site = state.sites.find((s) => s.id === activeSite) || state.sites[0];
-  const defaults = site ? jobDefaultsFromSite(site) : {};
-  const suppliedSystem = { fire: "Fire alarm", security: "Intruder alarm", cctv: "CCTV", access: "Access control" }[site?.drawings.at(-1)?.systemType] || "";
-  return `<section class="page-title"><div><span class="eyebrow">NEW JOB FILE</span><h1>Create job</h1><p>Choose the site folder for this visit.</p></div></section>${site
-    ? `<form class="panel form-wide" data-form="job">${select("Site", "siteId", state.sites.map((s) => [s.id, siteLabel(s)]), site.id)}<p class="muted">Recorded site details are filled in automatically. Empty fields stay out of the job view. This job keeps the site's current plan revision and included PNG.</p><div class="form-grid">${select("Work type", "workType", [["", "Choose work type (optional)"], "Fire alarm maintenance", "General fault or repair work"], defaults.workType || "")}${field("System reference", "system", defaults.system || suppliedSystem)}${field("Assigned engineer", "engineer", defaults.engineer || "")}${field("Visit date", "visitDate", "", "date")}</div><div class="record-secondary-grid">${area("Scope", "scope", defaults.scope || "")}${area("Instructions", "instructions", defaults.instructions || "")}</div><p class="muted">All device results begin as Not tested. You can edit details after creating the job.</p><button class="primary">Create job</button></form>`
-    : `<div class="panel"><h2>Create a site folder first</h2><p>Your site holds its plans, equipment and job files. Create it manually or import a Zone Sketch plan.</p><div class="actions">${button("Create site manually", "sites", "primary")}${button("Import Zone Sketch", "import-zone")}</div></div>`}`;
+  if (!state.sites.length) return `<section class="panel"><h1>Create a site first</h1>${button("Sites", "sites", "primary")}</section>`;
+  return `<section class="page-title"><div><span class="eyebrow">NEW JOB</span><h1>Create job</h1></div></section><form class="panel job-create" data-form="job"><div class="creation-fields">${select("Site", "siteId", [["", "Choose a site"], ...state.sites.map((s) => [s.id, siteLabel(s)])], activeSite || "", true)}${select("Discipline", "discipline", [["", "Choose a discipline"], ...DISCIPLINES], "", true)}<label hidden>Custom discipline<input name="customDiscipline" maxlength="120" disabled></label>${select("Job type", "workType", [["", "Choose a job type"], ...JOB_TYPES], "", true)}<label hidden>Custom job type<input name="customWorkType" maxlength="120" disabled></label><label>Description<textarea name="description" rows="4" maxlength="10000" required></textarea></label></div><p class="muted">The site's recorded details and saved plan will be included.</p><div class="record-save"><button class="primary">Create job</button></div></form>`;
 }
 function siteJobs(s) {
   const jobs = state.jobs.filter((j) => j.siteId === s.id);
-  return `<section class="panel site-job-folder"><div class="section-head"><h2>Jobs in this site <span class="count">${jobs.length}</span></h2></div>${jobs.length ? `<div class="job-list">${jobs.map((j) => `<button class="job-card" data-testid="site-job-card" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(j.workflow?.details?.title || j.workType || "Job " + j.id.slice(0, 8))}</strong><small>${esc(j.workflow?.details?.reference || j.id.slice(0, 8))} · Plan ${esc(drawingOf(s, j)?.revision || "Unlabelled")}</small></span><span class="job-meta">${badge(j.status)}</span><span>→</span></button>`).join("")}</div>` : '<p class="muted">No jobs in this folder yet. Create a job to start a visit.</p>'}</section>`;
+  return `<section class="panel site-job-folder"><div class="section-head"><h2>Jobs in this site <span class="count">${jobs.length}</span></h2></div>${jobs.length ? `<div class="job-list">${jobs.map((j) => `<button class="job-card" data-testid="site-job-card" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(j.workflow?.details?.title || jobTypeLabel(j) || "Job " + j.id.slice(0, 8))}</strong><small>${esc(j.workflow?.details?.reference || j.id.slice(0, 8))} · Plan ${esc(drawingOf(s, j)?.revision || "Unlabelled")}</small></span><span class="job-meta">${badge(j.status)}</span><span>→</span></button>`).join("")}</div>` : '<p class="muted">No jobs in this folder yet. Create a job to start a visit.</p>'}</section>`;
 }
 function siteView(s) {
   if (!s) return "";
@@ -596,6 +600,11 @@ function jobView(j, s) {
     ["POs", "POs"],
     ["Finalisation", "Finalisation"],
   ];
+  const reference = j.workflow?.details?.reference;
+  const discipline = disciplineLabel(j), jobType = jobTypeLabel(j);
+  const headingMeta = reference
+    ? `<span class="eyebrow" ${holdField("overview", "reference")}>${esc(reference)}</span>`
+    : `<div class="eyebrow">${discipline ? `<span ${holdField("instructions", j.discipline === "Custom" ? "customDiscipline" : "discipline")}>${esc(discipline)}</span>` : ""}${discipline && jobType ? " · " : ""}${jobType ? `<span ${holdField("instructions", j.workType === "Custom" ? "customWorkType" : "workType")}>${esc(jobType)}</span>` : ""}</div>`;
   const primary = `<nav class="job-main-nav" aria-label="Job workflow">${sections.map(([key, label]) => button(label, "tab:" + key, key === mainSection ? "active" : "")).join("")}</nav>`;
   let content;
   if (["Job details", "Work", "Products", "POs", "Finalisation"].includes(tab))
@@ -604,7 +613,7 @@ function jobView(j, s) {
     content = `<section class="plan-actions panel"><div><h2>Plans</h2><p>Working revision ${esc(d.revision || "Unlabelled")} · ${d.floors.length} floors</p></div><div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${button("Export editable drawing", "edited-source-export")}</div>${drawingConnection(d)}</section><div id="plan-root" class="panel"></div>`;
   else if (tab === "Devices") content = devices(j, d);
   else content = results(j, d);
-  return `${button("‹ Site folder", "site:" + s.id, "text-button job-folder-link")}<section class="page-title job-title"><div>${j.workflow?.details?.reference || j.workType ? `<span class="eyebrow" ${holdField("overview", "reference")}>${esc(j.workflow?.details?.reference || j.workType)}</span>` : ""}<h1 ${holdField("overview", "title")}>${esc(j.workflow?.details?.title || s.name || "Untitled job")}</h1><p>${j.system ? `<span ${holdField("instructions", "system")}>${esc(j.system)}</span> · ` : ""}Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div><span ${holdField("finalisation", "status")}>${badge(j.status)}</span></section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
+  return `${button("‹ Site folder", "site:" + s.id, "text-button job-folder-link")}<section class="page-title job-title"><div>${headingMeta}<h1 ${holdField("overview", "title")}>${esc(j.workflow?.details?.title || s.name || "Untitled job")}</h1><p>${j.system ? `<span ${holdField("instructions", "system")}>${esc(j.system)}</span> · ` : ""}Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div><span ${holdField("finalisation", "status")}>${badge(j.status)}</span></section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 const devicePageSize = () => window.matchMedia("(max-width: 700px)").matches ? 4 : 8;
 function filteredDevices(j, d) {
@@ -763,6 +772,7 @@ async function readJob(file) {
   }
 }
 async function action(a) {
+  if (a === "create" && !state.sites.length) return;
   if (a === "add-reading") {
     $("#reading-rows").insertAdjacentHTML(
       "beforeend",
@@ -791,6 +801,7 @@ async function action(a) {
     saveLabel = "Saved on this device";
   }
   if (a === "home" || a === "sites" || a === "create") {
+    if (a === "create" && page !== "site") activeSite = null;
     page = a;
     activeJob = null;
     importTargetJob = null;
@@ -963,7 +974,7 @@ async function submit(form) {
     const s = next.sites.find((s) => s.id === v.siteId);
     if (!s?.name.trim())
       throw Error("Enter a site name in Sites before creating a job.");
-    const j = newJob(s, v);
+    const j = createVisitJob(s, v);
     next.jobs.push(j);
     if (await persist(next, "Job created. All devices start as Not tested.")) {
       activeJob = j.id;
@@ -1083,7 +1094,7 @@ function printReport(s, j) {
   const d = drawingOf(s, j);
   const print = document.createElement("section");
   print.id = "print-report";
-  print.innerHTML = `<h1>Draft service report</h1><p>Not a certificate of compliance. Engineer review required.</p><h2>${esc(s.name)}</h2>${s.address ? `<p>${esc(s.address)}</p>` : ""}<p>Job ${esc(j.id)} · revision ${j.revision} · drawing ${esc(d.revision)}</p><p>${[j.workType, j.engineer, j.status].filter(Boolean).map(esc).join(" · ")}</p>${j.scope ? `<h3>Scope</h3><p>${esc(j.scope)}</p>` : ""}${j.instructions ? `<h3>Instructions</h3><p>${esc(j.instructions)}</p>` : ""}${j.visitNotes ? `<h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>` : ""}${results(j, d)}`;
+  print.innerHTML = `<h1>Draft service report</h1><p>Not a certificate of compliance. Engineer review required.</p><h2>${esc(s.name)}</h2>${s.address ? `<p>${esc(s.address)}</p>` : ""}<p>Job ${esc(j.id)} · revision ${j.revision} · drawing ${esc(d.revision)}</p><p>${[disciplineLabel(j), jobTypeLabel(j), j.engineer, j.status].filter(Boolean).map(esc).join(" · ")}</p>${j.scope ? `<h3>Scope</h3><p>${esc(j.scope)}</p>` : ""}${j.instructions ? `<h3>Instructions</h3><p>${esc(j.instructions)}</p>` : ""}${j.visitNotes ? `<h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>` : ""}${results(j, d)}`;
   print.insertBefore(renderWorkflowReport(j), print.querySelector(".panel"));
   document.body.append(print);
   window.print();
