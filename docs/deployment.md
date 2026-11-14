@@ -8,10 +8,10 @@ The website uses Sites hosting and is public to anyone with the link, following 
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
 - Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_8c61c1450ecc81918a55980a53281dfa` (version 13, embedded FINDR Toolbox)
-- Successful deployment: `appgdep_6af8e45b27f48191a6cd46767c9b4918`
-- Application source: Jobs commit `a6c78f368b71e7e79b1eafe330a39ac1af7a077f`
-- Sanitized hosting-source commit: `f52018c3259bdbe69bf298b95f2dc9362d9db1f5`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_6db84a7584f88191935575584745ef3b` (version 14, overview tool chest)
+- Successful deployment: `appgdep_6af8e8add1588191ba289b4c475db81f`
+- Application source: Jobs commit `c63a88444222db3c6621365d549a8eef3ff85642`
+- Sanitized hosting-source commit: `d138064f889810123fb3ddc2fea6bea0d7ecf0b7`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
@@ -30,9 +30,13 @@ The preceding timesheets deployment reported **succeeded**, and all **12 publish
 
 The preceding logo update uses Zone Sketch's original coloured 256×256 house-and-flame artwork in the mobile navigation. The original bytes and proprietary licence are preserved; the image is included in the offline precache. Source syntax, the build and all four existing engine/licence checks passed. The 13-file deployment build matched the verified local build byte-for-byte, and native public publication of version 12 reported **succeeded**. Fresh browser visual QA was unavailable because the managed cloud-browser tool was not present.
 
-The current Toolbox update embeds FINDR's four core calculators, six extra calculators, six picture guides, Resistor Lab and FESS revision (31 subject quizzes, 20 mocks and 10 full papers). All pack content is bundled locally. Separate tool storage retains inputs and practice progress without writing to job results. Original source provenance, ownership notices, formulas and practice-only labels are retained. The FINDR app itself is unchanged.
+The preceding Toolbox update embeds FINDR's four core calculators, six extra calculators, six picture guides, Resistor Lab and FESS revision (31 subject quizzes, 20 mocks and 10 full papers). All pack content is bundled locally. Separate tool storage retains inputs and practice progress without writing to job results. Original source provenance, ownership notices, formulas and practice-only labels are retained. The FINDR app itself is unchanged.
 
 **235 automated unit/DOM tests passed**, followed by a final **14/14 focused interaction checks with network requests denied**. The production build passed, all **15 build files matched** the sanitized hosting build byte-for-byte, and every app asset is included in its offline precache. Native public publication of **version 13 succeeded**. Fresh real-browser visual/offline testing was unavailable because the managed browser tool was not present; Happy DOM checks are not represented as browser QA. See [Toolbox instructions](toolbox.md) and [verification](VERIFICATION.md).
+
+The current update opens Toolbox as a compact animated chest over the overview. It keeps the dashboard mounted and visible, with calculations, guides and practice tools inside the scrolling tray. Closing, Escape and the Toolbox toggle preserve the overview; unsaved tool changes still receive their existing protection. Tool navigation resets tray scrolling and focus, and reduced-motion preferences remove the opening animation.
+
+**241 automated unit/DOM tests passed**, including six chest lifecycle/integration cases. The production build passed and all **15 hosting build files matched** the verified app build. Native public publication of **version 14 succeeded**. Fresh phone/browser visual testing of the animation, geometry and keyboard remains unavailable; the DOM tests do not claim those checks.
 
 ## Deployment contents and updates
 
