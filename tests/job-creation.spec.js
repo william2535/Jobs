@@ -39,7 +39,7 @@ test('job creation requires a site and the exact discipline/type choices, then r
   if (mobile) await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   const entries = page.locator('[data-action="create"]');
-  expect(await entries.count()).toBeGreaterThan(0);
+  await expect.poll(() => entries.count()).toBeGreaterThan(0);
   for (const entry of await entries.all()) await expect(entry).toBeDisabled();
   await expect(page.locator('[data-form="job"]')).toHaveCount(0);
   if (mobile) await capture(page, 'mobile-create-disabled.png', false);

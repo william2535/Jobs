@@ -58,6 +58,10 @@ Older job packages without discipline still import. Their existing Fire alarm ma
 
 The job's `drawingId` pins its own saved map revision. That drawing's geometry, source envelope, PNG and photographs are included in the package; they do not depend on the latest site plan or a remote link. Updating the site plan appends a revision and leaves existing visits on their saved map. Importing a revised plan explicitly inside a job creates its reviewed drawing change/history instead.
 
+## Optional visit checklist
+
+`job.checklist` version 1 contains the saved discipline/job-type checklist, stable checklist ID and revision, prompt-template version, drawing reference and supporting job revision, recorded fields and item states, saved timestamp, and retained earlier classification/drawing records. It is validated before import writes. Older packages without this extension remain supported. Checklist evidence travels alongside the unchanged device results; it never implies a passed result or an issued certificate. See [checklist contract](job-checklist.md) for the workflow and validation boundary.
+
 ## Attachment pool and decoding
 
 Version 2 replaces repeated image strings in the wire `site` and `job` with `null`, and lists their exact locations separately:

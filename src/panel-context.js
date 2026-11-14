@@ -95,6 +95,7 @@ export function panelContext(
       })),
     engineerEvidence: {
       provenance: "engineer-recorded",
+      visitChecklist: present(job.checklist),
       results: clone(results),
       visitNotes: job.visitNotes || "",
       technicianNote: job.workflow?.finalisation?.technicianNote || "",

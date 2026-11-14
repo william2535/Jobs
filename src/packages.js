@@ -1,6 +1,7 @@
 import { validateWorkflow } from "./job-workflow.js";
 import { validateSiteProfile } from "./site-profile.js";
 import { validateJobClassification } from "./job-options.js";
+import { validateJobChecklist } from "./job-checklist.js";
 const hasClassification = (job) =>
   (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
   ["discipline", "customDiscipline", "customWorkType"].some((key) => job[key] !== undefined);
@@ -421,6 +422,7 @@ export function validateJobPackage(input) {
   object(input.site, "site");
   object(input.job, "job");
   const { site, job } = input;
+  const checklist = validateJobChecklist(job.checklist);
   const classification = hasClassification(job) ? validateJobClassification(job) : null;
   string(site.id, "site.id");
   string(site.name, "site.name");
@@ -468,6 +470,12 @@ export function validateJobPackage(input) {
   }
   resultRecords(job.results, selected, "job.results");
   const drawings = new Map(site.drawings.map((value) => [value.id, value]));
+  if (checklist) {
+    for (const record of [checklist, ...checklist.history]) {
+      if (!drawings.has(record.drawingId))
+        fail("checklist record references a missing drawing.");
+    }
+  }
   for (const value of site.drawings)
     if (value.basedOnDrawingId && !drawings.has(value.basedOnDrawingId))
       fail("edited drawing references a missing base drawing.");
@@ -551,6 +559,7 @@ export function validateJobPackage(input) {
   }
   array(job.aiProposals || [], "job.aiProposals");
   const normalized = clone(input);
+  if (checklist !== undefined) normalized.job.checklist = checklist;
   if (classification) Object.assign(normalized.job, classification);
   if (workflow !== undefined) normalized.job.workflow = workflow;
   normalized.site.address ??= "";
@@ -594,6 +603,7 @@ async function digest(value) {
 
 function cleanJob(job) {
   const value = clone(job);
+  if (value.checklist !== undefined) value.checklist = validateJobChecklist(value.checklist);
   if (hasClassification(value)) Object.assign(value, validateJobClassification(value));
   if (value.workflow !== undefined) value.workflow = validateWorkflow(value.workflow);
   delete value.importHistory;
@@ -810,6 +820,12 @@ export async function importJobPackage(state, input) {
     if (drawingMap.has(copy.basedOnDrawingId)) {
       copy.sourceBasedOnDrawingId ??= copy.basedOnDrawingId;
       copy.basedOnDrawingId = drawingMap.get(copy.basedOnDrawingId);
+    }
+  }
+  if (job.checklist) {
+    for (const record of [job.checklist, ...job.checklist.history]) {
+      if (drawingMap.has(record.drawingId))
+        record.drawingId = drawingMap.get(record.drawingId);
     }
   }
   for (const entry of job.archivedResults || []) {

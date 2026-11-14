@@ -191,12 +191,18 @@ test('site folder comes first, supplies recorded details, and jobs edit and reop
   await saveEditor(page, 'Save job overview');
   await expect(page.locator('.wf-readout[data-hold-field="description"]')).toHaveCount(0);
 
-  const siteName = page.locator('header [data-job-edit="site"]');
+  const siteName = page.locator('header .job-site-link');
   await siteName.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('textbox', { name: 'Site name', exact: true })).toBeFocused();
-  await page.getByRole('textbox', { name: 'Site address', exact: true }).fill('Updated training address');
-  await saveEditor(page, 'Save site details');
+  await expect(page.locator('body')).toHaveAttribute('data-page', 'site');
+  await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
+  await page.locator('.site-profile').getByRole('textbox', { name: 'Address', exact: true }).fill('Updated training address');
+  await page.locator('.site-profile').getByRole('button', { name: 'Save site details', exact: true }).click();
+  await expect(page.getByTestId('save-status')).toContainText('Saved');
+  await page.getByTestId('site-job-card').click();
+  await page.getByRole('button', { name: '‹ Home', exact: true }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-page', 'home');
+  await page.getByTestId('job-card').click();
   await page.locator('[data-wf-action="edit:instructions"]').click();
   await expect(page.getByRole('combobox', { name: 'Job type', exact: true })).toHaveValue('Maintenance');
   await page.getByRole('textbox', { name: 'Assigned engineer', exact: true }).fill('Synthetic engineer');
@@ -286,7 +292,7 @@ test('each visit keeps its included map when the site gains a newer drawing', as
   const floor = revisedSource.project.floors[0];
   floor.data.symbols.find(symbol => symbol.reference === 'FAP-01').x = 0.55;
   for (const [key, value] of Object.entries(floor.data)) revisedSource.project[key] = structuredClone(value);
-  await page.locator('.job-folder-link').click();
+  await page.locator('header .job-site-link').click();
   await expect(page.getByTestId('site-job-card')).toHaveCount(1);
   const chooserPromise = page.waitForEvent('filechooser');
   await page.locator('[data-action="import-site-plan"]').click();

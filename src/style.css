@@ -180,6 +180,27 @@ header strong {
   display: block;
   font-size: 15px;
 }
+.job-site-link {
+  display: block;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.job-site-link:hover {
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.job-site-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .eyebrow {
   font-size: 10px;
   letter-spacing: 1.6px;
@@ -1121,13 +1142,16 @@ footer {
 }
 .job-tools.tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 9px;
   border: 0;
   margin-bottom: 20px;
 }
 .job-tools.tabs button {
   min-height: 44px;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 9px 12px;

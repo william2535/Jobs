@@ -6,6 +6,8 @@ import "./site-profile.css";
 import { renderSiteProfile, validateSiteProfile } from "./site-profile.js";
 import { DISCIPLINES, JOB_TYPES, disciplineLabel, jobTypeLabel } from "./job-options.js";
 import "./job-create.css";
+import "./job-checklist.css";
+import { renderJobChecklist, renderChecklistReport, checklistReportTitle, validateJobChecklist } from "./job-checklist.js";
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
 import { renderMobileWorkspace } from "./mobile-shell.js";
@@ -415,6 +417,7 @@ const holdField = (group, field) =>
   `data-job-edit="${group}" data-edit-field="${field}" data-hold-edit tabindex="0" title="Hold for 3 seconds to edit"`;
 function render() {
   document.querySelector(".workflow-module")?.disposeHoldToEdit?.();
+  document.querySelector(".job-checklist")?.dispose?.();
   disposeJobHold?.();
   disposeJobHold = null;
   const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
@@ -424,9 +427,12 @@ function render() {
     s = j ? siteOf(j) : state.sites.find((s) => s.id === activeSite);
   const mobileHome =
     page === "home" && window.matchMedia("(max-width: 700px)").matches;
+  const headerSite = page === "job" && j && s
+    ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
+    : `<strong>${esc(s ? siteLabel(s) : "Jobs")}</strong>`;
   const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span><strong ${page === "job" && j ? holdField("site", "name") : ""}>${esc(s ? siteLabel(s) : "Jobs")}</strong></div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "create" ? createForm() : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "create" ? createForm() : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   document.body.dataset.page = page;
   if (page === "home" && $("#mobile-workspace-root")) {
@@ -502,6 +508,17 @@ function render() {
           ),
       }),
     );
+  }
+  if (page === "job" && j && $("#checklist-root")) {
+    $("#checklist-root").append(renderJobChecklist({
+      site: s,
+      job: j,
+      onSave: (checklist) => saveWorkflow({ ...j, checklist: validateJobChecklist(checklist) }),
+      onDirty: markDirty,
+      onNavigate: (destination) => runTask(() => action(
+        ["print", "export"].includes(destination) ? destination : "tab:" + destination,
+      )),
+    }));
   }
   if (page === "job" && j) {
     disposeJobHold = attachHoldToEdit($("#app"), {
@@ -590,7 +607,7 @@ function jobView(j, s) {
   if (!j || !s) return "";
   const d = drawingOf(s, j),
     tested = j.results.filter((r) => r.state !== "Not tested").length;
-  const mainSection = ["Plan", "Devices", "Results"].includes(tab)
+  const mainSection = tab === "Checklist" ? "Finalisation" : ["Plan", "Devices", "Results"].includes(tab)
     ? "Work"
     : tab;
   const sections = [
@@ -609,11 +626,13 @@ function jobView(j, s) {
   let content;
   if (["Job details", "Work", "Products", "POs", "Finalisation"].includes(tab))
     content = `<div id="workflow-root"></div>${tab === "Job details" ? `<aside class="integration-note"><span><strong>FINDR adapter: future work.</strong> Export context for the planned local connection.</span>${button("Export Panel Pal context", "panel-export")}</aside>` : ""}`;
+  else if (tab === "Checklist")
+    content = `<div class="actions">${button("Visit notes & status", "tab:Finalisation", "text-button")}</div><div id="checklist-root"></div>`;
   else if (tab === "Plan")
     content = `<section class="plan-actions panel"><div><h2>Plans</h2><p>Working revision ${esc(d.revision || "Unlabelled")} · ${d.floors.length} floors</p></div><div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${button("Export editable drawing", "edited-source-export")}</div>${drawingConnection(d)}</section><div id="plan-root" class="panel"></div>`;
   else if (tab === "Devices") content = devices(j, d);
   else content = results(j, d);
-  return `${button("‹ Site folder", "site:" + s.id, "text-button job-folder-link")}<section class="page-title job-title"><div>${headingMeta}<h1 ${holdField("overview", "title")}>${esc(j.workflow?.details?.title || s.name || "Untitled job")}</h1><p>${j.system ? `<span ${holdField("instructions", "system")}>${esc(j.system)}</span> · ` : ""}Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div><span ${holdField("finalisation", "status")}>${badge(j.status)}</span></section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results"].map((t) => button(t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
+  return `${button("‹ Home", "home", "text-button job-home-link")}<section class="page-title job-title"><div>${headingMeta}<h1 ${holdField("overview", "title")}>${esc(j.workflow?.details?.title || s.name || "Untitled job")}</h1><p>${j.system ? `<span ${holdField("instructions", "system")}>${esc(j.system)}</span> · ` : ""}Drawing ${esc(d.revision || "Unlabelled")} · Job revision ${j.revision}</p></div><span ${holdField("finalisation", "status")}>${badge(j.status)}</span></section><div class="job-toolbar"><span>${tested} / ${j.results.length} device results recorded</span><div class="actions">${button("Export job", "export")}${button("Draft service report", "print")}${d.source ? button("Original drawing", "source-export") : ""}</div></div>${primary}<nav class="tabs job-tools" aria-label="Drawing and equipment">${["Plan", "Devices", "Results", "Checklist"].map((t) => button(t === "Checklist" ? "Quick checklist" : t, "tab:" + t, t === tab ? "active" : "")).join("")}</nav>${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 const devicePageSize = () => window.matchMedia("(max-width: 700px)").matches ? 4 : 8;
 function filteredDevices(j, d) {
@@ -1094,7 +1113,8 @@ function printReport(s, j) {
   const d = drawingOf(s, j);
   const print = document.createElement("section");
   print.id = "print-report";
-  print.innerHTML = `<h1>Draft service report</h1><p>Not a certificate of compliance. Engineer review required.</p><h2>${esc(s.name)}</h2>${s.address ? `<p>${esc(s.address)}</p>` : ""}<p>Job ${esc(j.id)} · revision ${j.revision} · drawing ${esc(d.revision)}</p><p>${[disciplineLabel(j), jobTypeLabel(j), j.engineer, j.status].filter(Boolean).map(esc).join(" · ")}</p>${j.scope ? `<h3>Scope</h3><p>${esc(j.scope)}</p>` : ""}${j.instructions ? `<h3>Instructions</h3><p>${esc(j.instructions)}</p>` : ""}${j.visitNotes ? `<h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>` : ""}${results(j, d)}`;
+  print.innerHTML = `<h1>${esc(checklistReportTitle(j))}</h1><p>Draft service report. Not a certificate of compliance. Engineer review required.</p><h2>${esc(s.name)}</h2>${s.address ? `<p>${esc(s.address)}</p>` : ""}<p>Job ${esc(j.id)} · revision ${j.revision} · drawing ${esc(d.revision)}</p><p>${[disciplineLabel(j), jobTypeLabel(j), j.engineer, j.status].filter(Boolean).map(esc).join(" · ")}</p>${j.scope ? `<h3>Scope</h3><p>${esc(j.scope)}</p>` : ""}${j.instructions ? `<h3>Instructions</h3><p>${esc(j.instructions)}</p>` : ""}${j.visitNotes ? `<h3>Visit notes / condition left</h3><p>${esc(j.visitNotes)}</p>` : ""}${results(j, d)}`;
+  print.insertBefore(renderChecklistReport(s, j), print.querySelector(".panel"));
   print.insertBefore(renderWorkflowReport(j), print.querySelector(".panel"));
   document.body.append(print);
   window.print();

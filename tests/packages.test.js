@@ -5,6 +5,11 @@ import {
   importJobPackage,
   validateJobPackage,
 } from "../src/packages.js";
+import {
+  createChecklistDraft,
+  validateJobChecklist,
+  checklistProgress,
+} from "../src/job-checklist.js";
 
 function fixture() {
   const photo = {
@@ -60,6 +65,86 @@ function fixture() {
   };
   return { site, job };
 }
+
+function fixtureWithChecklistHistory() {
+  const { site, job } = fixture();
+  job.discipline = "Fire";
+  job.workType = "Maintenance";
+  const first = createChecklistDraft(job);
+  first.revision = 1;
+  first.drawingRevision = "A";
+  first.savedAt = "2026-01-01T12:00:00Z";
+  first.entries[0].state = "Recorded";
+  first.entries[0].notes = "Recorded against original drawing A.";
+  job.checklist = validateJobChecklist(first);
+  site.drawings.push({
+    ...structuredClone(site.drawings[0]),
+    id: "drawing-2",
+    revision: "B",
+    basedOnDrawingId: "drawing-1",
+  });
+  job.drawingId = "drawing-2";
+  job.revision = 2;
+  const second = createChecklistDraft(job);
+  second.revision = 2;
+  second.drawingRevision = "B";
+  second.savedAt = "2026-01-01T13:00:00Z";
+  second.entries[0].state = "Recorded";
+  second.entries[0].notes = "Reviewed against revised drawing B.";
+  job.checklist = validateJobChecklist(second);
+  return { site, job };
+}
+
+test("drawing conflicts keep current and historical checklist evidence linked to their preserved drawings", async () => {
+  const { site, job } = fixtureWithChecklistHistory();
+  const exported = await createJobPackage(site, job);
+  site.drawings[0].revision = "Different local A";
+  site.drawings[1].revision = "Different local B";
+  job.results[0].notes = "Keep local device evidence.";
+  const state = { sites: [site], jobs: [job] };
+  const before = structuredClone(state);
+  const imported = await importJobPackage(state, exported);
+  assert.equal(imported.conflict, true);
+  assert.equal(imported.state.jobs.length, 2);
+  assert.deepEqual(state, before);
+  assert.deepEqual(imported.state.jobs[0], before.jobs[0]);
+  assert.equal(imported.job.checklist.drawingId, imported.job.drawingId);
+  assert.equal(checklistProgress(imported.job).needsReview, false);
+  const drawings = imported.state.sites[0].drawings;
+  for (const [record, originalId, revision] of [
+    [imported.job.checklist, "drawing-2", "B"],
+    [imported.job.checklist.history[0], "drawing-1", "A"],
+  ]) {
+    const preserved = drawings.find((drawing) => drawing.id === record.drawingId);
+    assert.ok(preserved);
+    assert.notEqual(record.drawingId, originalId);
+    assert.equal(preserved.sourceDrawingId, originalId);
+    assert.equal(preserved.revision, revision);
+    assert.equal(record.drawingRevision, revision);
+  }
+  assert.equal(imported.job.checklist.entries[0].notes, job.checklist.entries[0].notes);
+  assert.equal(imported.job.checklist.history[0].entries[0].notes, job.checklist.history[0].entries[0].notes);
+  const reexported = await createJobPackage(imported.state.sites[0], imported.job);
+  const reopened = await importJobPackage({ sites: [], jobs: [] }, reexported);
+  assert.deepEqual(reopened.job.checklist, imported.job.checklist);
+  const repeated = await importJobPackage(imported.state, exported);
+  assert.equal(repeated.duplicate, true);
+  assert.equal(repeated.state.jobs.length, 2);
+});
+
+test("missing current or historical checklist drawings reject without changing existing work", async () => {
+  const { site, job } = fixtureWithChecklistHistory();
+  const exported = await createJobPackage(site, job);
+  const state = { sites: [site], jobs: [job] };
+  const before = structuredClone(state);
+  for (const historical of [false, true]) {
+    const invalid = structuredClone(exported);
+    const record = historical ? invalid.job.checklist.history[0] : invalid.job.checklist;
+    record.drawingId = "missing-drawing";
+    await assert.rejects(importJobPackage(state, invalid), /checklist record references a missing drawing/);
+    assert.deepEqual(state, before);
+  }
+});
 
 test("round trip retains all embedded photos, original drawing, stable IDs and revisions", async () => {
   const { site, job } = fixture();
