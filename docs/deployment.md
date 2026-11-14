@@ -7,17 +7,17 @@ The website uses Sites hosting, with access private to the owner's account. The 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_3bb0454391688191b3197ff0656b6b84` (job navigation and quick checklist update)
-- Successful deployment: `appgdep_6af7b226c3e88191919e385169fdfb4a`
-- Application source: Jobs commit `7d69f3be3bdcdf957ff8410916619022cf74387f`
-- Sanitized hosting-source commit: `d7af8e1580574c6ebc01039f383c4f13e5326fd6`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_7fa90634ea30819181e4aace78f50e1b` (notes and device remarks update)
+- Successful deployment: `appgdep_6af7bca8c728819183c57fc5e876c767`
+- Application source: Jobs commit `3349e39b511c5397ae73b99acd2ca5c1aeba5641`
+- Sanitized hosting-source commit: `1a701a12ca98d551ac8921cf27142448722445d6`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
 
-The latest 14 November update makes the job's back control return Home and the header site name open its site folder. Quick checklist selects recording prompts by discipline and job type, retains saved drawing references and history, and feeds the offline draft report and self-contained job export. Known details prefill the draft; unrecorded facts and excluded work remain visible. The independent forms are not validated compliance certificates. Site-first creation, the requested dropdowns, hold editing and each job's pinned map remain available.
+The latest 14 November update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
 
-The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. Verification includes 134 passing unit tests and all 31 applicable desktop/mobile browser cases passing across the full run and final creation rerun; one mobile-only case is intentionally skipped on desktop. See [the full test results](VERIFICATION.md). If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
+The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. Verification includes 163 passing unit tests and a full browser run with 41 passed / 1 intentional desktop skip. After the final compact-editor adjustment, all 8 affected Notes/remarks cases passed again on desktop and mobile. See [the full test results](VERIFICATION.md). If an already-open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
