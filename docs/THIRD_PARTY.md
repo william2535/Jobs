@@ -5,3 +5,8 @@ Jobs' importer and read-only renderer are independent implementations of the obs
 Production application modules have no npm runtime dependencies. Build/test dependencies are Vite (MIT), Playwright (Apache-2.0), and fake-indexeddb (Apache-2.0), plus their locked transitive dependencies. Their original licences and notices remain in installed packages; no licence files were modified. The committed icon is an original simple geometric clipboard/check drawing. No remote fonts or assets are required.
 
 The repository owner's pre-existing files and instructions are retained. The supplied real customer drawing is not included in the generated static build or automated fixtures. Do not add customer saves, manuals or photographs to `public/` or test fixtures.
+
+
+## FINDR launcher artwork
+
+The owner-requested mobile launcher uses `public/findr-logo.png`, copied unchanged from FINDR `public/app/icons/icon-192.png` at commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. SHA-256: `b42a020989445ecabf16bd74d431c866353c28da60b3cc6351a12214a6f23dbb`. This is the owner's FINDR branding, not a newly open-source-licensed component; no licence is changed or granted by its inclusion. It is cached with the Jobs shell for offline display. The shortcut opens the existing FINDR app at `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; it does not transfer job data or implement the future Panel Pal adapter. No FINDR application code is bundled.

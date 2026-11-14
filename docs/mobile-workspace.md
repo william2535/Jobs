@@ -16,6 +16,8 @@ Overdue means an open job with a past appointment or visit date. Completing work
 
 The shell uses actual text DOM nodes for source content, 44px minimum controls, native date selection and safe-area spacing for fixed navigation. Saved job cards keep their stable IDs and open the same job records used by the desktop interface. Tapping a card opens Notes; its separate gear opens Settings without opening a different job.
 
+The small circular FINDR logo sits immediately below Toolbox on Dashboard and opens the existing FINDR app in a separate tab. The logo is included locally; opening FINDR uses its own website and offline preparation. This is a launcher, without automatic job-context transfer.
+
 ## Quick job flow
 
 **Create job** is always available. From Home it opens a blank standalone note, with no site or classifications required. From a site folder it opens blank notes linked to that site. Write, format text, add pictures and press **Save**; a job is not persisted until an explicit save succeeds. **Save settings** also persists a new job. The visible save status distinguishes an unsaved draft from saved work.

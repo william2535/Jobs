@@ -187,6 +187,29 @@
     font-size: 18px;
     font-weight: 700;
   }
+  .mobile-workspace .mw-findr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 44px;
+    padding: 4px 0;
+    color: var(--mw-link);
+    font-size: 12px;
+    text-decoration: none;
+    border-radius: 6px;
+  }
+  .mobile-workspace .mw-findr-circle {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: #ffd000;
+  }
+  .mobile-workspace .mw-findr img { display: block; width: 38px; height: 38px; }
+  .mobile-workspace .mw-findr:focus-visible { outline: 3px solid var(--mw-link); outline-offset: 3px; }
   .mobile-workspace .mw-shortcuts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

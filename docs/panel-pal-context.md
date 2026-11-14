@@ -15,7 +15,7 @@ Relevant existing boundaries:
 - `public/app/helper-mode.mjs`: offline, manual and separately consented online modes. Imported context must not imply online consent.
 - `docs/COMPACT-PANEL-PALS.md`: the local runtime uses the selected pal's manuals and evidence; document retrieval is not model training.
 
-No FINDR application source, manuals, model weights, images or vendor components were copied into Jobs. Existing component licences remain in the reference repository. This contract and its exporter are independently written.
+The separate Dashboard launcher includes FINDR’s unchanged app icon at the owner’s request; see [artwork provenance](THIRD_PARTY.md). No FINDR application source, manuals, model weights or vendor components were copied into Jobs. Existing component licences remain in the reference repository. This contract and its exporter are independently written.
 
 ## Document fields
 

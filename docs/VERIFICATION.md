@@ -79,3 +79,8 @@ Current notebook previews: [mobile job](screenshots/mobile-notes-job.png) and [d
 The public automatic connection becomes available after the companion Zone Sketch PR is merged and deployed. Jobs reports a missing receiver or blocked popup; it does not claim a connection before acknowledgement. Cold-opening the external Zone Sketch editor offline depends on that application's own caching, which the inspected web app does not provide. Jobs' saved PNG viewing, recording and export work independently offline.
 
 Mobile verification uses browser emulation. Physical-device installation, OS share sheets and storage-pressure behaviour still need validation. FINDR's real adapter, validated certificate templates, cloud/team synchronisation and warehouse stock management remain future work. Draft reports do not claim compliance or automatically pass equipment.
+
+
+## FINDR launcher update
+
+The owner-requested circular FINDR logo sits directly below Toolbox on the mobile dashboard. The production build and existing mobile dashboard browser case passed. A focused browser check verified the original logo bytes, minimum 44px touch target, position below Toolbox, a real click opening `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` with the FINDR app title, offline logo loading after preparation, and no horizontal overflow at 320px. [Mobile preview](screenshots/mobile-findr-launcher.png). This launcher does not transfer job context or implement the future Panel Pal adapter.

@@ -407,6 +407,20 @@ export function renderMobileWorkspace({
         ?.scrollIntoView({ block: "center", behavior: "smooth" }),
     );
     toolbox.append(icon("toolbox"), node("strong", "Toolbox"));
+    const findr = node("a", undefined, "mw-findr");
+    findr.href = "https://findr-fault-finder.floodyyy21.chatgpt.site/app/";
+    findr.target = "_blank";
+    findr.rel = "noopener noreferrer";
+    findr.setAttribute("aria-label", "Open FINDR");
+    findr.title = "Open FINDR";
+    const findrCircle = node("span", undefined, "mw-findr-circle");
+    const findrLogo = node("img");
+    findrLogo.src = "./findr-logo.png";
+    findrLogo.alt = "";
+    findrLogo.width = 38;
+    findrLogo.height = 38;
+    findrCircle.append(findrLogo);
+    findr.append(findrCircle, node("strong", "FINDR"));
     const overdue = control("", () => {
       tab = "Tasks";
       onlyOverdue = true;
@@ -418,7 +432,7 @@ export function renderMobileWorkspace({
       node("span", "Overdue"),
     );
     overdue.setAttribute("aria-label", `${summary.overdue} overdue visits`);
-    tools.append(toolbox, overdue);
+    tools.append(toolbox, findr, overdue);
     metrics.append(tools);
     content.append(metrics, shortcuts());
     if (!summary.total)
