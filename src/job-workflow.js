@@ -1,6 +1,13 @@
 /** Local editable visit workflow. No supplier submission, certification or AI actions. */
 import { attachHoldToEdit } from "./hold-to-edit.js";
 import {
+  SESSION_TYPES,
+  validateTimesheetEntry,
+  prepareTimesheetEdit,
+  deleteTimesheetEntry,
+  minutesForTimesheet,
+} from "./timesheets.js";
+import {
   DISCIPLINES,
   JOB_TYPES,
   LEGACY_JOB_TYPES,
@@ -140,18 +147,7 @@ function recordFor(collection, value) {
     r.currency = currency(r.currency);
     r.notes = text(r.notes ?? "", "PO notes");
   } else if (collection === "timesheets") {
-    r.date = date(r.date ?? "", "Work date");
-    r.start = time(r.start ?? "", "Start time");
-    r.end = time(r.end ?? "", "End time");
-    r.note = text(r.note ?? "", "Time note");
-    r.engineer = text(r.engineer ?? "", "Engineer");
-    if (Boolean(r.start) !== Boolean(r.end))
-      throw Error(
-        "Enter both start and end time, or leave both empty and enter hours.",
-      );
-    const calculated = r.start && r.end ? duration(r.start, r.end) : null;
-    r.hours = number(r.hours, "Hours", true) ?? calculated;
-    if (r.hours === null) throw Error("Enter hours or a start and end time.");
+    return validateTimesheetEntry(r);
   } else if (collection === "timeline") {
     for (const key of ["at", "action", "collection", "recordId", "summary"])
       r[key] = text(r[key] ?? "", `Timeline ${key}`);
@@ -223,8 +219,12 @@ export function updateWorkflow(job, collection, record) {
     w[collection] = { ...w[collection], ...clone(record) };
     saved = w[collection];
   } else if (arrays.includes(collection) && collection !== "timeline") {
-    saved = recordFor(collection, record);
-    const index = w[collection].findIndex((r) => r.id === saved.id);
+    object(record, collection);
+    const candidate = { ...clone(record), id: record.id === undefined ? uid() : record.id };
+    const index = w[collection].findIndex((r) => r.id === candidate.id);
+    saved = collection === "timesheets"
+      ? prepareTimesheetEdit(index < 0 ? null : w[collection][index], candidate)
+      : recordFor(collection, candidate);
     if (index < 0) w[collection].push(saved);
     else w[collection][index] = saved;
   } else throw Error("Unknown editable workflow section.");
@@ -254,7 +254,9 @@ export function removeWorkflowRecord(job, collection, id) {
     w = normalizeWorkflow(job);
   if (!w[collection].some((r) => r.id === id))
     throw Error("The record no longer exists.");
-  w[collection] = w[collection].filter((r) => r.id !== id);
+  w[collection] = collection === "timesheets"
+    ? w[collection].map(record => record.id === id ? deleteTimesheetEntry(record) : record)
+    : w[collection].filter((r) => r.id !== id);
   w.timeline.push({
     id: uid(),
     at: now(),
@@ -277,7 +279,7 @@ export function workflowProgress(job) {
     productsComplete: w.products.filter((p) => p.complete).length,
     productsTotal: w.products.length,
     hours:
-      Math.round(w.timesheets.reduce((n, t) => n + t.hours, 0) * 100) / 100,
+      Math.round(w.timesheets.filter(entry => !entry.deletedAt).reduce((n, entry) => n + (Number.isFinite(entry.hours) ? entry.hours : minutesForTimesheet(entry) / 60), 0) * 100) / 100,
   };
 }
 
@@ -476,7 +478,7 @@ export function renderWorkflowSection(
     if (section === "POs")
       return `<p class="notice">Purchase orders are local records. Changing a status does not send an order, notify a supplier or take payment.</p>${listing("purchaseOrders", "Purchase orders", w.purchaseOrders, (r) => `<h3 ${holdAttributes("purchaseOrders", "supplier", r.id, "Supplier", false)}>${esc(r.supplier)}</h3><dl>${editableValue("purchaseOrders", "reference", "PO reference", r.reference, r.id)}${editableValue("purchaseOrders", "status", "PO status", r.status, r.id)}${editableValue("purchaseOrders", "date", "PO date", r.date, r.id)}${editableValue("purchaseOrders", "amount", "Amount", r.amount, r.id)}${editableValue("purchaseOrders", "currency", "Currency", r.currency, r.id)}${editableValue("purchaseOrders", "notes", "PO notes", r.notes, r.id)}</dl>`)}`;
     if (section === "Finalisation")
-      return `<div class="wf-grid"><article class="wf-card" ${holdAttributes("finalisation", "status", "", "Visit status", false)}><h3>Visit status</h3><dl>${editableValue("finalisation", "status", "Status", current.status)}</dl><p>${current.results.filter((r) => r.state === "Not tested").length} device results remain Not tested.</p><p>${workflowProgress(current).requiredComplete} / ${workflowProgress(current).requiredTotal} required work actions complete.</p>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("finalisation", "technicianNote", "", "Visit notes", false)}><h3>Visit notes</h3><dl>${editableValue("finalisation", "technicianNote", "Technician note", w.finalisation.technicianNote)}${editableValue("finalisation", "invoiceNote", "Invoice note", w.finalisation.invoiceNote)}</dl>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("acknowledgement", "name", "", "Client acknowledgement", false)}><h3>Client acknowledgement</h3><dl>${editableValue("acknowledgement", "name", "Client name", w.finalisation.clientAcknowledgement?.name)}${editableValue("acknowledgement", "recordedAt", "Acknowledgement time", w.finalisation.clientAcknowledgement?.recordedAt)}${editableValue("acknowledgement", "note", "Acknowledgement note", w.finalisation.clientAcknowledgement?.note)}</dl><p class="muted">A typed acknowledgement record, not a digital signature or certificate.</p>${button("Record acknowledgement", "edit:acknowledgement")}</article><article class="wf-card"><h3>Review and export</h3><p class="muted">Review actual findings, limitations and the condition left. Completing a job never passes equipment.</p><div class="actions">${button("Quick checklist", "navigate:Checklist")}${button("Draft service report", "navigate:print")}${button("Export job", "navigate:export")}${button("Review results", "navigate:Results")}</div></article></div>${listing("timesheets", "Timesheet", w.timesheets, (r) => `<h3>Time entry</h3><dl>${editableValue("timesheets", "date", "Work date", r.date, r.id)}${editableValue("timesheets", "hours", "Hours", r.hours, r.id)}${editableValue("timesheets", "start", "Start time", r.start, r.id)}${editableValue("timesheets", "end", "End time", r.end, r.id)}${editableValue("timesheets", "engineer", "Engineer", r.engineer, r.id)}${editableValue("timesheets", "note", "Time note", r.note, r.id)}</dl>`)}<p class="muted">Total recorded time: ${workflowProgress(current).hours} hours</p>`;
+      return `<div class="wf-grid"><article class="wf-card" ${holdAttributes("finalisation", "status", "", "Visit status", false)}><h3>Visit status</h3><dl>${editableValue("finalisation", "status", "Status", current.status)}</dl><p>${current.results.filter((r) => r.state === "Not tested").length} device results remain Not tested.</p><p>${workflowProgress(current).requiredComplete} / ${workflowProgress(current).requiredTotal} required work actions complete.</p>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("finalisation", "technicianNote", "", "Visit notes", false)}><h3>Visit notes</h3><dl>${editableValue("finalisation", "technicianNote", "Technician note", w.finalisation.technicianNote)}${editableValue("finalisation", "invoiceNote", "Invoice note", w.finalisation.invoiceNote)}</dl>${button("Edit notes & status", "edit:finalisation")}</article><article class="wf-card" ${holdAttributes("acknowledgement", "name", "", "Client acknowledgement", false)}><h3>Client acknowledgement</h3><dl>${editableValue("acknowledgement", "name", "Client name", w.finalisation.clientAcknowledgement?.name)}${editableValue("acknowledgement", "recordedAt", "Acknowledgement time", w.finalisation.clientAcknowledgement?.recordedAt)}${editableValue("acknowledgement", "note", "Acknowledgement note", w.finalisation.clientAcknowledgement?.note)}</dl><p class="muted">A typed acknowledgement record, not a digital signature or certificate.</p>${button("Record acknowledgement", "edit:acknowledgement")}</article><article class="wf-card"><h3>Review and export</h3><p class="muted">Review actual findings, limitations and the condition left. Completing a job never passes equipment.</p><div class="actions">${button("Quick checklist", "navigate:Checklist")}${button("Draft service report", "navigate:print")}${button("Export job", "navigate:export")}${button("Review results", "navigate:Results")}</div></article></div>${listing("timesheets", "Timesheet", w.timesheets.filter(entry => !entry.deletedAt), (r) => `<h3>${esc(r.sessionType === "Custom" ? r.customType || "Custom" : r.sessionType || "Time entry")}</h3>${r.sessionType ? `<p>${r.submittedAt ? `Submitted locally · ${esc(r.submittedAt)}` : "Draft"}</p>` : ""}<dl>${editableValue("timesheets", "date", "Work date", r.date, r.id)}${editableValue("timesheets", "endDate", "Finish date", r.endDate, r.id)}${editableValue("timesheets", "hours", "Hours", r.hours, r.id)}${editableValue("timesheets", "start", "Start time", r.start, r.id)}${editableValue("timesheets", "end", "End time", r.end, r.id)}${editableValue("timesheets", "engineer", "Engineer", r.engineer, r.id)}${editableValue("timesheets", "note", "Time note", r.note, r.id)}</dl>`)}<p class="muted">Total recorded time: ${workflowProgress(current).hours} hours</p>`;
     return empty("Choose a job section.");
   }
   function editorContent(w) {
@@ -556,15 +558,19 @@ export function renderWorkflowSection(
     if (collection === "timesheets") {
       title = "Time entry";
       fields =
+        (r.sessionType ? select("Session type", "sessionType", SESSION_TYPES, r.sessionType) + input("Custom session name", "customType", r.customType || "") : "") +
         input(
           "Work date",
           "date",
           r.date || new Date().toISOString().slice(0, 10),
           "date",
+          Boolean(r.sessionType),
         ) +
         input("Start time", "start", r.start, "time") +
+        (r.sessionType ? input("Finish date", "endDate", r.endDate || r.date, "date") : "") +
         input("End time", "end", r.end, "time") +
-        input("Hours (or calculate from times)", "hours", r.hours, "number") +
+        input(r.sessionType ? "Hours (for a duration-only session)" : "Hours (or calculate from times)", "hours", r.hours, "number") +
+        (r.sessionType ? '<p class="muted">When start and finish times are entered, duration is calculated from those times. Saving an edit returns a locally submitted session to Draft.</p>' : "") +
         input("Engineer", "engineer", r.engineer || current.engineer) +
         area("Time note", "note", r.note);
     }
@@ -734,7 +740,7 @@ export function renderWorkflowReport(job) {
   const details = show("Job reference", w.details.reference) + show("Job title", w.details.title) + show("Description", w.details.description) + show("Client", w.details.client) + show("Estimated hours", w.details.estimatedHours) + show("Safety requirements", w.details.safetyRequirements) + show("Service requirements", w.details.serviceRequirements);
   const content = `${list("Work actions", w.tasks, (r) => `<p><strong>${esc(r.title)}</strong> · ${r.complete ? "Complete" : "Not complete"}${r.required ? " · Required" : ""}</p>${paragraph(r.notes)}`)}
     ${list("Products and labour", w.products, (r) => `<p><strong>${esc(r.description)}</strong> · ${r.complete ? "Used / complete" : "Planned"}</p><p>${esc(r.quantity)} ${esc(r.unit)}${r.unitCost !== null ? ` · ${esc(r.currency)} ${(r.quantity * r.unitCost).toFixed(2)}` : ""}</p>`)}
-    ${list("Recorded time", w.timesheets, (r) => `<p>${[r.date, `${r.hours} hours`, r.engineer || job.engineer].filter(hasValue).map(esc).join(" · ")}</p>${paragraph(r.note)}`)}
+    ${list("Recorded time", w.timesheets.filter(entry => !entry.deletedAt), (r) => `<p>${[r.sessionType === "Custom" ? r.customType || "Custom" : r.sessionType, r.date, r.start && r.end ? `${r.start} – ${r.endDate && r.endDate !== r.date ? `${r.endDate} ` : ""}${r.end}` : "", `${r.hours} hours`, r.engineer || job.engineer].filter(hasValue).map(esc).join(" · ")}</p>${r.sessionType || r.submittedAt ? `<p>${r.submittedAt ? `Submitted locally · ${esc(r.submittedAt)}` : "Draft"}</p>` : ""}${paragraph(r.note)}`)}
     ${hasValue(w.finalisation.technicianNote) ? `<h3>Technician note</h3>${paragraph(w.finalisation.technicianNote)}` : ""}
     ${w.finalisation.clientAcknowledgement ? `<h3>Client acknowledgement record</h3><p>${esc(w.finalisation.clientAcknowledgement.name)} · ${esc(w.finalisation.clientAcknowledgement.recordedAt)}</p>${paragraph(w.finalisation.clientAcknowledgement.note)}<p>A typed acknowledgement record; not a digital signature or certificate.</p>` : ""}`.trim();
   if (details || content) root.innerHTML = `<h2>Visit workflow</h2>${details ? `<dl>${details}</dl>` : ""}${content}`;

@@ -23,6 +23,9 @@ import { renderJobSettings, effectiveJob, adoptSiteSettings, captureJobOverrides
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
 import { renderMobileWorkspace } from "./mobile-shell.js";
+import { renderTimesheets } from "./timesheets-ui.js";
+import { saveTimesheet, deleteTimesheet, submitTimesheets, createTimesheetPackage } from "./timesheets.js";
+import "./timesheets-ui.css";
 import { loadState, saveState } from "./storage.js";
 import {
   importZoneSketch,
@@ -64,6 +67,7 @@ const $ = (s) => document.querySelector(s),
         })[c],
     );
 let state = { sites: [], jobs: [] },
+  timesheetDate = null,
   page = "home",
   activeJob = null,
   draftJob = null,
@@ -222,6 +226,51 @@ function markDirty(value = true) {
   saveLabel = value ? "Unsaved changes" : draftJob ? "Not saved yet" : "Saved on this device";
   updateStatus();
 }
+function workspaceSnapshot() {
+  return { ...state, jobs: state.jobs.map(job => effectiveJob(job, siteOf(job))) };
+}
+async function persistTimesheets(change, success) {
+  if (operationPending || busy) throw Error("Please wait for the current save to finish.");
+  operationPending = true;
+  updateInteractionLock();
+  try {
+    const result = change(state);
+    if (!(await persist(result.state, success))) return false;
+    message = "";
+    const notice = $("#notice");
+    if (notice) {
+      notice.className = "";
+      notice.setAttribute("role", "status");
+      notice.textContent = "";
+    }
+    if (result.package) {
+      try { download(result.package, `timesheet-${result.package.period?.from || "sessions"}.timesheets.json`); }
+      catch (cause) { result.downloadError = cause.message || "The browser could not prepare the download."; }
+    }
+    return { ...result, state: workspaceSnapshot() };
+  } finally {
+    operationPending = false;
+    updateInteractionLock();
+  }
+}
+const timesheetCallbacks = {
+  onSaveTimesheet: ({ entry, jobId, previousJobId }) => persistTimesheets(
+    current => ({ state: saveTimesheet(current, entry, { jobId, previousJobId }) }), "Session saved on this device.",
+  ),
+  onDeleteTimesheet: locator => persistTimesheets(
+    current => ({ state: deleteTimesheet(current, locator) }), "Session moved to trash. Its saved history is retained.",
+  ),
+  onSubmitTimesheets: ({ refs, from, to }) => persistTimesheets(
+    current => submitTimesheets(current, refs, { from, to }), "Timesheet submitted locally. No office copy has been sent.",
+  ),
+  onExportTimesheets: options => {
+    if (busy || operationPending) throw Error("Please wait for the current save to finish.");
+    if (dirty) throw Error("Save or cancel your session changes before exporting the timesheet.");
+    const pack = createTimesheetPackage(state, options);
+    download(pack, `timesheet-${options.from || "sessions"}.timesheets.json`);
+    return { package: pack };
+  },
+};
 async function saveWorkflow(updatedJob) {
   const original = currentJob();
   return saveJob(captureJobOverrides(original, updatedJob, siteOf(original)));
@@ -517,6 +566,7 @@ function openJobField(target) {
 const holdField = (group, field) =>
   `data-job-edit="${group}" data-edit-field="${field}" data-hold-edit tabindex="0" title="Hold for 3 seconds to edit"`;
 function render() {
+  timesheetDate = document.querySelector(".timesheets-ui")?.getViewState?.().date || timesheetDate;
   const previousPlan = document.querySelector('.plan-preview');
   const planScroll = previousPlan ? { x: window.scrollX, y: window.scrollY } : null;
   if (previousPlan?.dataset.viewKey && previousPlan.getViewState)
@@ -527,6 +577,8 @@ function render() {
   document.querySelector(".job-settings")?.dispose?.();
   document.querySelector(".device-remarks")?.dispose?.();
   document.querySelector(".fire-maintenance")?.dispose?.();
+  document.querySelector(".timesheets-ui")?.dispose?.();
+  document.querySelector(".mobile-workspace")?.dispose?.();
   disposeJobHold?.();
   disposeJobHold = null;
   const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
@@ -540,16 +592,18 @@ function render() {
   const headerSite = page === "job" && j && s
     ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
     : `<strong>${esc(s ? siteLabel(s) : j ? j.workflow?.details?.title || "Job notes" : "Jobs")}</strong>`;
-  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {
     $("#mobile-workspace-root").append(
       renderMobileWorkspace({
-        state: { ...state, jobs: state.jobs.map(job => effectiveJob(job, siteOf(job))) },
+        state: workspaceSnapshot(),
+        ...timesheetCallbacks,
+        onDirty: markDirty,
         onAction: (value) => runTask(() => action(value)),
       }),
     );
@@ -653,13 +707,24 @@ function render() {
         onNavigate: (destination) =>
           runTask(() =>
             action(
-              ["print", "export", "import-job-plan"].includes(destination)
+              ["print", "export", "import-job-plan", "timesheets"].includes(destination)
                 ? destination
                 : "tab:" + destination,
             ),
           ),
       }),
     );
+  }
+  if (page === "timesheets" && $("#timesheets-root")) {
+    $("#timesheets-root").append(renderTimesheets({
+      state: workspaceSnapshot(),
+      initialDate: timesheetDate || undefined,
+      onSave: timesheetCallbacks.onSaveTimesheet,
+      onDelete: timesheetCallbacks.onDeleteTimesheet,
+      onSubmit: timesheetCallbacks.onSubmitTimesheets,
+      onExport: timesheetCallbacks.onExportTimesheets,
+      onDirty: markDirty,
+    }));
   }
   if (page === "job" && rawJob && $("#notes-root")) {
     $("#notes-root").append(renderJobNotes({
@@ -1087,7 +1152,7 @@ async function action(a) {
     render();
     return;
   }
-  if (a === "home" || a === "sites") {
+  if (a === "home" || a === "sites" || a === "timesheets") {
     page = a;
     draftJob = null;
     activeJob = null;
@@ -1458,15 +1523,18 @@ async function init() {
   if ("serviceWorker" in navigator && import.meta.env.PROD) {
     try {
       await navigator.serviceWorker.register("./sw.js");
-      await navigator.serviceWorker.ready;
+      const offlineRegistration = await navigator.serviceWorker.ready;
       if (!navigator.serviceWorker.controller)
-        await new Promise((resolve) =>
+        await new Promise((resolve) => {
           navigator.serviceWorker.addEventListener(
             "controllerchange",
             resolve,
             { once: true },
-          ),
-        );
+          );
+          // A navigation during first activation can miss that worker's initial
+          // clients.claim(). Ask the active worker to claim this document too.
+          offlineRegistration.active?.postMessage({ type: "JOBS_CLAIM_CLIENT" });
+        });
       offlineLabel = "Ready offline";
     } catch (e) {
       offlineLabel = "Offline preparation failed";
@@ -1478,7 +1546,10 @@ async function init() {
 window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
   if (dirty || busy || operationPending) return;
   // CSS adapts editors without discarding their open picker or unsaved draft.
-  if (page === "home") render();
+  if (page === "home") {
+    if (document.querySelector(".timesheets-ui")) page = "timesheets";
+    render();
+  }
   else if (page === "job" && tab === "Devices" && !selectedAsset) {
     const job = currentJob();
     if (job && $("#device-grid-results")) {

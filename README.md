@@ -39,6 +39,8 @@ The main job sections are **Notes**, **Plan** and **Finalisation**. After saving
 
 Use the app's **Print report** button for reports with pictures: it prepares the included images before opening the browser's print / Save as PDF sheet. Browser-menu printing refreshes saved report data but cannot wait for image decoding. Native iPhone printing still needs device validation.
 
+**Timesheets** provides a daily timeline with editable Work, Travel, Break, Administration, Training and Custom sessions. Add a type, start and finish, with an optional job and description, then save locally. Overnight sessions contribute only their portion on the selected day. Earlier duration-only records remain separately visible. Submitting records a local snapshot and downloads a timesheet file; it does not send time to an office or approve payroll. See [timesheets](docs/timesheets.md) for exports, amendments and time calculations.
+
 Inside a job, **‹ Home** returns to the dashboard. For a linked job, the **site name in the header** opens its site folder. Both routes protect unsaved changes. Detailed records retain their three-second hold-to-edit shortcut and visible Edit/Add controls. Empty optional fields and report sections stay hidden.
 
 Home offers **Explore demonstration site** when there are no jobs. `public/demo.zonesketch.json` is a synthetic save verified by importing it into the actual Zone Sketch application and using its real exporter. The customer example added by the repository owner was used only for local validation; it is not copied into `public/`, the build or test fixtures.
@@ -66,6 +68,7 @@ Deep contrasting blue provides the headers and accents. The mobile workspace fol
 - `src/zone-handoff.js`, `src/zone-return.js`: automatic Zone Sketch launch/return protocol and safe revision reconciliation.
 - `src/revisions.js`: permanent asset mapping and retained visit history; `src/drawing-editor.js` retains the actual-schema export utility and earlier editing helpers for compatibility.
 - `src/job-workflow.js`: editable job metadata, actions, materials, local POs, time and finalisation.
+- `src/timesheets.js`, `src/timesheets-ui.js`: daily timed sessions, optional job links, local submission snapshots and timesheet export.
 - `src/hold-to-edit.js`: cancellable three-second hold shortcut, with explicit editing and keyboard alternatives.
 - `src/packages.js`: validated versioned package export/import, duplicate receipts and preserved conflicts.
 - `src/panel-context.js`: future Panel Pal handoff contract, separate engineer evidence and AI proposals.

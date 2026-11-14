@@ -33,13 +33,15 @@ Current exports use job package **version 3**; versions 1 and 2 remain importabl
 | `tasks` | Stable `id`, title, required flag, completion flag and notes |
 | `products` | Stable `id`, description, quantity, unit, unit cost, currency and completion flag |
 | `purchaseOrders` | Stable `id`, reference, supplier, date, amount, currency, notes and explicit local status |
-| `timesheets` | Stable `id`, date, start/end time, hours and note |
+| `timesheets` | Stable `id`, date, start/end time, hours, engineer and note; timed sessions also retain finish date, type, revision and optional local submission history |
 | `finalisation` | Job status, technician/invoice notes and optional typed client acknowledgement |
 | `timeline` | Local saved/removed workflow events with ID, time, collection, record ID and summary |
 
 Older jobs acquire empty workflow collections when edited. No pre-start compliance checklist, client acknowledgement, signature, purchase order, product use or task completion is invented. IDs remain stable when a record is edited. The parent application saves the complete changed job transactionally and increments its revision after a successful save. Workflow edits also append a local timeline event; this is a useful history, not a signed or tamper-proof audit record.
 
-`normalizeWorkflow`, `validateWorkflow`, `updateWorkflow`, `removeWorkflowRecord` and `workflowProgress` are pure helpers in `src/job-workflow.js`. They detach changes from input records, validate values and calculate progress from stored task/product flags. Numeric estimates, quantities, costs and hours must be finite and nonnegative. Text is bounded. Dates/times use explicit local fields. Same-day timesheets can calculate hours from their start/end times; reversed intervals are rejected rather than silently interpreted as overnight work.
+`normalizeWorkflow`, `validateWorkflow`, `updateWorkflow`, `removeWorkflowRecord` and `workflowProgress` are pure helpers in `src/job-workflow.js`. They detach changes from input records, validate values and calculate progress from stored task/product flags. Numeric estimates, quantities, costs and hours must be finite and nonnegative. Text is bounded. Dates/times use explicit local fields. Earlier same-day timesheets retain their entered hours and reject reversed intervals. The dedicated **Timesheets** workspace adds typed sessions with an explicit finish date for overnight work; it calculates duration from local calendar/clock values and splits daily totals at midnight. See [timesheets](timesheets.md).
+
+New sessions can be unassigned or linked to a saved job. Linked sessions remain canonical `job.workflow.timesheets` records and travel in the job export. Unassigned sessions are stored separately in local workspace metadata. Local submission retains a snapshot of the recorded entries and downloads a file; it does not send or approve time. Amendments retain earlier submitted evidence. Neither time entry nor submission changes the job's status, device results or client acknowledgement.
 
 ## Meaning of actions
 

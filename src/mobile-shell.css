@@ -576,6 +576,43 @@
     padding: 0;
   }
 }
+@media (max-width: 700px) {
+  .mobile-workspace.mw-timesheets-active {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 50px);
+    min-height: 0;
+    padding-bottom: calc(66px + env(safe-area-inset-bottom));
+    scroll-margin-top: 50px;
+  }
+  .mobile-workspace.mw-timesheets-active .mw-header {
+    flex: 0 0 56px;
+    min-height: 56px;
+    padding: 6px 14px;
+  }
+  .mobile-workspace.mw-timesheets-active .mw-header::after,
+  .mobile-workspace.mw-timesheets-active .mw-brand {
+    display: none;
+  }
+  .mobile-workspace.mw-timesheets-active .mw-home-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .mobile-workspace.mw-timesheets-active .mw-header h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+  }
+  .mobile-workspace.mw-timesheets-active .mw-open-jobs span {
+    top: -2px;
+    right: -1px;
+    min-width: 19px;
+    height: 19px;
+    font-size: 10px;
+    line-height: 17px;
+  }
+}
 @media (max-width: 360px) {
   .mobile-workspace .mw-header h1 {
     font-size: 25px;

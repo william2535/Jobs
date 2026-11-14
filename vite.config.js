@@ -32,6 +32,7 @@ export default defineConfig({
           source: `const CACHE='jobs-v2-${version}'; const FILES=${JSON.stringify(files)};
  self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
  self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('jobs-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+ self.addEventListener('message',e=>{if(e.data?.type==='JOBS_CLAIM_CLIENT'&&e.source?.url&&new URL(e.source.url).origin===self.location.origin)e.waitUntil(self.clients.claim());});
  self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;e.respondWith(caches.open(CACHE).then(c=>c.match(e.request,{ignoreVary:true}).then(hit=>hit||fetch(e.request).catch(()=>e.request.mode==='navigate'?c.match('./index.html',{ignoreVary:true}):Response.error()))));});`,
         });
       },

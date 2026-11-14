@@ -126,11 +126,21 @@ Optional core extensions are preserved in supported wire versions:
 
 `applyDrawingToJob(state, jobId, newDrawing)` returns a detached next state. Unchanged asset IDs retain result IDs and findings. New or reintroduced equipment starts Not tested. Removed equipment is archived, not erased. Applying the same drawing again is a no-op. Existing drawing IDs with different content are rejected. Other visits remain linked to their original drawings/results. No drawing revision or import automatically passes equipment.
 
+### Timed sessions and local submissions
+
+Job-linked time remains in `job.workflow.timesheets`, alongside supported earlier records. Base fields are `id`, `date`, `start`, `end`, `hours`, `note` and `engineer`. Typed sessions add `endDate`, `sessionType`, `customType` and `revision`; optional `submissionId`, `submittedAt`, `submissionHistory` and `deletedAt` retain local submission and removal evidence. Each history entry has a stable `id`, `submittedAt`, optional `jobId` and an entry snapshot. These fields travel with the job package without a new envelope version.
+
+Timed duration uses entered local dates and clocks, not UTC offsets. Earlier duration-only hours remain valid and are not assigned invented times. Undated legacy records remain separate until a recorded date is entered. A session may exist without a job in local workspace metadata; it is not included in an unrelated job export. A separate `JobsTimesheetPackage` version 1 exports the selected period's active `entries`, deleted `archivedEntries` with retained submission snapshots, job/site references, complete overnight-session context, period totals and `delivery: {status: "local-export", sent: false}`. Archives are excluded from totals. Duplicate active entry IDs across imported job copies are marked as conflicts, excluded from confirmed totals and blocked from local submission. Timesheet JSON import is not implemented; job-package import still restores linked entries.
+
+Local submission snapshots the complete pending session, including any adjacent-day portion, while export totals are clipped to the selected period. Previously submitted sessions do not need another receipt. A download failure after a successful save does not undo the committed submission; plain export can retry the download. This is local recording, not office delivery or payroll approval. See [timesheets](timesheets.md) for day splitting and amendments.
+
 ## Local storage and offline behavior
 
 IndexedDB database `jobs-local` version 2 has separate `sites`, `jobs` and `metadata` stores. A save replaces the application snapshot transactionally; all stores commit or none do. A metadata revision rejects stale tabs before they overwrite newer work. Save state is shown only after commit, and failures are visible. Cache Storage contains the application shell; IndexedDB contains expanded engineer data and attachments. The export pool reduces package size; shared Blob storage and on-device media deduplication remain future work.
 
 The optional `metadata` key `quick-defects` holds this browser's reusable defect wording. It is saved atomically with the snapshot and is preserved when an older caller omits `state.quickDefects`; an explicit empty array clears it. This library is not part of the job package. Applying a shortcut creates a fresh remark which, once saved, is included in that job's normal results and export. Job imports preserve the receiving browser's library. See [device remarks](device-remarks.md) for its fields and limits.
+
+The optional `metadata` key `unassigned-timesheets` similarly stores `state.unassignedTimesheets`, including retained submission histories and deleted records. Omitting the field preserves the existing collection; an explicit array replaces it in the same atomic transaction. These entries are independent of individual job packages and appear in the separate timesheet export when within the selected period, under `entries` or `archivedEntries` as appropriate.
 
 Use one editing tab at a time. Stale-tab writes are rejected; automatic merging is not implemented. When rejected, keep a copy of unsaved form content before reloading. Export regularly. Installed apps still use browser-managed storage and can be evicted. Service-worker readiness must be confirmed before offline reopening.
 

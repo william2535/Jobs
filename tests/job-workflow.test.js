@@ -67,6 +67,21 @@ test('editing and deleting workflow records retain stable identities and preserv
   assert.deepEqual(removed.results, original.results);
 });
 
+test('removing a timesheet retains a recoverable record and excludes its hours from totals', () => {
+  const original = fixture();
+  const saved = updateWorkflow(original, 'timesheets', { date: '2026-11-14', start: '', end: '', hours: 2, note: 'Synthetic work' });
+  const id = saved.workflow.timesheets[0].id;
+  assert.equal(workflowProgress(saved).hours, 2);
+  const removed = removeWorkflowRecord(saved, 'timesheets', id);
+  assert.equal(removed.workflow.timesheets.filter(entry => !entry.deletedAt).length, 0);
+  assert.equal(removed.workflow.timesheets[0].id, id);
+  assert.ok(removed.workflow.timesheets[0].deletedAt);
+  assert.equal(removed.workflow.timesheets[0].hours, 2);
+  assert.equal(workflowProgress(removed).hours, 0);
+  assert.deepEqual(removed.results, original.results);
+  assert.equal(saved.workflow.timesheets[0].deletedAt, undefined);
+});
+
 test('work and product completion totals are calculated without passing equipment', () => {
   const original = fixture();
   let job = updateWorkflow(original, 'tasks', task({ complete: true }));

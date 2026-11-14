@@ -1,6 +1,8 @@
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
 import { DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
 import { jobTypeLabel } from "./job-options.js";
+import { renderTimesheets } from "./timesheets-ui.js";
+import { timesheetEntries, splitTimesheetByDay, minutesForTimesheet, isWorkSession } from "./timesheets.js";
 const list = (value) => (Array.isArray(value) ? value : []);
 const pad = (value) => String(value).padStart(2, "0");
 const node = (tag, text, className) => {
@@ -18,23 +20,6 @@ const dateLabel = (value) => {
     ? value
     : date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 };
-const minutesFor = (entry) => {
-  if (
-    typeof entry.hours === "number" &&
-    Number.isFinite(entry.hours) &&
-    entry.hours >= 0
-  )
-    return Math.round(entry.hours * 60);
-  if (
-    /^\d\d:\d\d$/.test(entry.start || "") &&
-    /^\d\d:\d\d$/.test(entry.end || "")
-  ) {
-    const minutes = (value) =>
-      Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
-    return Math.max(0, minutes(entry.end) - minutes(entry.start));
-  }
-  return 0;
-};
 export function recordedTimeLabel(minutes) {
   return `${Math.floor(minutes / 60)}:${pad(minutes % 60)}`;
 }
@@ -42,9 +27,9 @@ export function recordedTimeLabel(minutes) {
 /** Derived facts only: a completed checklist does not imply tested equipment or completed visits. */
 export function mobileWorkspaceSummary(state, today) {
   const jobs = list(state.jobs);
-  const timesheets = jobs.flatMap((job) =>
-    list(job.workflow?.timesheets).map((entry) => ({ job, entry })),
-  );
+  const timesheets = timesheetEntries(state);
+  const counted = timesheets.filter(({ conflict }) => !conflict);
+  const minutesToday = entry => splitTimesheetByDay(entry).filter(segment => segment.date === today).reduce((sum, segment) => sum + segment.minutes, 0);
   const appointments = jobs.flatMap((job) =>
     list(job.workflow?.appointments).map((entry) => ({ job, entry })),
   );
@@ -68,11 +53,13 @@ export function mobileWorkspaceSummary(state, today) {
     open: jobs.filter((job) => job.status !== "Complete").length,
     overdue: overdueIds.size,
     overdueIds: [...overdueIds],
-    todayMinutes: timesheets
-      .filter(({ entry }) => entry.date === today)
-      .reduce((sum, { entry }) => sum + minutesFor(entry), 0),
-    totalMinutes: timesheets.reduce(
-      (sum, { entry }) => sum + minutesFor(entry),
+    todayMinutes: counted.filter(({ entry }) => isWorkSession(entry))
+      .reduce((sum, { entry }) => sum + minutesToday(entry), 0),
+    todayTravelMinutes: counted.filter(({ entry }) => entry.sessionType === "Travel").reduce((sum, { entry }) => sum + minutesToday(entry), 0),
+    todayBreakMinutes: counted.filter(({ entry }) => entry.sessionType === "Break").reduce((sum, { entry }) => sum + minutesToday(entry), 0),
+    timesheetConflicts: timesheets.filter(({ conflict }) => conflict).length,
+    totalMinutes: counted.reduce(
+      (sum, { entry }) => sum + minutesForTimesheet(entry),
       0,
     ),
     timesheets,
@@ -130,7 +117,12 @@ function control(label, action, className = "") {
 /** Parent renders only this home view below 700px, keeping the existing desktop workspace intact. */
 export function renderMobileWorkspace({
   state,
-  onAction = () => {},
+  onAction: handleAction = () => {},
+  onSaveTimesheet,
+  onDeleteTimesheet,
+  onSubmitTimesheets,
+  onExportTimesheets,
+  onDirty = () => {},
   now = new Date(),
 }) {
   const root = node("section", undefined, "mobile-workspace");
@@ -139,7 +131,23 @@ export function renderMobileWorkspace({
   const nextDay = new Date(now);
   nextDay.setDate(nextDay.getDate() + 1);
   const tomorrow = localDay(nextDay);
-  const summary = mobileWorkspaceSummary(state, today);
+  let summary = mobileWorkspaceSummary(state, today), timesheetView = null, timesheetViewState = null;
+  let disposed = false;
+  const confirmLeave = () => !timesheetView || timesheetView.confirmLeave?.() !== false;
+  const onAction = (action) => {
+    if (!confirmLeave()) return;
+    onDirty(false);
+    handleAction(action);
+  };
+  const persistTimesheet = (callback) => async (payload) => {
+    if (typeof callback !== "function") throw Error("Timesheet saving is unavailable. Your changes have not been saved.");
+    const saved = await callback(payload);
+    if (saved?.state && !disposed) {
+      state = saved.state;
+      summary = mobileWorkspaceSummary(state, today);
+    }
+    return saved;
+  };
   let tab = "Dashboard",
     dateFilter = "",
     query = "",
@@ -395,7 +403,7 @@ export function renderMobileWorkspace({
       ring(
         recordedTimeLabel(summary.todayMinutes),
         "Work",
-        "recorded today",
+        summary.timesheetConflicts ? "duplicate sessions excluded" : "recorded today",
         summary.todayMinutes ? 1 : 0,
         "mw-time-ring",
       ),
@@ -471,40 +479,17 @@ export function renderMobileWorkspace({
     return content;
   }
   function timesheets() {
-    return listScreen(
-      "Timesheets",
-      `${recordedTimeLabel(summary.totalMinutes)} recorded across your saved jobs. Open a job’s Finalisation section to add or edit time.`,
-      [...summary.timesheets].sort((a, b) =>
-        (b.entry.date || "").localeCompare(a.entry.date || ""),
-      ),
-      ({ job, entry }) => {
-        const card = control("", () => goJob(job), "mw-record-card");
-        const heading = node("div", undefined, "mw-card-head");
-        heading.append(
-          node("strong", siteFor(job)?.name || jobTitle(job)),
-          icon("chevron"),
-        );
-        card.append(
-          heading,
-          node(
-            "span",
-            `${dateLabel(entry.date)} · ${recordedTimeLabel(minutesFor(entry))}`,
-            "mw-record-value",
-          ),
-        );
-        if (entry.start && entry.end)
-          card.append(node("span", `${entry.start} – ${entry.end}`));
-        if (entry.note) card.append(node("span", entry.note, "mw-description"));
-        card.append(
-          node(
-            "small",
-            entry.engineer || job.engineer || "Engineer not recorded",
-          ),
-        );
-        return card;
-      },
-      "No time recorded",
-    );
+    timesheetView = renderTimesheets({
+      state,
+      initialDate: timesheetViewState?.date || today,
+      viewState: timesheetViewState,
+      onSave: persistTimesheet(onSaveTimesheet),
+      onDelete: persistTimesheet(onDeleteTimesheet),
+      onSubmit: persistTimesheet(onSubmitTimesheets),
+      onExport: onExportTimesheets ? persistTimesheet(onExportTimesheets) : undefined,
+      onDirty,
+    });
+    return timesheetView;
   }
   function about() {
     const section = node("section", undefined, "mw-records-screen");
@@ -537,6 +522,13 @@ export function renderMobileWorkspace({
     return section;
   }
   function paint() {
+    if (disposed) return;
+    root.classList.toggle("mw-timesheets-active", tab === "Timesheets");
+    if (timesheetView) {
+      timesheetViewState = timesheetView.getViewState?.() || timesheetViewState;
+      timesheetView.dispose?.();
+      timesheetView = null;
+    }
     root.replaceChildren();
     const header = node("div", undefined, "mw-header");
     const title = node("a", undefined, "mw-home-link");
@@ -562,6 +554,8 @@ export function renderMobileWorkspace({
     const open = control(
       "",
       () => {
+        if (!confirmLeave()) return;
+        onDirty(false);
         tab = "Tasks";
         dateFilter = "";
         query = "";
@@ -603,6 +597,8 @@ export function renderMobileWorkspace({
       const button = control(
         "",
         () => {
+          if (label === tab || !confirmLeave()) return;
+          onDirty(false);
           tab = label;
           dateFilter = "";
           query = "";
@@ -618,6 +614,12 @@ export function renderMobileWorkspace({
     }
     root.append(header, content, navigation);
   }
+  root.confirmLeave = confirmLeave;
+  root.dispose = () => {
+    disposed = true;
+    timesheetView?.dispose?.();
+    timesheetView = null;
+  };
   paint();
   return root;
 }

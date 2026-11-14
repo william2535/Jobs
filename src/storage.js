@@ -1,4 +1,5 @@
 import { validateQuickDefects } from "./quick-defects.js";
+import { validateTimesheetEntries } from "./timesheets.js";
 
 const DATABASE = "jobs-local";
 const VERSION = 2;
@@ -59,11 +60,13 @@ export async function loadState() {
     const jobs = transaction.objectStore("jobs").getAll();
     const revision = transaction.objectStore("metadata").get("revision");
     const quickDefects = transaction.objectStore("metadata").get("quick-defects");
+    const unassignedTimesheets = transaction.objectStore("metadata").get("unassigned-timesheets");
     transaction.oncomplete = () => {
       try {
         const library = validateQuickDefects(quickDefects.result?.value);
+        const sessions = validateTimesheetEntries(unassignedTimesheets.result?.value);
         lastSeenRevision = revision.result?.value || 0;
-        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library });
+        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions });
       } catch (error) {
         reject(error);
       }
@@ -82,6 +85,7 @@ export async function saveState(state) {
   // Older callers omit this key. Omission must preserve the stored library;
   // an explicitly supplied empty array is the deliberate clear operation.
   const quickDefects = state.quickDefects === undefined ? undefined : validateQuickDefects(state.quickDefects);
+  const unassignedTimesheets = state.unassignedTimesheets === undefined ? undefined : validateTimesheetEntries(state.unassignedTimesheets);
   for (const collection of [state.sites, state.jobs]) {
     if (
       collection.some(
@@ -137,6 +141,8 @@ export async function saveState(state) {
         }
         if (quickDefects !== undefined)
           transaction.objectStore("metadata").put({ key: "quick-defects", value: quickDefects });
+        if (unassignedTimesheets !== undefined)
+          transaction.objectStore("metadata").put({ key: "unassigned-timesheets", value: unassignedTimesheets });
         transaction
           .objectStore("metadata")
           .put({ key: "revision", value: expectedRevision + 1 });

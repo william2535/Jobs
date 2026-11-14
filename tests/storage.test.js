@@ -5,7 +5,8 @@ import { IDBObjectStore } from 'fake-indexeddb';
 import { loadState, saveState, openDB } from '../src/storage.js';
 import { quickDefectFromRemark } from '../src/quick-defects.js';
 import { newDeviceRemark } from '../src/device-remarks.js';
-const withDefaults = state => ({ ...state, quickDefects: state.quickDefects || [] });
+import { saveTimesheet, submitTimesheets } from '../src/timesheets.js';
+const withDefaults = state => ({ ...state, quickDefects: state.quickDefects || [], unassignedTimesheets: state.unassignedTimesheets || [] });
 
 test('IndexedDB persists complete structured records across loads', async () => {
   const state = { sites: [{ id: 'site-1', name: 'Synthetic site', drawings: [{ id: 'drawing-1', source: { geometry: [[0, 0], [1, 1]] } }] }], jobs: [{ id: 'job-1', siteId: 'site-1', results: [{ id: 'r-1', photos: [{ id: 'p-1', image: 'data:image/png;base64,AAAA' }] }] }] };
@@ -35,7 +36,7 @@ test('stale tabs cannot silently overwrite a newer local snapshot', async () => 
   assert.deepEqual(await loadState(), withDefaults(newest));
   await otherTab.loadState();
   await otherTab.saveState({ sites: [], jobs: [] });
-  assert.deepEqual(await loadState(), { sites: [], jobs: [], quickDefects: [] });
+  assert.deepEqual(await loadState(), { sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [] });
 });
 
 test('old metadata loads an empty library, and older snapshot writes retain a later saved library', async () => {
@@ -75,10 +76,10 @@ test('library write failures and invalid templates leave jobs, sites, library an
   try {
     await assert.rejects(saveState({ sites: [], jobs: [], quickDefects: [] }), /storage failure/);
   } finally { IDBObjectStore.prototype.put = originalPut; }
-  assert.deepEqual(await loadState(), state);
+  assert.deepEqual(await loadState(), withDefaults(state));
   assert.deepEqual(await metadata(), beforeMetadata);
   await assert.rejects(saveState({ sites: [], jobs: [], quickDefects: [{ ...template, internalNote: 'Not reusable' }] }), /invalid structure/);
-  assert.deepEqual(await loadState(), state);
+  assert.deepEqual(await loadState(), withDefaults(state));
   assert.deepEqual(await metadata(), beforeMetadata);
 });
 
@@ -90,5 +91,44 @@ test('library saves participate in stale-tab protection with the complete worksp
   const latest = { sites: [], jobs: [{ id: 'latest-job' }], quickDefects: [template] };
   await saveState(latest);
   await assert.rejects(otherTab.saveState({ sites: [], jobs: [], quickDefects: [] }), /Another Jobs tab/);
-  assert.deepEqual(await loadState(), latest);
+  assert.deepEqual(await loadState(), withDefaults(latest));
+});
+
+test('unassigned sessions and submissions survive old snapshot writes and local reload', async () => {
+  let state = { sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [] };
+  await saveState(state);
+  const db = await openDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('metadata', 'readwrite'); tx.objectStore('metadata').delete('unassigned-timesheets');
+    tx.oncomplete = resolve; tx.onabort = () => reject(tx.error);
+  });
+  assert.deepEqual((await loadState()).unassignedTimesheets, []);
+  state = saveTimesheet(state, { id: 'unassigned-1', date: '2026-11-14', start: '09:00', end: '10:00', sessionType: 'Travel', note: 'Synthetic journey' }, { jobId: null });
+  state = submitTimesheets(state, [{ jobId: null, entryId: 'unassigned-1' }], { from: '2026-11-14' }).state;
+  await saveState(state);
+  await saveState({ sites: [{ id: 'legacy-site' }], jobs: [] });
+  assert.deepEqual((await loadState()).unassignedTimesheets, state.unassignedTimesheets);
+  assert.ok((await loadState()).unassignedTimesheets[0].submissionHistory[0].entry);
+});
+
+test('unassigned-session metadata failure rolls back jobs, libraries and workspace revision', async () => {
+  const state = await loadState(), db = await openDB();
+  const metadata = () => new Promise((resolve, reject) => {
+    const tx = db.transaction('metadata', 'readonly'), request = tx.objectStore('metadata').getAll();
+    tx.oncomplete = () => resolve(request.result); tx.onabort = () => reject(tx.error);
+  });
+  const before = await metadata(), originalPut = IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put = function(value, ...args) {
+    if (this.name === 'metadata' && value.key === 'unassigned-timesheets') throw new DOMException('Synthetic session storage failure', 'QuotaExceededError');
+    return originalPut.call(this, value, ...args);
+  };
+  try { await assert.rejects(saveState({ sites: [], jobs: [{ id: 'replacement' }], quickDefects: [], unassignedTimesheets: [] }), /session storage failure/); }
+  finally { IDBObjectStore.prototype.put = originalPut; }
+  assert.deepEqual(await loadState(), state);
+  assert.deepEqual(await metadata(), before);
+  const otherTab = await import('../src/storage.js?timesheet-tab');
+  await otherTab.loadState();
+  await saveState({ ...state, unassignedTimesheets: [] });
+  await assert.rejects(otherTab.saveState(state), /Another Jobs tab/);
+  assert.deepEqual((await loadState()).unassignedTimesheets, []);
 });

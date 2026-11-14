@@ -9,10 +9,12 @@ Below 700px, Jobs uses a deep-blue mobile dashboard with circular summaries, sch
 - **Dashboard:** completed visits out of all saved jobs, time recorded today, overdue open visits, and the four core actions: Create job, Import Zone Sketch, Import job and Sites.
 - **Tasks:** saved jobs with site/reference search. Today, Tomorrow and Calendar filter actual appointment dates or the job's visit date. All shows one card per saved job. With multiple appointments, the card shows the next scheduled appointment, or the most recent past one when no future appointment exists.
 - **Zone Sketch:** replaces Stock in the bottom navigation and opens the existing Zone Sketch editor in a separate tab. Product records remain available inside each job through its settings and More job tools.
-- **Timesheets:** dated time records with recorded durations. Explicit entered hours take precedence over a start/end-time calculation. Opening a record opens its job notes; **gear → More job tools → Visit records** contains the editable timesheet.
+- **Timesheets:** a daily timeline with a date selector, recorded sessions and Add session. Sessions record a type, start and finish, optional job and description; duration follows the entered times. Overnight sessions are split across the days shown. Earlier duration-only entries remain separately visible without invented start or finish times; Undated records can receive an explicit Recorded date. See [timesheets](timesheets.md) for local submissions, exports and amendments.
 - **About:** local/offline workflow information, core actions and the request for persistent browser storage.
 
 Overdue means an open job with a past appointment or visit date. Completing work actions or entering satisfactory device results does not automatically complete a job. Dashboard completion uses only the engineer-selected job status. The work ring shows recorded time, not an assumed daily target. Empty workspaces show zero recorded progress. No remote notifications, account details or appointments are invented.
+
+Timesheet sessions can be saved without choosing a job. Job-linked entries stay with that job; unassigned entries stay in this browser's local workspace. Submitting creates a local snapshot and download, with no office delivery or approval connection. Editing submitted time retains its earlier snapshot and requires a new local submission for the amended record.
 
 The shell uses actual text DOM nodes for source content, 44px minimum controls, native date selection and safe-area spacing for fixed navigation. Saved job cards keep their stable IDs and open the same job records used by the desktop interface. Tapping a card opens Notes; its separate gear opens Settings without opening a different job.
 
