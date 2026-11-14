@@ -2,11 +2,12 @@
 
 Live address: **https://jobs-field-workspace.floodyyy21.chatgpt.site**
 
-The website uses Sites hosting, with access private to the owner's account. The hosting gate is separate from Jobs: the application itself stores its records locally in IndexedDB, has no account/API dependency, and can still be run independently using the README setup commands. After preparation, its included plans, photographs, work records and exports work offline. Records do not synchronize between browsers or devices.
+The website uses Sites hosting and is public to anyone with the link, following the owner's request to share it with friends on 14 November 2026. The source repository remains private. Each visitor has their own browser-local IndexedDB workspace; sharing the website does not expose another person's jobs or photographs. Jobs has no account/API dependency and can also run independently using the README setup commands. After preparation, its included plans, photographs, work records and exports work offline. Records do not synchronize between browsers or devices.
 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
+- Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
 - Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_4f8b8a224e60819181bdbffb72cebc71` (daily timesheets)
 - Successful deployment: `appgdep_6af885d201008191a453e23d8e0499d6`
 - Application source: Jobs commit `99cf2aefd22b3af3a84989d726fd80e404c36572`
@@ -36,3 +37,7 @@ The separate hosting source was prepared from an explicit allowlist: `src`, `pub
 The optional Zone Sketch receiver is in [companion PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40). Commit `ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f` adds this exact hosted Jobs origin alongside GitHub Pages and passed the real-engine cross-origin loading/return test. That PR remains unmerged and undeployed, so the public Zone Sketch application cannot yet accept automatic loading. File import, local job editing, saved PNG viewing and package export work independently of that connection.
 
 Physical-device installation and the hosting sign-in flow still require owner testing. Do not describe the external Zone Sketch web editor as ready for a cold offline launch: it has no offline service worker in the inspected source.
+
+## Shareable link verification
+
+The native Sites access operation confirmed `public` with access policy revision 2. The static build and sanitized source were checked again: no customer example is served, and visitor records remain local. A command-line anonymous HTTP probe was blocked by Cloudflare bot protection (403 / 1010), so it is not recorded as a successful fresh-browser test. No runtime source change or redeployment was needed for the access change.
