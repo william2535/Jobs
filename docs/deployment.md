@@ -2,18 +2,20 @@
 
 Live address: **https://jobs-field-workspace.floodyyy21.chatgpt.site**
 
-The first publication uses Sites hosting, with access private to the owner's account. The hosting gate is separate from Jobs: the application itself stores its records locally in IndexedDB, has no account/API dependency, and can still be run independently using the README setup commands. After preparation, its included plans, photographs, work records and exports work offline. Records do not synchronize between browsers or devices.
+The website uses Sites hosting, with access private to the owner's account. The hosting gate is separate from Jobs: the application itself stores its records locally in IndexedDB, has no account/API dependency, and can still be run independently using the README setup commands. After preparation, its included plans, photographs, work records and exports work offline. Records do not synchronize between browsers or devices.
 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_691f925603fc819182b4e67eb2584cd2` (version 1)
-- Successful deployment: `appgdep_6af79ecde5b48191ae0a5f302a385da6`
-- Application source: Jobs commit `65e22276f48183df57373052d75e6e65c486df8a`
-- Sanitized hosting-source commit: `10c8e8f69de7cb1c5b72b1d8bfe6dbc7a010a51c`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_f02a8a1c2b8481918644c5fd9cb48587` (site-folder / hold-edit update)
+- Successful deployment: `appgdep_6af7a74dd7e8819197f2bc5eb51e0e62`
+- Application source: Jobs commit `713281f490ad83dbcc0ee9a720dcd68a7d43b18e`
+- Sanitized hosting-source commit: `c9603615f8abd682928dc18fce75dc1a52e3720d`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
+
+The 14 November update adds site folders, inherited recorded details, hidden empty fields, three-second hold editing and regression coverage for each job’s pinned map. The native deployment reported **succeeded**. All 11 published build files matched the verified production output byte-for-byte. If a previously open offline app still shows the earlier version, refresh online to install the new cache, then reload once more.
 
 ## Deployment contents and updates
 
