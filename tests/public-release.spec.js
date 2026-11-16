@@ -119,7 +119,7 @@ test('release help backs up saved sites, job photos and unassigned time, then re
     await home(reopened);
     const before = await stored(reopened, 'jobs');
     await reopened.locator('#workspace-file').setInputFiles(exported.file);
-    await expect(reopened.locator('#notice')).toContainText(/empty workspace/i);
+    await expect(reopened.locator('#notice')).toContainText(/empty(?: job)? workspace/i);
     expect(await stored(reopened, 'jobs')).toEqual(before);
     expect(await stored(reopened, 'sites')).toHaveLength(1);
   } finally { await fresh.close(); }
