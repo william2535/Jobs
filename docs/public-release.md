@@ -26,11 +26,13 @@ Restore a workspace backup into an empty Jobs workspace. Existing records are no
 
 **Protect local storage** requests browser persistence. It cannot protect against deliberate deletion, device loss or every storage failure. Keep regular exported backups, especially before changing device, browser, website address or clearing site data.
 
-If local records cannot be opened, do not clear website data as a first troubleshooting step. The error does not mean previous records were deleted. A **Download local recovery copy** control is shown when a recovery snapshot is available. Preserve that file securely for investigation; it is not automatically a validated backup ready to restore. If saving fails, free space on the device and retry in the same editor.
+If local records cannot be opened, do not clear website data as a first troubleshooting step. The error does not mean previous records were deleted. Use **Retry opening records**. If a save fails, **Download unsaved recovery** preserves the attempted workspace in the validated backup format, clearly marked as an unsaved recovery snapshot. It can be reviewed and restored into an empty workspace; it does not mean the original save succeeded. Keep it securely, free space if needed, and retry saving in the same editor.
 
 ## Updates
 
 **Help & data** identifies the app version and build and shows local storage and offline readiness. Use **Check for updates** while online. When an update is available, save your current work before applying it. Export a workspace backup before a significant update. An update is not a backup or a cloud synchronization operation.
+
+For the first upgrade from the earlier prototype, open Jobs online so it can download the update, then close every Jobs tab and installed Jobs window and reopen online. This lets the new offline worker activate. Check that Help & data shows version **1.0.0** and wait for **Ready offline** before disconnecting. Later updates can use **Apply update** after saving and closing other Jobs windows.
 
 ## Privacy and sharing
 

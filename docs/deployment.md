@@ -8,13 +8,26 @@ The website uses Sites hosting and is public to anyone with the link, following 
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
 - Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_6db84a7584f88191935575584745ef3b` (version 14, overview tool chest)
-- Successful deployment: `appgdep_6af8e8add1588191ba289b4c475db81f`
-- Application source: Jobs commit `c63a88444222db3c6621365d549a8eef3ff85642`
-- Sanitized hosting-source commit: `d138064f889810123fb3ddc2fea6bea0d7ecf0b7`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_1b35fd7d45b481918a14433f43c78fd8` (hosting version 15, Jobs 1.0.0 public release)
+- Successful deployment: `appgdep_6afab42428d881918bb80f00e9d4382b`
+- Application source: Jobs commit `8bf0eab03dcdd75443c0d68c2f54f9ac523df030`
+- Application build: `4feb87501bab15ae2b3c`
+- Sanitized hosting-source commit: `611c7fa52b0166e5d5bba5660cad84d33c4cb2ae`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
+
+## Public release 1.0.0 — 16 November 2026
+
+Native public publication of hosting **version 15 succeeded**. The release targets independent engineers and preserves the existing deep-blue dashboard, notebook jobs and compact Toolbox chest. It adds complete saved-workspace backup/restore, download of an unsaved recovery snapshot after a failed save, explicit local-storage opening errors with retry, checked offline preparation, controlled updates and Help & data guidance. Records remain local to each browser; there is no account or cloud synchronization dependency.
+
+The exact application commit passed **272 unit/DOM/VM tests** and **74 browser tests with one intentional skip**, including focused iPhone WebKit recovery/backup cases. Production packaging passed and `npm audit` found zero vulnerabilities. All **16 files in the sanitized hosting build matched the verified canonical production build byte-for-byte**; the same archive was supplied to Sites. The [successful CI and downloadable release artifact](https://github.com/william2535/Jobs/actions/runs/43824940846) record the build and its checksums. The archive and served assets exclude the customer example and repository history.
+
+For an existing prototype installation, open Jobs online to let the update download, close every Jobs tab and installed Jobs window, then reopen online. Check **Help & data → Version 1.0.0** and wait for **Ready offline**. Use **Export workspace backup** before changing browser/device or deleting website data. Later updates use **Apply update** after saving and closing other Jobs windows.
+
+CI exercises desktop/mobile Chromium and the stated iPhone WebKit cases; it does not establish physical-phone installation or native share-sheet behaviour. A fresh visual check of the hosted site was unavailable because the managed browser tool was absent. Publication is confirmed by the native Sites operation, not claimed as a new live-browser check. Reports remain drafts, and the optional external Zone Sketch receiver and Panel Pal job adapter retain their documented boundaries. See [verification](VERIFICATION.md), [public-release guidance](public-release.md), [workspace backups](workspace-backup.md) and [release packaging](release-build.md).
+
+## Earlier feature releases
 
 The notes and device-remarks update keeps the home layout and makes jobs open directly into a formatted notebook. Create job works without a site and is saved explicitly. Card/settings gears hold optional details, linked jobs share reusable site settings, and each visit retains its own map and results. Notes, Plan and Finalisation form the main navigation. Device defects use a grouped remark editor with before/resolved photographs, severity, recommendations, local products and retained history. Finalisation includes recorded evidence in the draft report and self-contained export. Checklists and detailed work tools remain available through settings; no compliance certificate or AI connection is implied.
 
@@ -34,7 +47,7 @@ The preceding Toolbox update embeds FINDR's four core calculators, six extra cal
 
 **235 automated unit/DOM tests passed**, followed by a final **14/14 focused interaction checks with network requests denied**. The production build passed, all **15 build files matched** the sanitized hosting build byte-for-byte, and every app asset is included in its offline precache. Native public publication of **version 13 succeeded**. Fresh real-browser visual/offline testing was unavailable because the managed browser tool was not present; Happy DOM checks are not represented as browser QA. See [Toolbox instructions](toolbox.md) and [verification](VERIFICATION.md).
 
-The current update opens Toolbox as a compact animated chest over the overview. It keeps the dashboard mounted and visible, with calculations, guides and practice tools inside the scrolling tray. Closing, Escape and the Toolbox toggle preserve the overview; unsaved tool changes still receive their existing protection. Tool navigation resets tray scrolling and focus, and reduced-motion preferences remove the opening animation.
+The preceding overview update opens Toolbox as a compact animated chest over the overview. It keeps the dashboard mounted and visible, with calculations, guides and practice tools inside the scrolling tray. Closing, Escape and the Toolbox toggle preserve the overview; unsaved tool changes still receive their existing protection. Tool navigation resets tray scrolling and focus, and reduced-motion preferences remove the opening animation.
 
 **241 automated unit/DOM tests passed**, including six chest lifecycle/integration cases. The production build passed and all **15 hosting build files matched** the verified app build. Native public publication of **version 14 succeeded**. Fresh phone/browser visual testing of the animation, geometry and keyboard remains unavailable; the DOM tests do not claim those checks.
 
@@ -42,7 +55,7 @@ The current update opens Toolbox as a compact animated chest over the overview. 
 
 Only the compiled `dist/` is served: application JS/CSS, index, service worker, manifest/icons, original component licence notices, the FINDR and Zone Sketch launcher icons and the synthetic demonstration. The deployment archive was checked byte-for-byte against the verified production build. It contains no uploaded customer example or repository history.
 
-The separate hosting source was prepared from an explicit allowlist: `src`, `public`, `vendor`, `tests`, package manifests, Vite/Playwright configuration, `index.html` and `.gitignore`, plus its own hosting manifest and source provenance. It does not contain the customer example stored in the canonical repository root. For later publication, use this sanitized source checkout or regenerate it with the same allowlist; do not copy or publish the canonical repository root wholesale. Keep the existing Site identity and audience unless the user requests a change.
+The separate hosting source was prepared from an explicit allowlist: `src`, `public`, `vendor`, `tests`, `scripts`, package manifests, Vite/Playwright configuration, `index.html` and `.gitignore`, plus its own hosting manifest and source provenance. It does not contain the customer example stored in the canonical repository root. For later publication, use this sanitized source checkout or regenerate it with the same allowlist; do not copy or publish the canonical repository root wholesale. Keep the existing Site identity and audience unless the user requests a change.
 
 The optional Zone Sketch receiver is in [companion PR #40](https://github.com/william2535/FIRE-ZONE-PLAN-APP/pull/40). Commit `ea04c0b8a1fad8fef1f649822b51d0d1a8170f3f` adds this exact hosted Jobs origin alongside GitHub Pages and passed the real-engine cross-origin loading/return test. That PR remains unmerged and undeployed, so the public Zone Sketch application cannot yet accept automatic loading. File import, local job editing, saved PNG viewing and package export work independently of that connection.
 
