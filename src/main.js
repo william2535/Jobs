@@ -1194,7 +1194,7 @@ async function action(a, source) {
     );
     return;
   }
-  if (dirty) {
+  if (dirty || recoverySnapshot) {
     if (
       [
         "export",
@@ -1210,8 +1210,10 @@ async function action(a, source) {
       );
       return;
     }
-    if (!confirm("Leave this form and discard unsaved changes?")) return;
+    if (!confirm(recoverySnapshot ? "The latest save failed. Download the unsaved recovery copy first if you need it. Leave and discard this unsaved attempt?" : "Leave this form and discard unsaved changes?")) return;
     dirty = false;
+    recoverySnapshot = null;
+    recoveryCapturedAt = null;
     pendingCardResult = null;
     saveLabel = draftJob ? "Not saved yet" : "Saved on this device";
   }
@@ -1263,11 +1265,11 @@ async function action(a, source) {
     draftJob = null;
     activeJob = null;
     activeSite = null;
-    saveLabel = "Saved on this device";
+    saveLabel = storageReady ? "Saved on this device" : "Local storage unavailable";
     importTargetJob = null;
     importTargetSite = null;
     message = "";
-    error = "";
+    if (storageReady) error = "";
     render();
     return;
   }
@@ -1604,7 +1606,7 @@ installReportPrinting({
 });
 
 window.addEventListener("beforeunload", (event) => {
-  if (dirty || toolboxChest.hasUnsavedChanges()) {
+  if (dirty || recoverySnapshot || toolboxChest.hasUnsavedChanges()) {
     event.preventDefault();
     event.returnValue = "";
   }

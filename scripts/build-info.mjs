@@ -14,7 +14,7 @@ export function getBuildInfo(root) {
     if (info.isDirectory()) for (const name of readdirSync(path).sort()) collect(join(path, name));
     else if (info.isFile()) paths.push(path);
   }
-  for (const input of ['src', 'public', 'scripts', 'package.json', 'package-lock.json', 'vite.config.js', 'index.html']) collect(join(root, input));
+  for (const input of ['src', 'public', 'vendor', 'scripts', 'package.json', 'package-lock.json', 'vite.config.js', 'index.html']) collect(join(root, input));
   const hash = createHash('sha256');
   for (const path of paths.sort()) hash.update(relative(root, path).split(sep).join('/') + '\0').update(readFileSync(path)).update('\0');
   return { version: pkg.version, buildId: hash.digest('hex').slice(0, 20) };

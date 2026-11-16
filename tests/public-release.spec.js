@@ -177,6 +177,9 @@ test('failed local opening offers retry and does not turn retained records into 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Local records could not be opened', exact: true })).toBeVisible();
   await expect(page.getByTestId('job-card')).toHaveCount(0);
+  await page.locator('[data-action="help"]:visible').first().click();
+  await expect(page.locator('.release-help-status')).toContainText('Local storage unavailable');
+  await home(page);
   await page.locator('[data-action="storage-retry"]').click();
   await expect(page.getByTestId('job-card')).toHaveCount(1);
   await expect(page.getByTestId('job-card')).toContainText('Existing retained release job');

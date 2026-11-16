@@ -66,6 +66,12 @@ test('source identity is checkout-independent and a source edit invalidates a st
   assert.deepEqual(getBuildInfo(copy), getBuildInfo(root));
   await writeFile(join(root, 'README.md'), 'Documentation does not change the served application.');
   assert.deepEqual(getBuildInfo(copy), getBuildInfo(root));
+  await mkdir(join(root, 'vendor'));
+  await writeFile(join(root, 'vendor/calculator.js'), 'export const synthetic = 42;');
+  assert.notEqual(getBuildInfo(copy).buildId, getBuildInfo(root).buildId);
+  await assert.rejects(verifyRelease({ root, dist }), /different or unsupported source build/);
+  await rm(join(root, 'vendor'), { recursive: true });
+  assert.deepEqual(getBuildInfo(copy), getBuildInfo(root));
   await writeFile(join(root, 'src/main.js'), 'export const synthetic = false;\n');
   assert.notEqual(getBuildInfo(copy).buildId, getBuildInfo(root).buildId);
   await assert.rejects(verifyRelease({ root, dist }), /different or unsupported source build/);
