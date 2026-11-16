@@ -30,6 +30,11 @@ import "./toolbox.css";
 import "./toolbox-extras.css";
 import "./toolbox-chest.css";
 import { createToolboxChest } from "./toolbox-chest.js";
+import { renderReleaseHelp } from "./release-help.js";
+import "./release-help.css";
+import { APP_VERSION, BUILD_ID } from "./release-info.js";
+import { startOffline } from "./offline.js";
+import { createWorkspaceBackup, restoreWorkspaceBackup } from "./workspace-backup.js";
 import { loadState, saveState } from "./storage.js";
 import {
   importZoneSketch,
@@ -71,6 +76,7 @@ const $ = (s) => document.querySelector(s),
         })[c],
     );
 const toolboxChest = createToolboxChest();
+let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, pendingRestore = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
   page = "home",
@@ -143,6 +149,20 @@ function reportError(text) {
     box.scrollIntoView({ block: "nearest" });
   }
 }
+function reportNotice(text) {
+  error = ""; message = text;
+  const box = $("#notice");
+  if (box) { box.className = "notice"; box.setAttribute("role", "status"); box.textContent = text; }
+}
+function updateReleaseStatus() {
+  $(".release-help")?.setStatus?.({ offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, updateAvailable });
+  const recovery = $("#recovery-actions");
+  if (recovery) recovery.hidden = !recoverySnapshot;
+  const update = $("#release-update");
+  if (update) update.hidden = !updateAvailable;
+  const offline = $("#offline-status");
+  if (offline) offline.textContent = offlineLabel;
+}
 function flash(text, isError = false) {
   message = isError ? "" : text;
   error = isError ? text : "";
@@ -166,12 +186,18 @@ async function persist(next, success) {
     }
     await saveState(next);
     state = next;
+    recoverySnapshot = null;
+    recoveryCapturedAt = null;
     dirty = false;
     saveLabel = draftJob && !next.jobs.some(job => job.id === draftJob.id) ? "Not saved yet" : "Saved on this device";
     error = "";
     message = success || "";
     return true;
   } catch (e) {
+    // This is the attempted, unsaved snapshot. Keep it outside IndexedDB so a
+    // quota or stale-tab failure can still be rescued without overwriting data.
+    recoverySnapshot = next;
+    recoveryCapturedAt = new Date().toISOString();
     saveLabel = "Save failed — retry this form";
     error = `Local save failed: ${e.message}. Your last saved records are unchanged. Keep this form open and retry.`;
     updateStatus();
@@ -197,12 +223,14 @@ function updateInteractionLock() {
 function updateStatus() {
   const s = $('[data-testid="save-status"]');
   if (s) s.textContent = saveLabel;
+  updateReleaseStatus();
 }
 function bindActions(root = document) {
   root.querySelectorAll("[data-action]").forEach((el) => {
     el.onclick = (event) => {
       event.preventDefault();
-      runTask(() => action(el.dataset.action, el));
+      if (el.dataset.action === "toolbox") action(el.dataset.action, el);
+      else runTask(() => action(el.dataset.action, el));
     };
   });
 }
@@ -435,7 +463,7 @@ function drawingConnection(drawing) {
           "",
         )
       : ""
-  }${drawing.kind === "issued" ? '<span class="muted">Issued record is read-only. Import a working drawing to edit.</span>' : button("Edit site", "edit-site", "primary")}</div><p class="muted" data-testid="zone-connection-status">${esc(handoffStatus || "Open the linked Zone Sketch editor, then use Save to Jobs to return your changes.")}</p></div>`;
+  }${drawing.kind === "issued" ? '<span class="muted">Issued record is read-only. Import a working drawing to edit.</span>' : button("Edit site", "edit-site", "primary")}</div><p class="muted" data-testid="zone-connection-status">${esc(handoffStatus || "Automatic loading and return require the optional Zone Sketch receiver, which is not yet deployed on the standard editor. Use Export editable drawing and Import Zone Sketch plan for the supported file workflow.")}</p></div>`;
 }
 function showHandoffStatus(value) {
   handoffStatus = value;
@@ -584,6 +612,7 @@ function render() {
   document.querySelector(".fire-maintenance")?.dispose?.();
   document.querySelector(".timesheets-ui")?.dispose?.();
   document.querySelector(".mobile-workspace")?.dispose?.();
+  document.querySelector(".release-help")?.dispose?.();
   disposeJobHold?.();
   disposeJobHold = null;
   const route = `${page}:${activeJob || ""}:${activeSite || ""}:${tab}`;
@@ -597,9 +626,9 @@ function render() {
   const headerSite = page === "job" && j && s
     ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
     : `<strong>${esc(s ? siteLabel(s) : j ? j.workflow?.details?.title || "Job notes" : "Jobs")}</strong>`;
-  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">01</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("+ &nbsp; Create job", "create", "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div>${page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version 0.1 · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header><div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}</div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
@@ -609,13 +638,14 @@ function render() {
         state: workspaceSnapshot(),
         ...timesheetCallbacks,
         onDirty: markDirty,
-        onAction: (value, source) => runTask(() => action(value, source)),
+        onAction: (value, source) => value === "toolbox" ? action(value, source) : runTask(() => action(value, source)),
       }),
     );
   }
   updateInteractionLock();
   $("#zone-file").onchange = (e) => runTask(() => readZone(e.target.files[0]));
   $("#job-file").onchange = (e) => runTask(() => readJob(e.target.files[0]));
+  $("#workspace-file").onchange = (e) => { const file = e.target.files[0]; e.target.value = ""; runTask(() => readWorkspaceBackup(file)); };
   document.querySelectorAll("#app form").forEach((f) => {
     f.addEventListener("input", () => {
       f.dataset.dirty = "true";
@@ -719,6 +749,10 @@ function render() {
           ),
       }),
     );
+  }
+  if (page === "help" && $("#release-help-root")) {
+    $("#release-help-root").append(renderReleaseHelp({ version: APP_VERSION, buildId: BUILD_ID, offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, onAction: value => runTask(() => action(value)) }));
+    updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
     $("#timesheets-root").append(renderTimesheets({
@@ -826,6 +860,35 @@ function render() {
   }
   if (changedRoute) window.scrollTo(0, 0);
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
+}
+function startupView() {
+  return `<section class="panel"><h1>Local records could not be opened</h1><p>Your existing records have not been deleted. Keep this browser's website data; clearing it can remove your work.</p><p>Close other Jobs tabs if an upgrade is blocked, check available device storage, then retry.</p><div class="actions">${button("Retry opening records", "storage-retry", "primary")}${button("Help &amp; data", "help")}</div></section>`;
+}
+function backupReview() {
+  if (!pendingRestore) return `<section class="panel"><h1>No backup selected</h1>${button("Help &amp; data", "help")}</section>`;
+  const { summary, metadata } = pendingRestore.result;
+  return `<section class="panel"><h1>Review workspace backup</h1><p>${metadata.kind === "recovery" ? "This is an unsaved recovery snapshot from a failed save. Review its jobs after restoring." : "This file contains the saved records from another Jobs workspace."}</p><p>Created ${esc(new Date(metadata.createdAt).toLocaleString())} · Jobs ${esc(metadata.appVersion)}</p><div class="metrics"><div><span>Sites</span><strong>${summary.sites}</strong></div><div><span>Jobs</span><strong>${summary.jobs}</strong></div><div><span>Attachments</span><strong>${summary.attachments}</strong></div></div><p>${summary.quickDefects} quick defects · ${summary.unassignedTimesheets} unassigned timesheet sessions. Included drawings, visit records and photographs will be restored locally.</p><p>Restoration requires an empty workspace. Existing work is never replaced.</p><div class="actions">${button("Restore backup", "confirm-workspace-restore", "primary")}${button("Cancel", "help")}</div></section>`;
+}
+async function readWorkspaceBackup(file) {
+  if (!file) return;
+  try {
+    if (file.size > 100 * 1024 * 1024) throw Error("The backup exceeds the 100 MiB file limit.");
+    const result = await restoreWorkspaceBackup(state, await file.text());
+    if (result.duplicate) { reportNotice(result.message); return; }
+    pendingRestore = { result, original: state };
+    page = "backup-review";
+    render();
+  } catch (cause) { reportError(`Backup not restored: ${cause.message}`); }
+}
+async function downloadWorkspace(recovery = false) {
+  if (!storageReady && !recovery) throw Error("Open your saved records successfully before exporting a backup.");
+  const snapshot = recovery ? recoverySnapshot : state;
+  if (!snapshot) throw Error("There is no failed-save snapshot to download.");
+  const backup = await createWorkspaceBackup(snapshot, { appVersion: APP_VERSION, kind: recovery ? "recovery" : "backup" });
+  download(backup, `Jobs-${recovery ? "unsaved-recovery" : "workspace"}-${new Date().toISOString().slice(0, 10)}.jobs-backup.json`);
+  reportNotice(recovery
+    ? `Recovery download started for the attempted save at ${new Date(recoveryCapturedAt).toLocaleTimeString()}. It has not been saved in Jobs. Keep this editor open and retry, or restore the file into an empty workspace.`
+    : `Workspace backup download started. Confirm the file reached your chosen folder. ${dirty ? "It includes saved records only; current unsaved edits are excluded." : "Keep a copy outside this browser."}`);
 }
 function home() {
   if (window.matchMedia("(max-width: 700px)").matches)
@@ -1094,6 +1157,29 @@ async function action(a, source) {
     return;
   }
   if (!toolboxChest.close({ restoreFocus: false })) return;
+  if (a === "backup-workspace") return downloadWorkspace();
+  if (a === "recovery-download") return downloadWorkspace(true);
+  if (a === "offline-retry") return offlineController?.retry();
+  if (a === "update-check") return offlineController?.checkForUpdates();
+  if (a === "update-apply") {
+    if (dirty || recoverySnapshot) throw Error("Save your open work and resolve the failed save before applying an update. Your current app remains available.");
+    if (await offlineController?.applyUpdate()) window.location.reload();
+    return;
+  }
+  if (a === "storage-retry") { await openRecords(); render(); return; }
+  if (!storageReady && !["home", "help"].includes(a)) throw Error("Your saved records have not opened. Retry opening records before making changes.");
+  if (a === "restore-workspace") {
+    if (dirty) throw Error("Save your current edits before choosing a workspace backup.");
+    $("#workspace-file").click();
+    return;
+  }
+  if (a === "confirm-workspace-restore") {
+    if (!pendingRestore || pendingRestore.original !== state) throw Error("The workspace changed. Select and review the backup again.");
+    if (await persist(pendingRestore.result.state, "Workspace restored on this device.")) {
+      pendingRestore = null; page = "home"; activeJob = activeSite = draftJob = null; render();
+    }
+    return;
+  }
   if (a === "cancel-card-result") {
     pendingCardResult = null;
     markDirty(false);
@@ -1171,7 +1257,8 @@ async function action(a, source) {
     render();
     return;
   }
-  if (a === "home" || a === "sites" || a === "timesheets") {
+  if (a === "home" || a === "sites" || a === "timesheets" || a === "help") {
+    pendingRestore = null;
     page = a;
     draftJob = null;
     activeJob = null;
@@ -1522,11 +1609,15 @@ window.addEventListener("beforeunload", (event) => {
     event.returnValue = "";
   }
 });
-async function init() {
+async function openRecords() {
+  saveLabel = "Opening local records…";
+  updateStatus();
   try {
-    state = await loadState();
+    const loaded = await loadState();
+    state = loaded;
     storageReady = true;
     saveLabel = "Saved on this device";
+    error = "";
     if (
       state.sites.some((site) =>
         site.drawings.some((drawing) => !Array.isArray(drawing.planPreviews)),
@@ -1535,32 +1626,19 @@ async function init() {
       await persist(structuredClone(state));
     }
   } catch (e) {
+    storageReady = false;
     saveLabel = "Local storage unavailable";
     error = `Could not open local records: ${e.message}`;
   }
+}
+async function init() {
+  await openRecords();
   render();
-  if ("serviceWorker" in navigator && import.meta.env.PROD) {
-    try {
-      await navigator.serviceWorker.register("./sw.js");
-      const offlineRegistration = await navigator.serviceWorker.ready;
-      if (!navigator.serviceWorker.controller)
-        await new Promise((resolve) => {
-          navigator.serviceWorker.addEventListener(
-            "controllerchange",
-            resolve,
-            { once: true },
-          );
-          // A navigation during first activation can miss that worker's initial
-          // clients.claim(). Ask the active worker to claim this document too.
-          offlineRegistration.active?.postMessage({ type: "JOBS_CLAIM_CLIENT" });
-        });
-      offlineLabel = "Ready offline";
-    } catch (e) {
-      offlineLabel = "Offline preparation failed";
-    }
-  } else offlineLabel = "Development mode · offline cache unavailable";
-  const status = $("#offline-status");
-  if (status) status.textContent = offlineLabel;
+  if (import.meta.env.PROD) offlineController = startOffline({
+    onStatus: value => { offlineLabel = value; updateReleaseStatus(); },
+    onUpdate: value => { updateAvailable = value.available; if (value.blocked && value.message) reportNotice(value.message); updateReleaseStatus(); },
+  });
+  else { offlineLabel = "Development mode · offline cache unavailable"; updateReleaseStatus(); }
 }
 window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
   if (dirty || busy || operationPending) return;

@@ -6,6 +6,7 @@ import { validateNotesDocument } from "./job-notes.js";
 import { validateJobSettings } from "./job-settings.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
 import { validateFireMaintenance } from "./fire-maintenance.js";
+import { pngDimensions } from "./plan-preview.js";
 const hasClassification = (job) =>
   (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
   ["discipline", "customDiscipline", "customWorkType"].some((key) => job[key] !== undefined);
@@ -149,7 +150,8 @@ function drawing(value, path) {
       if (
         typeof preview.image !== "string" ||
         !preview.image.startsWith("data:image/png;base64,") ||
-        !embeddedImage(preview.image)
+        !embeddedImage(preview.image) ||
+        preview.image.slice("data:image/png;base64,".length).length % 4 !== 0
       )
         fail("plan preview must contain an included PNG image.");
       for (const dimension of ["width", "height"])
@@ -159,6 +161,16 @@ function drawing(value, path) {
           preview[dimension] > 16384
         )
           fail(`plan preview ${dimension} is invalid.`);
+      // Imported previews must meet the same actual PNG-header limits as an
+      // editor handoff. Declared metadata alone cannot bound image dimensions.
+      let dimensions;
+      try {
+        dimensions = pngDimensions(preview.image);
+      } catch (error) {
+        fail(`plan preview: ${error.message}`);
+      }
+      if (preview.width !== dimensions.width || preview.height !== dimensions.height)
+        fail("plan preview dimensions do not match its PNG header.");
       string(preview.generatedAt, "plan preview generation date");
       if (!Number.isFinite(Date.parse(preview.generatedAt)))
         fail("plan preview generation date is invalid.");

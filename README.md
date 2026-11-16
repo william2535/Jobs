@@ -2,13 +2,13 @@
 
 **[Open the Jobs website](https://jobs-field-workspace.floodyyy21.chatgpt.site)** · [Hosting and access details](docs/deployment.md)
 
-An independent, local-first job workspace for fire and security engineers. First working milestone: import a Zone Sketch drawing, review equipment, create a visit, record evidence, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
+An independent, local-first job workspace for fire and security engineers. Public release 1.0.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
 [Desktop notes](docs/screenshots/desktop-notes-job.png) · [Mobile notes](docs/screenshots/mobile-notes-job.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)
 
 ## Run locally
 
-Requires Node.js 20.19+ or 22.12+ and npm.
+Requires Node.js 22.12+ (Node 24 recommended) and npm.
 
 ```sh
 npm ci
@@ -25,6 +25,16 @@ npm run preview -- --port 4173
 Open `http://localhost:4173`. Wait for **Ready offline**, then save a job. The service worker caches the built application; IndexedDB stores sites, drawings, jobs and embedded photographs. Offline reopen, included plan/photo viewing, recording, report printing and JSON export then work without the server. The first preparation requires loading the app while the server is available.
 
 To install on phones, serve `dist/` over **HTTPS** (ordinary HTTP LAN addresses do not enable service workers). On iPhone use Safari → Share → Add to Home Screen; on Android/Desktop use the browser’s install option. This is a static app, including when hosted. No customer data is sent to a server. Keep exported backups: browser storage can be cleared or evicted. “Protect local storage” requests persistence but cannot guarantee it.
+
+## Public release and recovery
+
+Open **Help & data** from the desktop sidebar or mobile **About** for install instructions, verified offline readiness, updates, privacy and recovery. App version and build identity are shown there. Opening/saving errors keep existing records intact; a failed save offers **Download unsaved recovery** without closing the editor.
+
+Use **Export workspace backup** to preserve all saved sites, jobs, drawings, photos, quick defects and timesheets, including sites without visits and unassigned sessions. **Restore workspace backup** validates and reviews the file before saving it into an empty workspace; it never replaces differing existing work. Identical restores do nothing. Use individual job imports to combine records instead. Toolbox convenience drafts/practice progress remain separate. See [backup format and recovery](docs/workspace-backup.md).
+
+Updates wait until you choose **Apply update** after saving. Other Jobs windows must be closed before activation. When upgrading from the earlier prototype, close all Jobs tabs/installed windows and reopen online so the waiting release can activate. Wait for **Ready offline** before going to site; the app verifies its included shell files instead of assuming a controller is sufficient.
+
+Create a distributable build with `npm run release`; this validates and packages only compiled public files, with a file manifest and SHA-256 checksum. It excludes repository history and the supplied customer example. See [release build instructions](docs/release-build.md), [public release guide](docs/public-release.md) and [verification results](docs/VERIFICATION.md). Reports remain draft service records, and the FINDR job adapter and automatic Zone Sketch receiver remain separate future/deployment work.
 
 ## Workflow
 

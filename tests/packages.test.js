@@ -624,6 +624,40 @@ test("optional PNG plan previews round-trip through the image pool and malformed
   }
 });
 
+test("PNG preview imports check actual headers and dimensions without changing existing jobs", async () => {
+  const { site, job } = fixture();
+  const image = site.drawings[0].assets[0].photos[0].image;
+  site.drawings[0].planPreviews = [{
+    id: "preview-safe", drawingId: "drawing-1", floorId: "floor-1",
+    snapshotId: null, rendererVersion: 1, revision: "A", image,
+    width: 1, height: 1, generatedAt: "2026-11-16T00:00:00Z",
+  }];
+  const packed = await createJobPackage(site, job);
+  const existing = { sites: [structuredClone(site)], jobs: [structuredClone(job)] };
+  existing.jobs[0].results[0].notes = "Keep the engineer's existing evidence.";
+  const before = structuredClone(existing);
+  const headerImage = (width, height) => {
+    const bytes = Buffer.from(image.split(",")[1], "base64");
+    bytes.writeUInt32BE(width, 16); bytes.writeUInt32BE(height, 20);
+    return "data:image/png;base64," + bytes.toString("base64");
+  };
+  for (const [label, mutate] of [
+    ["non-PNG bytes", preview => { preview.image = "data:image/png;base64,bm90IGEgcG5n"; }],
+    ["malformed base64", preview => { preview.image = image.slice(0, -1); }],
+    ["declared width mismatch", preview => { preview.width = 2; }],
+    ["declared height mismatch", preview => { preview.height = 2; }],
+    ["oversized true width", preview => { preview.image = headerImage(20000, 1); }],
+    ["oversized pixel area", preview => {
+      preview.image = headerImage(8192, 8192); preview.width = preview.height = 8192;
+    }],
+  ]) {
+    const invalid = validateJobPackage(packed);
+    mutate(invalid.site.drawings[0].planPreviews[0]);
+    await assert.rejects(importJobPackage(existing, invalid), /Invalid job package: plan preview/, label);
+    assert.deepEqual(existing, before, label + " must leave saved records unchanged");
+  }
+});
+
 test("generated preview caches do not create drawing conflicts and imported source-engine PNGs remain usable after true conflicts", async () => {
   const { site, job } = fixture();
   const base = structuredClone(site);

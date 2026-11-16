@@ -512,6 +512,7 @@ export function renderMobileWorkspace({
     );
     section.append(
       card,
+      control("Help & data", () => onAction("help"), "mw-blue-button"),
       shortcuts(),
       control(
         "Protect local storage",

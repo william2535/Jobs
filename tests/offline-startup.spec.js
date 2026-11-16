@@ -7,7 +7,7 @@ test('an active offline worker can reclaim a document that missed its initial ac
     const original = await response.text();
     // Reproduce a document arriving after the worker's one-off activation claim.
     // The normal message handler and every cache operation remain unchanged.
-    const withoutInitialClaim = original.replace('.then(()=>self.clients.claim())', '.then(()=>Promise.resolve())');
+    const withoutInitialClaim = original.replace('/* JOBS_INITIAL_CLAIM */ await self.clients.claim();', '/* Simulate a missed initial claim; message recovery remains enabled. */');
     expect(withoutInitialClaim).not.toBe(original);
     intercepted = true;
     await route.fulfill({ response, body: withoutInitialClaim });
