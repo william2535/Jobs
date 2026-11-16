@@ -7,7 +7,11 @@ test('an active offline worker can reclaim a document that missed its initial ac
     const original = await response.text();
     // Reproduce a document arriving after the worker's one-off activation claim.
     // The normal message handler and every cache operation remain unchanged.
-    const withoutInitialClaim = original.replace('/* JOBS_INITIAL_CLAIM */ await self.clients.claim();', '/* Simulate a missed initial claim; message recovery remains enabled. */');
+    // The build strips comments while serializing this function. The activation
+    // path is the only awaited claim; message recovery uses event.waitUntil.
+    const initialClaim = /await\s+self\.clients\.claim\(\);/g;
+    expect([...original.matchAll(initialClaim)]).toHaveLength(1);
+    const withoutInitialClaim = original.replace(initialClaim, '/* Simulate a missed initial claim; message recovery remains enabled. */');
     expect(withoutInitialClaim).not.toBe(original);
     intercepted = true;
     await route.fulfill({ response, body: withoutInitialClaim });

@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ||
   (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined);
+const chromiumLaunchOptions = { executablePath, args: ["--no-sandbox"] };
 
 export default defineConfig({
   testDir: "./tests",
@@ -17,11 +18,11 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    launchOptions: { executablePath, args: ["--no-sandbox"] },
   },
   projects: [
-    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
+    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions } },
+    { name: "mobile-chromium", use: { ...devices["Pixel 7"], launchOptions: chromiumLaunchOptions } },
+    { name: "iphone-webkit", testMatch: "**/public-release.spec.js", use: { ...devices["iPhone 13"], browserName: "webkit" } },
   ],
   webServer: {
     command: "npm run preview -- --port 4173 --strictPort",

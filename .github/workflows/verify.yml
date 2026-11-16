@@ -26,7 +26,7 @@ jobs:
       - run: npm run release:verify
       - name: Install PDF verification tools
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - run: npm run release:package
       - name: Upload verified release build

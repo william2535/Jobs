@@ -101,12 +101,27 @@ test('release help backs up saved sites, job photos and unassigned time, then re
   expect(workspace.unassignedTimesheets).toHaveLength(1);
   expect(workspace.unassignedTimesheets[0].note).toBe('Synthetic unassigned release administration');
 
-  const fresh = await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: testInfo.project.use.viewport });
+  const fresh = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4173',
+    viewport: testInfo.project.use.viewport,
+    isMobile: testInfo.project.use.isMobile,
+    hasTouch: testInfo.project.use.hasTouch,
+    deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+    userAgent: testInfo.project.use.userAgent,
+  });
   try {
     const reopened = await fresh.newPage();
     await reopened.goto('/');
     await reviewAndRestore(reopened, exported.file);
     await expect(reopened.getByTestId('save-status')).toContainText('Saved');
+    await expect(reopened.locator('#offline-status')).toHaveText('Ready offline');
+    await fresh.setOffline(true);
+    await reopened.reload();
+    await reopened.getByTestId('job-card').click();
+    const includedPhoto = reopened.locator('.job-notes .notes-photo img');
+    await expect(includedPhoto).toHaveAttribute('src', photo);
+    await expect.poll(() => includedPhoto.evaluate(image => image.complete && image.naturalWidth > 0)).toBeTruthy();
+    await home(reopened);
     await help(reopened);
     expect((await downloadBackup(reopened)).inspected.workspace).toEqual(workspace);
     await reopened.locator('#workspace-file').setInputFiles(exported.file);

@@ -76,7 +76,7 @@ const $ = (s) => document.querySelector(s),
         })[c],
     );
 const toolboxChest = createToolboxChest();
-let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, pendingRestore = null;
+let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
   page = "home",
@@ -168,7 +168,7 @@ function flash(text, isError = false) {
   error = isError ? text : "";
   render();
 }
-async function persist(next, success) {
+async function persist(next, success, retryKey = null) {
   if (!storageReady)
     throw Error(
       "Local records could not be opened. Reload successfully before saving; existing records have not been changed.",
@@ -188,6 +188,7 @@ async function persist(next, success) {
     state = next;
     recoverySnapshot = null;
     recoveryCapturedAt = null;
+    recoveryRetryKey = null;
     dirty = false;
     saveLabel = draftJob && !next.jobs.some(job => job.id === draftJob.id) ? "Not saved yet" : "Saved on this device";
     error = "";
@@ -198,6 +199,7 @@ async function persist(next, success) {
     // quota or stale-tab failure can still be rescued without overwriting data.
     recoverySnapshot = next;
     recoveryCapturedAt = new Date().toISOString();
+    recoveryRetryKey = retryKey;
     saveLabel = "Save failed — retry this form";
     error = `Local save failed: ${e.message}. Your last saved records are unchanged. Keep this form open and retry.`;
     updateStatus();
@@ -363,7 +365,8 @@ async function saveCardResult(assetId, outcome, explanation = "") {
   changed.revision = original.revision + 1;
   changed.updatedAt = now();
   next.jobs[index] = changed;
-  if (!(await persist(next))) return false;
+  const resultAction = { Satisfactory: "pass", Unsatisfactory: "fail", "Not applicable": "na" }[outcome];
+  if (!(await persist(next, undefined, `card-result:${resultAction}:${assetId}:${activeJob}`))) return false;
   pendingCardResult = null;
   render();
   requestAnimationFrame(() => {
@@ -1194,7 +1197,8 @@ async function action(a, source) {
     );
     return;
   }
-  if (dirty || recoverySnapshot) {
+  const retryingQuickResult = recoveryRetryKey && recoveryRetryKey === `${a}:${activeJob}`;
+  if (dirty || (recoverySnapshot && !retryingQuickResult)) {
     if (
       [
         "export",
@@ -1214,6 +1218,7 @@ async function action(a, source) {
     dirty = false;
     recoverySnapshot = null;
     recoveryCapturedAt = null;
+    recoveryRetryKey = null;
     pendingCardResult = null;
     saveLabel = draftJob ? "Not saved yet" : "Saved on this device";
   }

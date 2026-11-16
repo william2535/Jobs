@@ -71,6 +71,15 @@ test('device cards save Pass directly and require explanations for Fail and N/A 
   await expect(page.getByTestId('save-status')).toContainText('Save failed');
   expect((await stored(page, 'jobs'))[0].results.find(result => result.assetId === ids[0]).state).toBe('Not tested');
   await expect(first.getByRole('button', { name: 'Pass', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.evaluate(() => {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  })).toBeTruthy();
+  page.once('dialog', dialog => dialog.dismiss());
+  await second.getByRole('button', { name: 'Pass', exact: true }).click();
+  await expect(page.locator('#recovery-actions')).toBeVisible();
+  expect((await stored(page, 'jobs'))[0].results.find(result => result.assetId === ids[1]).state).toBe('Not tested');
   await first.getByRole('button', { name: 'Pass', exact: true }).click();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await expect(first.getByRole('button', { name: 'Pass', exact: true })).toHaveAttribute('aria-pressed', 'true');
