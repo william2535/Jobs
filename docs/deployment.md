@@ -8,14 +8,20 @@ The website uses Sites hosting and is public to anyone with the link, following 
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
 - Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
-- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_1b35fd7d45b481918a14433f43c78fd8` (hosting version 15, Jobs 1.0.0 public release)
-- Successful deployment: `appgdep_6afab42428d881918bb80f00e9d4382b`
-- Application source: Jobs commit `8bf0eab03dcdd75443c0d68c2f54f9ac523df030`
-- Application build: `4feb87501bab15ae2b3c`
-- Sanitized hosting-source commit: `611c7fa52b0166e5d5bba5660cad84d33c4cb2ae`
+- Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_27e4c41b5610819199b17cad6011dc59` (hosting version 16, Jobs 1.0.0 sharing banner)
+- Successful deployment: `appgdep_6afabbda89a08191a0e5cd4b22149a74`
+- Application source: Jobs commit `27da639cddadbfb8cdfb767dedc4390a4b8ac6a9`
+- Application build: `953e89b944559d819250`
+- Sanitized hosting-source commit: `ae5f1179339ed69bad2b5fdd593611d5d76205fc`
 - Hosting checkout in the build workspace: `/workspace/sites/jobs-field-workspace`
 
 GitHub Pages is disabled for this private repository, and the connected GitHub credential cannot enable Pages. The repository was not made public. Sites provided the website without changing that visibility.
+
+## Sharing banner — 16 November 2026
+
+Hosting **version 16 succeeded** with the owner-requested deep-blue advert, blue uptick mark and a home-dashboard phone illustration. The generated artwork uses a generic demonstration job and includes no supplied customer names. The original 1734×907 PNG is served as `jobs-share-banner.png`. Static Open Graph and large-image Twitter metadata point to its absolute HTTPS URL, with matching dimensions and alternative text. Preview services may cache older cards; instant third-party refresh is not guaranteed.
+
+All four existing release-verifier tests passed. Production build and packaging passed with **17 served files**. A built-HTML check verified matching OG/Twitter image URLs, actual PNG dimensions and exact generated image bytes; all 17 sanitized hosting-build files match the canonical build. The banner is included in offline preparation. No runtime workflow changed and no fresh full-browser run is claimed for this metadata/image update. The preceding full-release verification remains recorded below.
 
 ## Public release 1.0.0 — 16 November 2026
 
