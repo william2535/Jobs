@@ -20,6 +20,9 @@
 .release-help-details { margin-top:14px; border-top:1px solid #e2e8f0; }
 .release-help-details summary { min-height:44px; padding:13px 0 10px; color:var(--help-blue); font-size:13px; font-weight:650; cursor:pointer; line-height:1.45; }
 .release-help-details p { margin:9px 0 14px; }
+.release-help-policy h3 { margin:18px 0 8px; font-size:14px; line-height:1.4; color:var(--help-blue); }
+.release-help-policy ul { margin:9px 0 14px; padding-left:20px; font-size:13px; line-height:1.65; color:#465971; }
+.release-help-policy li + li { margin-top:6px; }
 .release-help .release-help-update,.release-help .release-help-recovery-hint { padding:11px 12px; border-radius:7px; background:#eaf1fc; color:#214b7d; }
 .release-help-error { padding:12px 15px; border:1px solid #d9a9b2; border-radius:8px; background:#fff1f3; color:#8c2c3d; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
 @media (max-width:700px) {

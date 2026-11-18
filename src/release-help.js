@@ -1,4 +1,5 @@
 import { isNativePlatform } from './native-platform.js';
+import { ANDROID_PRIVACY_POLICY_TEXT, ANDROID_PRIVACY_POLICY_URL } from './android-privacy-policy.js';
 
 /** Release help and data controls. The application owns all storage operations. */
 const ACTIONS = new Set([
@@ -119,6 +120,29 @@ export function renderReleaseHelp({
   paragraph(privacy, native
     ? 'Anyone who can unlock this device and open Jobs may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and keep exported work private.'
     : 'Anyone who can use this browser profile may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and your own browser profile on shared equipment. Avoid private or incognito browsing for work you need to keep.');
+  if (native) {
+    const policy = details('Privacy policy', []);
+    policy.classList.add('release-help-policy');
+    paragraph(policy, 'This complete policy covers Jobs for Android and is available offline.');
+    for (const [index, block] of ANDROID_PRIVACY_POLICY_TEXT.trimEnd().split(/\n\n+/).entries()) {
+      if (index === 0 || /^\d+\. /.test(block)) {
+        policy.append(element('h3', block));
+      } else if (block.startsWith('- ')) {
+        const list = element('ul');
+        for (const line of block.split('\n')) list.append(element('li', line.slice(2)));
+        policy.append(list);
+      } else {
+        for (const line of block.split('\n')) paragraph(policy, line);
+      }
+    }
+    const online = element('p');
+    const link = element('a', 'View the public privacy policy in your browser');
+    link.href = ANDROID_PRIVACY_POLICY_URL;
+    link.rel = 'noopener noreferrer';
+    online.append(link);
+    policy.append(online);
+    privacy.append(policy);
+  }
   privacy.append(details('Reports, drawing editing and FINDR', [
     'Reports are Draft service reports of your recorded work. They are not validated compliance certificates. Checklist completion and tool calculations do not automatically pass equipment.',
     'Zone Sketch and the FINDR logo open separate applications. Their websites may require a connection and have their own storage. Automatic Zone Sketch loading and return require a compatible receiver and configuration; editable drawing export and reviewed file reimport remain available.',
