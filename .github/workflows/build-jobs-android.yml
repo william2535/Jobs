@@ -1,0 +1,103 @@
+name: Build Jobs for Google Play
+
+# This workflow builds downloadable files only. It never submits a Play release.
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Leave 0 for an automatic increasing version code'
+        required: true
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobs-android-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the Android release source
+        uses: actions/checkout@v4
+        with:
+          ref: release/jobs-android
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Configure the existing upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.JOBS_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.JOBS_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.JOBS_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.JOBS_UPLOAD_KEY_PASSWORD }}
+          REQUESTED_VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, base64, subprocess
+          for name in ('KEYSTORE_BASE64', 'STORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD'):
+              if not os.environ.get(name):
+                  raise SystemExit('One-time signing setup is missing. See docs/android-play.md. No key was generated or replaced.')
+          requested = os.environ['REQUESTED_VERSION_CODE']
+          if not requested.isdigit():
+              raise SystemExit('Version code must be 0 or a positive integer.')
+          version = int(requested) or 1000 + int(os.environ['GITHUB_RUN_NUMBER'])
+          if not 1 <= version <= 2100000000:
+              raise SystemExit('Version code is outside the Google Play range.')
+          key = pathlib.Path(os.environ['RUNNER_TEMP']) / 'jobs-upload.p12'
+          key.write_bytes(base64.b64decode(os.environ['KEYSTORE_BASE64'], validate=True))
+          key.chmod(0o600)
+          source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          with open(os.environ['GITHUB_ENV'], 'a') as out:
+              out.write(f'JOBS_UPLOAD_STORE_FILE={key}\nJOBS_VERSION_CODE={version}\nJOBS_SOURCE_COMMIT={source}\n')
+          PY
+      - name: Install Android build tools
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: npm ci
+      - name: Verify Jobs data and native bridge behaviour
+        run: npm test
+      - name: Build signed upload and test files
+        env:
+          JOBS_UPLOAD_STORE_PASSWORD: ${{ secrets.JOBS_UPLOAD_STORE_PASSWORD }}
+          JOBS_UPLOAD_KEY_ALIAS: ${{ secrets.JOBS_UPLOAD_KEY_ALIAS }}
+          JOBS_UPLOAD_KEY_PASSWORD: ${{ secrets.JOBS_UPLOAD_KEY_PASSWORD }}
+        run: npm run android:release
+      - name: Validate the Android bundle
+        run: |
+          python3 - <<'PY'
+          import urllib.request, hashlib, pathlib, os, subprocess
+          jar = pathlib.Path(os.environ['RUNNER_TEMP']) / 'bundletool.jar'
+          with urllib.request.urlopen('https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar', timeout=60) as response:
+              jar.write_bytes(response.read())
+          if hashlib.sha256(jar.read_bytes()).hexdigest() != 'a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29':
+              raise SystemExit('Bundletool checksum mismatch.')
+          bundles = list(pathlib.Path('release/android').glob('*.aab'))
+          if len(bundles) != 1:
+              raise SystemExit('Expected exactly one upload bundle.')
+          subprocess.run(['java', '-jar', str(jar), 'validate', '--bundle=' + str(bundles[0])], check=True)
+          subprocess.run(['jarsigner', '-verify', str(bundles[0])], check=True)
+          PY
+      - name: Download these files from the completed run
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jobs-Play-upload-${{ env.JOBS_VERSION_CODE }}
+          path: release/android/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Remove the temporary upload key
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import pathlib, os
+          (pathlib.Path(os.environ['RUNNER_TEMP']) / 'jobs-upload.p12').unlink(missing_ok=True)
+          PY

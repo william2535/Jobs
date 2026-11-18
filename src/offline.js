@@ -1,3 +1,5 @@
+import { getNativePlatform } from './native-platform.js';
+
 /** Offline preparation and deliberate updates. Never reloads or changes job data. */
 export function startOffline({
   onStatus = () => {}, onUpdate = () => {},
@@ -5,7 +7,41 @@ export function startOffline({
   createChannel = () => new MessageChannel(),
   timeoutMs = 12000, messageTimeoutMs = 4000,
   expectedBuildId = typeof __JOBS_BUILD_ID__ === 'undefined' ? null : __JOBS_BUILD_ID__,
+  nativePlatform = getNativePlatform(),
 } = {}) {
+  if (nativePlatform) {
+    let disposed = false, inFlight = null, prepared = false;
+    const status = value => { if (!disposed) onStatus(value); };
+    async function prepare() {
+      prepared = false;
+      status('Checking installed app…');
+      try {
+        const installed = await nativePlatform.info();
+        if (!installed?.buildId || (expectedBuildId && installed.buildId !== expectedBuildId)) throw Error('The installed app files do not match this version. Update Jobs through Google Play.');
+        if (disposed) return false;
+        prepared = true;
+        status('Ready offline · included in this app');
+        onUpdate({ available: false, blocked: false, message: 'App updates are managed in Google Play.' });
+        return true;
+      } catch (error) { status(error.message || 'The installed app could not be verified.'); return false; }
+    }
+    const retry = () => {
+      if (disposed) return Promise.resolve(false);
+      if (!inFlight) inFlight = prepare().finally(() => { inFlight = null; });
+      return inFlight;
+    };
+    const checkForUpdates = async () => {
+      if (disposed) return false;
+      if (!prepared && !await retry()) return false;
+      status('Ready offline · check Google Play for app updates');
+      await nativePlatform.openUpdates();
+      return false;
+    };
+    // Bundled Android assets need no service worker and are updated atomically
+    // with the package. Avoid caching an older web shell over a newer AAB.
+    queueMicrotask(() => { if (!disposed) retry(); });
+    return { retry, checkForUpdates, applyUpdate: checkForUpdates, dispose() { disposed = true; } };
+  }
   let disposed = false, registration = null, inFlight = null, prepared = false;
   let watchers = [];
   const pending = new Set();

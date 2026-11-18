@@ -108,3 +108,35 @@ test('disposing help removes actions and ignores late operation updates', async 
   control(root, 'backup-workspace').disabled = true;
   assert.equal(root.innerHTML, original);
 });
+
+test('Android help explains bundled storage and Play updates without offering browser installation or worker activation', async t => {
+  installToolboxDOM(t);
+  const browser = mountToolbox(t, renderReleaseHelp());
+  assert.match(browser.textContent, /Add to Home Screen/);
+  assert.equal(control(browser, 'update-check').textContent, 'Check for updates');
+  assert.ok(control(browser, 'persist'));
+
+  const savedBridge = Object.getOwnPropertyDescriptor(globalThis, 'JobsNative');
+  Object.defineProperty(globalThis, 'JobsNative', { configurable: true, value: { postMessage() { assert.fail('Rendering help must not request a native operation'); } } });
+  Object.defineProperty(globalThis, 'location', { configurable: true, writable: true, value: { origin: 'https://appassets.androidplatform.net', pathname: '/assets/index.html' } });
+  t.after(() => {
+    if (savedBridge) Object.defineProperty(globalThis, 'JobsNative', savedBridge);
+    else delete globalThis.JobsNative;
+  });
+  const calls = [];
+  const native = mountToolbox(t, renderReleaseHelp({ onAction: action => calls.push(action) }));
+  assert.match(native.textContent, /app files are bundled/);
+  assert.match(native.textContent, /Android app and the Jobs website have separate storage/);
+  assert.match(native.textContent, /uninstalling Jobs or clearing its app storage/);
+  assert.match(native.textContent, /wait for confirmation that the file was saved/);
+  assert.doesNotMatch(native.textContent, /Add to Home Screen|open this website in Safari/);
+  assert.equal(control(native, 'persist'), null);
+  assert.equal(control(native, 'offline-retry').textContent, 'Check installed app');
+  assert.equal(control(native, 'update-check').textContent, 'Open Google Play');
+  native.setStatus({ updateAvailable: true });
+  assert.equal(control(native, 'update-apply').hidden, true);
+  control(native, 'update-apply').click();
+  control(native, 'update-check').click();
+  await until(() => native.getAttribute('aria-busy') === 'false');
+  assert.deepEqual(calls, ['update-check']);
+});

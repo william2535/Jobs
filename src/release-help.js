@@ -1,3 +1,5 @@
+import { isNativePlatform } from './native-platform.js';
+
 /** Release help and data controls. The application owns all storage operations. */
 const ACTIONS = new Set([
   'backup-workspace', 'restore-workspace', 'recovery-download', 'persist',
@@ -16,6 +18,7 @@ export function renderReleaseHelp({
   storageStatus = 'Checking local storage…', hasRecovery = false,
   onAction = () => {},
 } = {}) {
+  const native = isNativePlatform();
   const root = element('section', undefined, 'release-help');
   root.setAttribute('aria-label', 'Help and data');
   const abort = new AbortController();
@@ -64,40 +67,58 @@ export function renderReleaseHelp({
   const offlineValue = element('dd'), storageValue = element('dd');
   statuses.append(element('dt', 'Offline app'), offlineValue, element('dt', 'Saved records'), storageValue);
   readiness.append(statuses);
-  paragraph(readiness, 'Open Jobs while online and wait for “Ready offline” before leaving for site. Included plans, photos and tools then work without a connection.');
+  paragraph(readiness, native
+    ? 'The app and included tools are installed on this device. Saved jobs, plans and photographs work offline. Check that the status says “Ready offline” before leaving for site; external websites need a connection.'
+    : 'Open Jobs while online and wait for “Ready offline” before leaving for site. Included plans, photos and tools then work without a connection.');
   const updateNotice = element('p', 'An app update is ready. Save your current work before applying it.', 'release-help-update');
   const applyUpdate = button('update-apply', 'Apply update', true);
   readiness.append(updateNotice);
-  actions(readiness, [button('offline-retry', 'Prepare offline use'), button('update-check', 'Check for updates'), applyUpdate]);
-  readiness.append(details('Install Jobs on this device', [
+  actions(readiness, [button('offline-retry', native ? 'Check installed app' : 'Prepare offline use'), button('update-check', native ? 'Open Google Play' : 'Check for updates'), applyUpdate]);
+  readiness.append(details(native ? 'About the Android app' : 'Install Jobs on this device', native ? [
+    'Jobs includes its app files, so you can open this Android edition without first loading the website. App updates are installed through Google Play when available. Updating the hosted website does not replace the files in this installed app.',
+    'Save your open work and export a workspace backup before updating or changing device. Keep this app installed; uninstalling it or using Android’s Clear storage control can remove its saved records.',
+    'This Android app and the Jobs website have separate storage. To bring existing browser work into an empty Android workspace, export a workspace backup from the browser and restore that file here. No records move automatically.',
+  ] : [
     'iPhone or iPad: open this website in Safari, tap Share, then Add to Home Screen. Choose Open as Web App if Safari offers it.',
     'Android: open this website in Chrome, open its menu and choose Install app or Add to Home screen. Desktop: use the browser’s Install app option when available. Menu names can differ by browser.',
     'Installation is optional. Use this same website address and browser profile to return to your records. A different browser, profile or device has its own storage. Check that your saved jobs are present in the installed app before working offline.',
   ]));
 
   const backups = card('Keep a backup');
-  paragraph(backups, 'Your work is saved in this browser, with no account or automatic cloud sync. Export a workspace backup regularly and before changing device or clearing website data.');
+  paragraph(backups, native
+    ? 'Your work is saved in this Android app, with no account or automatic cloud sync. Export a workspace backup regularly and before changing device, uninstalling Jobs or clearing its app storage.'
+    : 'Your work is saved in this browser, with no account or automatic cloud sync. Export a workspace backup regularly and before changing device or clearing website data.');
   actions(backups, [button('backup-workspace', 'Export workspace backup', true), button('restore-workspace', 'Restore workspace backup')]);
   backups.append(details('Backup and restore steps', [
-    'Save any open job or timesheet first, then export the workspace backup. Keep the downloaded file somewhere you can recover independently of this browser. Confirm that the file reached your chosen folder.',
+    native
+      ? 'Save any open job or timesheet first, then export the workspace backup. Choose a folder in Android’s save dialog and wait for confirmation that the file was saved. Keep a copy somewhere you can recover independently of this app and device.'
+      : 'Save any open job or timesheet first, then export the workspace backup. Keep the downloaded file somewhere you can recover independently of this browser. Confirm that the file reached your chosen folder.',
     'A workspace backup contains saved sites, jobs, drawings, attachments, timesheets and saved quick defects. Unsaved edits and separate Toolbox calculator inputs or practice progress are not included.',
     'Restore a workspace backup into an empty Jobs workspace. Existing work is not overwritten. To add individual jobs to a workspace that already has records, use Export job in Finalisation and Import job on Home; conflicting imported work is retained separately.',
     'Job packages and workspace backups contain the included notes, photographs and other site information. They are not encrypted. Share them only with the intended recipient and store them securely.',
   ]));
-  actions(backups, [button('persist', 'Protect local storage')]);
-  paragraph(backups, 'Protect local storage asks the browser to retain records. It cannot prevent deliberate clearing, device loss or every storage failure, so it does not replace a backup.');
+  if (!native) actions(backups, [button('persist', 'Protect local storage')]);
+  paragraph(backups, native
+    ? 'Android keeps the workspace in Jobs’ app storage. This does not replace a backup: uninstalling, clearing app storage, device loss or storage failure can remove local records.'
+    : 'Protect local storage asks the browser to retain records. It cannot prevent deliberate clearing, device loss or every storage failure, so it does not replace a backup.');
 
   const recovery = card('If records will not open');
-  paragraph(recovery, 'An opening or saving error does not mean your previous records were deleted. Keep the current tab open if it contains unsaved work. Do not clear website data to fix the problem before preserving your records.');
+  paragraph(recovery, native
+    ? 'An opening or saving error does not mean your previous records were deleted. Keep this editor open if it contains unsaved work. Do not uninstall Jobs or clear its app storage to fix the problem before preserving your records.'
+    : 'An opening or saving error does not mean your previous records were deleted. Keep the current tab open if it contains unsaved work. Do not clear website data to fix the problem before preserving your records.');
   paragraph(recovery, 'If saving fails, free space on the device and retry saving from the same editor. Export a backup when records can be opened. A recovery download, when available below, preserves the attempted save in a validated backup file. It remains an unsaved snapshot until you retry successfully or restore that file into an empty workspace.');
-  const recoveryDownload = button('recovery-download', 'Download local recovery copy');
+  const recoveryDownload = button('recovery-download', native ? 'Save local recovery copy' : 'Download local recovery copy');
   actions(recovery, [recoveryDownload]);
   const recoveryHint = element('p', 'A local recovery copy is available. Keep it private with your other backups.', 'release-help-recovery-hint');
   recovery.append(recoveryHint);
 
   const privacy = card('Your data and connected apps');
-  paragraph(privacy, 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. Sites hosting receives normal website requests and may process basic request metadata, such as IP address, browser information and request time, to serve and protect the website.');
-  paragraph(privacy, 'Anyone who can use this browser profile may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and your own browser profile on shared equipment. Avoid private or incognito browsing for work you need to keep.');
+  paragraph(privacy, native
+    ? 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. Its app files are bundled on this device. Exports go to the document provider and folder you choose; choosing a cloud provider may send that exported file to that service. External websites have their own data handling.'
+    : 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. Sites hosting receives normal website requests and may process basic request metadata, such as IP address, browser information and request time, to serve and protect the website.');
+  paragraph(privacy, native
+    ? 'Anyone who can unlock this device and open Jobs may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and keep exported work private.'
+    : 'Anyone who can use this browser profile may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and your own browser profile on shared equipment. Avoid private or incognito browsing for work you need to keep.');
   privacy.append(details('Reports, drawing editing and FINDR', [
     'Reports are Draft service reports of your recorded work. They are not validated compliance certificates. Checklist completion and tool calculations do not automatically pass equipment.',
     'Zone Sketch and the FINDR logo open separate applications. Their websites may require a connection and have their own storage. Automatic Zone Sketch loading and return require a compatible receiver and configuration; editable drawing export and reviewed file reimport remain available.',
@@ -113,8 +134,8 @@ export function renderReleaseHelp({
     storageValue.textContent = String(status.storageStatus ?? 'Storage status not available');
     recoveryDownload.hidden = !status.hasRecovery;
     recoveryHint.hidden = !status.hasRecovery;
-    updateNotice.hidden = !status.updateAvailable;
-    applyUpdate.hidden = !status.updateAvailable;
+    updateNotice.hidden = native || !status.updateAvailable;
+    applyUpdate.hidden = native || !status.updateAvailable;
     for (const control of root.querySelectorAll('[data-help-action]')) control.disabled = pending;
     root.setAttribute('aria-busy', String(pending));
   }

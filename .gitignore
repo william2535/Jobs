@@ -4,3 +4,15 @@ test-results/
 playwright-report/
 .env*
 release/
+
+# Android generated output and private signing material
+android-play/.gradle/
+android-play/build/
+android-play/app/build/
+android-play/app/src/main/assets/web/
+android-play/local.properties
+android-play/web-build-manifest.json
+*.jks
+*.keystore
+*.p12
+signing.json

@@ -11,7 +11,11 @@
     "test:e2e": "playwright test",
     "release:verify": "node scripts/verify-release.mjs",
     "release:package": "node scripts/package-release.mjs",
-    "release": "npm run build && npm run release:package"
+    "release": "npm run build && npm run release:package",
+    "android:prepare": "node scripts/prepare-android.mjs",
+    "android:bundle": "node scripts/build-android.mjs bundle",
+    "android:apk": "node scripts/build-android.mjs apk",
+    "android:release": "node scripts/build-android.mjs release"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

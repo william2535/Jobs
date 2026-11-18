@@ -34,6 +34,7 @@ import { renderReleaseHelp } from "./release-help.js";
 import "./release-help.css";
 import { APP_VERSION, BUILD_ID } from "./release-info.js";
 import { startOffline } from "./offline.js";
+import { getNativePlatform } from "./native-platform.js";
 import { createWorkspaceBackup, restoreWorkspaceBackup } from "./workspace-backup.js";
 import { loadState, saveState } from "./storage.js";
 import {
@@ -279,7 +280,10 @@ async function persistTimesheets(change, success) {
       notice.textContent = "";
     }
     if (result.package) {
-      try { download(result.package, `timesheet-${result.package.period?.from || "sessions"}.timesheets.json`); }
+      try {
+        const exported = await download(result.package, `timesheet-${result.package.period?.from || "sessions"}.timesheets.json`);
+        if (exported.status === "cancelled") result.downloadError = "The file save was cancelled.";
+      }
       catch (cause) { result.downloadError = cause.message || "The browser could not prepare the download."; }
     }
     return { ...result, state: workspaceSnapshot() };
@@ -298,11 +302,12 @@ const timesheetCallbacks = {
   onSubmitTimesheets: ({ refs, from, to }) => persistTimesheets(
     current => submitTimesheets(current, refs, { from, to }), "Timesheet submitted locally. No office copy has been sent.",
   ),
-  onExportTimesheets: options => {
+  onExportTimesheets: async options => {
     if (busy || operationPending) throw Error("Please wait for the current save to finish.");
     if (dirty) throw Error("Save or cancel your session changes before exporting the timesheet.");
     const pack = createTimesheetPackage(state, options);
-    download(pack, `timesheet-${options.from || "sessions"}.timesheets.json`);
+    const exported = await download(pack, `timesheet-${options.from || "sessions"}.timesheets.json`);
+    if (exported.status === "cancelled") throw Error("Timesheet export cancelled. Your saved sessions are unchanged.");
     return { package: pack };
   },
 };
@@ -477,6 +482,14 @@ function showHandoffStatus(value) {
     });
 }
 function editSite() {
+  if (getNativePlatform()) {
+    const instructions = page === "site"
+      ? "Open or create a saved job for this site, then choose Plan → Drawing tools → Export editable drawing. Edit the file in Zone Sketch, then use Import Zone Sketch plan in the job, or Import site plan in this site folder."
+      : "Choose Drawing tools → Export editable drawing, edit the file in Zone Sketch, then choose Import Zone Sketch plan to bring the updated drawing back into this job.";
+    showHandoffStatus(instructions);
+    reportNotice(instructions);
+    return;
+  }
   if (handoff?.active && !handoff.popup?.closed) {
     handoff.popup?.focus();
     showHandoffStatus(
@@ -888,7 +901,14 @@ async function downloadWorkspace(recovery = false) {
   const snapshot = recovery ? recoverySnapshot : state;
   if (!snapshot) throw Error("There is no failed-save snapshot to download.");
   const backup = await createWorkspaceBackup(snapshot, { appVersion: APP_VERSION, kind: recovery ? "recovery" : "backup" });
-  download(backup, `Jobs-${recovery ? "unsaved-recovery" : "workspace"}-${new Date().toISOString().slice(0, 10)}.jobs-backup.json`);
+  const exported = await download(backup, `Jobs-${recovery ? "unsaved-recovery" : "workspace"}-${new Date().toISOString().slice(0, 10)}.jobs-backup.json`);
+  if (exported.status === "cancelled") return false;
+  if (exported.status === "saved") {
+    reportNotice(recovery
+      ? `Recovery file saved to your chosen location for the attempted save at ${new Date(recoveryCapturedAt).toLocaleTimeString()}. It remains unsaved in Jobs. Keep this editor open and retry, or restore the recovery file into an empty workspace.`
+      : `Workspace backup saved to your chosen location. ${dirty ? "It includes saved records only; current unsaved edits are excluded." : "Keep a copy outside this device too."}`);
+    return true;
+  }
   reportNotice(recovery
     ? `Recovery download started for the attempted save at ${new Date(recoveryCapturedAt).toLocaleTimeString()}. It has not been saved in Jobs. Keep this editor open and retry, or restore the file into an empty workspace.`
     : `Workspace backup download started. Confirm the file reached your chosen folder. ${dirty ? "It includes saved records only; current unsaved edits are excluded." : "Keep a copy outside this browser."}`);
@@ -1432,16 +1452,16 @@ async function action(a, source) {
   if (draftJob && ["export", "print", "panel-export", "source-export", "edited-source-export"].includes(a))
     throw Error("Save this job first.");
   if (a === "edited-source-export")
-    return download(
+    return await download(
       buildEditableZoneSketch(drawingOf(s, j), { siteName: s.name }),
       "working-drawing.zonesketch.json",
     );
   if (a === "source-export")
-    return download(drawingOf(s, j).source, "original.zonesketch.json");
+    return await download(drawingOf(s, j).source, "original.zonesketch.json");
   if (a === "export")
-    return download(await createJobPackage(s || null, rawJob), `job-${j.id}.jobs.json`);
+    return await download(await createJobPackage(s || null, rawJob), `job-${j.id}.jobs.json`);
   if (a === "panel-export")
-    return download(panelContext(s, j), `job-${j.id}.panel-context.json`);
+    return await download(panelContext(s, j), `job-${j.id}.panel-context.json`);
   if (a === "print") {
     message = "Preparing report and photographs…";
     error = "";
@@ -1452,7 +1472,9 @@ async function action(a, source) {
       notice.textContent = message;
     }
     const prepared = await printServiceReport(() => jobReport(s, j));
-    message = "Report prepared. Use the print dialog to print or save as PDF.";
+    message = getNativePlatform()
+      ? (prepared ? "Print dialog closed. Your saved report is unchanged." : "Printing cancelled. Your saved report is unchanged.")
+      : "Report prepared. Use the print dialog to print or save as PDF.";
     if (notice?.isConnected) notice.textContent = message;
     return prepared;
   }
@@ -1587,7 +1609,15 @@ function dataURL(file) {
     r.readAsDataURL(file);
   });
 }
-function download(data, name) {
+async function download(data, name) {
+  const nativePlatform = getNativePlatform();
+  if (nativePlatform) {
+    const result = await nativePlatform.exportJson(data, name);
+    reportNotice(result.status === "saved"
+      ? "File saved to your chosen location. Your records remain saved in Jobs."
+      : "Export cancelled. Your saved records and any recovery copy in this editor are unchanged.");
+    return result;
+  }
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(data)], { type: "application/json" }),
   );
@@ -1596,6 +1626,7 @@ function download(data, name) {
   link.download = name;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return { status: "started" };
 }
 function jobReport(site, job) {
   return renderServiceReport({ site: site || null, job, drawing: drawingOf(site, job) || null });
@@ -1616,6 +1647,36 @@ window.addEventListener("beforeunload", (event) => {
     event.returnValue = "";
   }
 });
+// The Android host asks before finishing its Activity; Jobs does not use URL
+// history for screen navigation. Returning true always keeps the app open.
+window.__jobsAndroidBack = () => {
+  if (busy || operationPending || getNativePlatform()?.isBusy) {
+    reportNotice("Please finish the current save, export or print action before leaving.");
+    return true;
+  }
+  if (toolboxChest.isOpen) { toolboxChest.close(); return true; }
+  if (dirty || recoverySnapshot || toolboxChest.hasUnsavedChanges()) {
+    reportNotice(recoverySnapshot
+      ? "Keep this editor open. Retry the failed save or export its recovery copy before leaving."
+      : "Save your changes, or use the app's Cancel or Home control to discard them before leaving.");
+    return true;
+  }
+  const dialog = document.querySelector('dialog[open]');
+  if (dialog) {
+    const cancel = new Event("cancel", { cancelable: true });
+    if (dialog.dispatchEvent(cancel)) dialog.close();
+    return true;
+  }
+  if (page === "home") return false;
+  if (page === "job" && selectedAsset) {
+    selectedAsset = null;
+    render();
+  } else if (page === "job" && tab !== "Notes") {
+    tab = "Notes";
+    render();
+  } else void runTask(() => action("home"));
+  return true;
+};
 async function openRecords() {
   saveLabel = "Opening local records…";
   updateStatus();

@@ -1,3 +1,5 @@
+import { getNativePlatform } from './native-platform.js';
+
 /**
  * Print a detached snapshot of saved report data without changing the preview.
  * The app action waits for every included image. Native beforeprint events are
@@ -185,7 +187,8 @@ export function installReportPrinting({ getReport, onError = () => {} }) {
  */
 export async function printServiceReport(getReport = installedGetter) {
   if (preparing || callingPrint) throw Error('A report is already being prepared. Please wait.');
-  if (typeof window.print !== 'function') throw Error('Printing is unavailable in this browser.');
+  const nativePlatform = getNativePlatform();
+  if (!nativePlatform && typeof window.print !== 'function') throw Error('Printing is unavailable in this browser.');
   installLifecycle();
   const report = copyReport(getReport);
   if (!report) throw Error('Open a saved job before printing its report.');
@@ -210,7 +213,14 @@ export async function printServiceReport(getReport = installedGetter) {
     explicitBeforePrintPending = true;
     callingPrint = true;
     try {
-      window.print();
+      if (nativePlatform) {
+        // Android keeps using this DOM until its PrintDocumentAdapter finishes.
+        // A finished dialog is not evidence that a printer produced a page.
+        const result = await nativePlatform.print('Jobs service report');
+        awaitingAfterPrint = false;
+        explicitBeforePrintPending = false;
+        if (result.status === 'cancelled') return false;
+      } else window.print();
     } catch (error) {
       awaitingAfterPrint = false;
       explicitBeforePrintPending = false;
