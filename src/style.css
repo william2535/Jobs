@@ -1789,3 +1789,20 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   outline:3px solid #5ce9ff!important;outline-offset:-3px!important
  }
 }
+
+/* Refined compact headers: align Tasks, Timesheets and About with Jobs' restrained height.
+   Preserve artwork aspect ratio and full bleed; do not stretch the baked-in logo. */
+@media(max-width:700px){
+ body[data-page="home"] .workspace>header.jobs-banner-app-header{
+  height:clamp(74px,19.5vw,88px)!important;
+  min-height:0!important;max-height:88px!important;
+  aspect-ratio:auto!important;overflow:hidden!important;
+  background-size:cover!important;background-position:left center!important;
+ }
+ body[data-page="home"] .workspace>header.jobs-banner-app-header .jobs-banner-home-button{
+  width:18%!important;height:100%!important;
+ }
+ body[data-page="home"] .mobile-workspace .mw-header .mw-open-jobs{
+  top:calc(-1 * clamp(68px,18.5vw,82px))!important;
+ }
+}
