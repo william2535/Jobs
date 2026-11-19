@@ -1,3 +1,6 @@
+import "./appearance.css";
+import { initializeAppearance } from "./appearance.js";
+initializeAppearance();
 import "./style.css";
 import "./mobile-job.css";
 import "./mobile-shell.css";
