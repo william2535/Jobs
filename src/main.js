@@ -1183,7 +1183,22 @@ async function action(a, source) {
   if (a === "backup-workspace") return downloadWorkspace();
   if (a === "recovery-download") return downloadWorkspace(true);
   if (a === "offline-retry") return offlineController?.retry();
-  if (a === "update-check") return offlineController?.checkForUpdates();
+  if (a === "update-check") {
+    if (dirty || recoverySnapshot) throw Error("Save your current work before checking for updates.");
+    if (!navigator.onLine) { flash("Connect to the internet to check for a new Jobs version.", true); return; }
+    if (!offlineController) { flash("Update checking is available on the installed production app."); return; }
+    flash("Checking GitHub Pages for the latest Jobs version…");
+    const available = await offlineController.checkForUpdates();
+    if (available || updateAvailable) {
+      if (!window.confirm("A new Jobs version is ready. Apply it and reopen the app? Make sure your work is saved.")) {
+        flash("Update ready. Apply it when your work is saved.");
+        return;
+      }
+      if (await offlineController.applyUpdate()) window.location.reload();
+      else flash("Update not applied. Close other Jobs tabs and try again.", true);
+    } else flash("Update check finished. No new version is ready to apply.");
+    return;
+  }
   if (a === "update-apply") {
     if (dirty || recoverySnapshot) throw Error("Save your open work and resolve the failed save before applying an update. Your current app remains available.");
     if (await offlineController?.applyUpdate()) window.location.reload();
