@@ -58,6 +58,18 @@ jobs:
               raise SystemExit('Selected Jobs banner reference missing')
           p.write_text(s.replace(source, '../jobs-dashboard-banner.png'))
           PY
+      - name: Bundle uploaded Tasks Timesheets and About banners
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            'https://raw.githubusercontent.com/william2535/Jobs/main/3DF8AD0B-2314-4755-9E16-2D3A77C1258D.png' \
+            -o public/jobs-tasks-banner.png
+          curl --fail --location --retry 3 --silent --show-error \
+            'https://raw.githubusercontent.com/william2535/Jobs/main/4823D53B-4BFC-4D3C-8E98-69906E504378.png' \
+            -o public/jobs-timesheets-banner.png
+          curl --fail --location --retry 3 --silent --show-error \
+            'https://raw.githubusercontent.com/william2535/Jobs/main/E76B9984-AA6F-4280-90FB-80209B794024.png' \
+            -o public/jobs-about-banner.png
+          file public/jobs-{tasks,timesheets,about}-banner.png
       - run: npm run build
       - run: npm run release:verify
       - name: Prepare Pages files
@@ -66,6 +78,9 @@ jobs:
           test -f dist/index.html
           test -f dist/sw.js
           test -f dist/jobs-dashboard-banner.png
+          test -f dist/jobs-tasks-banner.png
+          test -f dist/jobs-timesheets-banner.png
+          test -f dist/jobs-about-banner.png
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
