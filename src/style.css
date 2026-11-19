@@ -1763,28 +1763,27 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
  .mobile-workspace .mw-update-button:focus-visible{outline:3px solid #32c9f3!important;outline-offset:3px!important}
 }
 
-/* Single shared Jobs logo/Home button for every mobile workspace tab.
-   Use the same approved source image for the logo, regardless of page banner.
-   Its crop is an overlay; the original image is not resized independently. */
+/* Correct mobile banner integration: no opaque logo overlay over page titles.
+   The original crisp banner artwork remains intact, with one invisible home hit target. */
 @media(max-width:700px){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   position:relative!important;
-  isolation:isolate!important;
+  background-size:cover!important;
+  background-position:left center!important;
+  background-repeat:no-repeat!important;
  }
- body[data-page="home"] .workspace>header.jobs-banner-app-header::before{
-  content:""!important;position:absolute!important;z-index:2!important;
-  left:0!important;top:0!important;bottom:0!important;width:19%!important;
-  background:#031126!important;pointer-events:none!important;
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .workspace>header.jobs-banner-app-header,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .workspace>header.jobs-banner-app-header,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .workspace>header.jobs-banner-app-header{
+  background-size:cover!important;
+  background-position:left center!important;
  }
+ body[data-page="home"] .workspace>header.jobs-banner-app-header::before{content:none!important;display:none!important}
  body[data-page="home"] .workspace>header.jobs-banner-app-header .jobs-banner-home-button{
   display:block!important;position:absolute!important;z-index:5!important;
-  left:0!important;top:0!important;width:19%!important;height:100%!important;
+  left:0!important;top:0!important;width:18%!important;height:100%!important;
   padding:0!important;border:0!important;border-radius:0!important;
-  background-color:#031126!important;
-  background-image:url("/jobs-dashboard-banner.png")!important;
-  background-size:calc(100vw) auto!important;
-  background-position:left center!important;background-repeat:no-repeat!important;
-  cursor:pointer!important;
+  background:transparent!important;box-shadow:none!important;cursor:pointer!important;
  }
  body[data-page="home"] .workspace>header.jobs-banner-app-header .jobs-banner-home-button:focus-visible{
   outline:3px solid #5ce9ff!important;outline-offset:-3px!important
