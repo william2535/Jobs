@@ -691,3 +691,32 @@
  }
  .mobile-workspace .mw-banner-dashboard .mw-open-jobs span{right:-3px;top:-7px}
 }
+
+/* Compact correction: the branded artwork lives in the existing app header.
+   Never create a second full-height banner above dashboard metrics. */
+@media(max-width:700px){
+ body[data-page="home"] .mobile-workspace .mw-header.mw-banner-dashboard{
+  aspect-ratio:auto!important;height:0!important;min-height:0!important;
+  padding:0!important;margin:0!important;overflow:visible!important;
+  background:none!important;border:0!important;
+ }
+ body[data-page="home"] .mobile-workspace .mw-banner-dashboard .mw-home-link{
+  display:none!important
+ }
+ body[data-page="home"] .mobile-workspace .mw-banner-dashboard .mw-open-jobs{
+  position:absolute!important;top:-87px!important;right:12px!important;
+  z-index:8!important;width:44px!important;height:44px!important;
+  min-height:44px!important
+ }
+ body[data-page="home"] .workspace > header.jobs-banner-app-header{
+  position:relative!important;min-height:112px!important
+ }
+ body[data-page="home"] .jobs-banner-home-button{
+  position:absolute;z-index:4;left:0;top:0;width:66%;height:100%;
+  min-height:0;border:0;border-radius:0;background:transparent;
+  color:transparent;font-size:0;padding:0
+ }
+ body[data-page="home"] .jobs-banner-home-button:focus-visible{
+  outline:3px solid #5ce9ff;outline-offset:-4px
+ }
+}
