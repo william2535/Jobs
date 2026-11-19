@@ -44,19 +44,19 @@ jobs:
       - run: npm ci
       - name: Test
         run: npm test
-      - name: Bundle approved Jobs banner
+      - name: Bundle selected deep-navy Jobs banner for offline use
         run: |
           curl --fail --location --retry 3 --silent --show-error \
-            'https://raw.githubusercontent.com/william2535/FIRE-SECURITY-APP-PORTAL/main/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png' \
+            'https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png' \
             -o public/jobs-dashboard-banner.png
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('src/mobile-shell.css')
+          p = Path('src/style.css')
           s = p.read_text()
-          original = 'https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png'
-          if original not in s:
-              raise SystemExit('Jobs banner source reference missing')
-          p.write_text(s.replace(original, './jobs-dashboard-banner.png'))
+          source = 'https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png'
+          if source not in s:
+              raise SystemExit('Selected Jobs banner reference missing')
+          p.write_text(s.replace(source, './jobs-dashboard-banner.png'))
           PY
       - run: npm run build
       - run: npm run release:verify
