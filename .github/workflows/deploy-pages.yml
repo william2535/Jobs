@@ -1,0 +1,74 @@
+name: Deploy Jobs website to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/jobs-android]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'scripts/**'
+      - '.github/workflows/deploy-pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: jobs-github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out actual Jobs application
+        uses: actions/checkout@v4
+        with:
+          ref: release/jobs-android
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npm test
+      - name: Bundle approved Jobs banner
+        run: |
+          curl --fail --location --retry 3 --silent --show-error \
+            'https://raw.githubusercontent.com/william2535/FIRE-SECURITY-APP-PORTAL/main/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png' \
+            -o public/jobs-dashboard-banner.png
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/mobile-shell.css')
+          s = p.read_text()
+          original = 'https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png'
+          if original not in s:
+              raise SystemExit('Jobs banner source reference missing')
+          p.write_text(s.replace(original, './jobs-dashboard-banner.png'))
+          PY
+      - run: npm run build
+      - run: npm run release:verify
+      - name: Prepare Pages files
+        run: |
+          touch dist/.nojekyll
+          test -f dist/index.html
+          test -f dist/sw.js
+          test -f dist/jobs-dashboard-banner.png
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
