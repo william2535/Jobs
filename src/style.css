@@ -1745,3 +1745,20 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   background-color:#031126!important;
  }
 }
+
+/* iPhone home-screen web app update control: native-looking, touch-sized and accessible. */
+@media(max-width:700px){
+ .mobile-workspace .mw-update-panel{
+  margin:20px 16px 100px!important;padding:0!important;
+  display:flex!important;justify-content:center!important;
+ }
+ .mobile-workspace .mw-update-button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  min-height:48px!important;width:100%!important;max-width:360px!important;
+  border-radius:13px!important;border:1px solid #2a75c4!important;
+  background:#103e7b!important;color:#fff!important;font-size:15px!important;
+  font-weight:700!important;letter-spacing:.01em!important;
+  box-shadow:0 3px 10px #001a3b18!important;cursor:pointer!important;
+ }
+ .mobile-workspace .mw-update-button:focus-visible{outline:3px solid #32c9f3!important;outline-offset:3px!important}
+}
