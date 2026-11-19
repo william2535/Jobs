@@ -1,5 +1,5 @@
 name: Deploy Jobs website to GitHub Pages
-# Pages configured; publish the verified Jobs release branch.
+# Pages environment now allows release/jobs-android; retry deployment.
 
 on:
   workflow_dispatch:
