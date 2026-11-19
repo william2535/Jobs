@@ -571,7 +571,10 @@ export function renderMobileWorkspace({
     );
     open.setAttribute("aria-label", `${summary.open} open jobs`);
     open.append(icon("tasks"), node("span", String(summary.open)));
-    header.append(title, open);
+    const appearance = control("◐", () => { const current = localStorage.getItem("jobs-appearance") || "system"; const next = current === "system" ? "dark" : current === "dark" ? "light" : "system"; localStorage.setItem("jobs-appearance", next); document.documentElement.dataset.theme = next === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : next; appearance.title = "Appearance: " + next; appearance.setAttribute("aria-label", "Appearance: " + next + ". Tap to change"); }, "mw-appearance-toggle");
+    appearance.title = "Change appearance (System / Dark / Light)";
+    appearance.setAttribute("aria-label", "Change appearance: System, Dark or Light");
+    header.append(title, appearance, open);
     const content =
       tab === "Dashboard"
         ? dashboard()
