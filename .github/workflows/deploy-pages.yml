@@ -47,13 +47,13 @@ jobs:
       - name: Bundle selected deep-navy Jobs banner for offline use
         run: |
           curl --fail --location --retry 3 --silent --show-error \
-            'https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png' \
+            'https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png' \
             -o public/jobs-dashboard-banner.png
           python3 - <<'PY'
           from pathlib import Path
           p = Path('src/style.css')
           s = p.read_text()
-          source = 'https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png'
+          source = 'https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png'
           if source not in s:
               raise SystemExit('Selected Jobs banner reference missing')
           p.write_text(s.replace(source, './jobs-dashboard-banner.png'))
