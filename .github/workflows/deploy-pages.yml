@@ -1,5 +1,5 @@
 name: Deploy Jobs website to GitHub Pages
-# Pages environment now allows release/jobs-android; retry deployment.
+# Redeploy the current Jobs application with the new appearance selector and dark theme.
 
 on:
   workflow_dispatch:
