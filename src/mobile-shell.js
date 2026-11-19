@@ -580,6 +580,13 @@ export function renderMobileWorkspace({
           : tab === "Timesheets"
             ? timesheets()
             : about();
+    // Visible in the installed iPhone web app as well as Safari.
+    // The existing offline controller checks the real service worker version.
+    const updatePanel = node("section", undefined, "mw-update-panel");
+    const updateButton = control("↻ Check for updates", () => onAction("update-check"), "mw-update-button");
+    updateButton.setAttribute("aria-label", "Check for a newer Jobs app version");
+    updatePanel.append(updateButton);
+    if (tab === "About") content.append(updatePanel);
     const navigation = node("nav", undefined, "mw-bottom-nav");
     navigation.setAttribute("aria-label", "Mobile workspace");
     for (const [label, symbol] of [
