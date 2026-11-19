@@ -525,6 +525,7 @@ export function renderMobileWorkspace({
   function paint() {
     if (disposed) return;
     root.classList.toggle("mw-timesheets-active", tab === "Timesheets");
+    document.body.dataset.jobsMobileTab = tab.toLowerCase();
     if (timesheetView) {
       timesheetViewState = timesheetView.getViewState?.() || timesheetViewState;
       timesheetView.dispose?.();
