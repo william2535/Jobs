@@ -56,7 +56,7 @@ jobs:
           source = 'https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png'
           if source not in s:
               raise SystemExit('Selected Jobs banner reference missing')
-          p.write_text(s.replace(source, './jobs-dashboard-banner.png'))
+          p.write_text(s.replace(source, '../jobs-dashboard-banner.png'))
           PY
       - run: npm run build
       - run: npm run release:verify
