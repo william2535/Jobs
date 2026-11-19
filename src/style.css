@@ -1589,14 +1589,14 @@ main:has(.drawing-editor) > .job-tools {
 }
 
 /* Jobs uploaded feature banner on home dashboard header; text remains readable on offline fallback */
-body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:linear-gradient(90deg,rgba(3,18,36,.84),rgba(3,18,36,.2)),url("https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/DF59BB8F-5A24-47B0-AD9A-BB0832AE9DB9.png");background-position:center;background-size:cover;background-repeat:no-repeat;min-height:126px;display:flex;align-items:flex-end;color:#fff}
+body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:linear-gradient(90deg,rgba(3,18,36,.84),rgba(3,18,36,.2)),url("https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png");background-position:center;background-size:cover;background-repeat:no-repeat;min-height:126px;display:flex;align-items:flex-end;color:#fff}
 body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[data-page="home"] .workspace > header.jobs-banner-app-header .eyebrow{color:#fff;text-shadow:0 1px 5px #000b}
 @media(max-width:600px){body[data-page="home"] .workspace > header.jobs-banner-app-header{min-height:112px;background-position:center}}
 
 /* Jobs mobile banner: vibrant original artwork, no duplicate bottom-left Jobs label. */
 @media(max-width:700px){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
-  background-image:url("https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/DF59BB8F-5A24-47B0-AD9A-BB0832AE9DB9.png")!important;
+  background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png")!important;
   background-color:#03152c!important;
   background-blend-mode:normal!important;
  }
@@ -1604,3 +1604,6 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   display:none!important;
  }
 }
+
+/* Approved deep-navy Jobs header artwork uploaded by owner; keep logo hotspot and badge functional. */
+@media(max-width:700px){body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/2C583FAE-54C0-432C-A7D1-D677F8187546.png")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;min-height:112px!important}}
