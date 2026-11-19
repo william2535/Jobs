@@ -11,7 +11,7 @@ const PUBLIC_FILES = new Set([
   'findr-tools-NOTICE.txt', 'zonesketch-LICENSE.txt', 'zonesketch-NOTICE.txt',
 ]);
 const GENERATED_FILES = new Set(['index.html', 'sw.js', 'offline-manifest.json']);
-const OPTIONAL_APPROVED_FILES = new Set(['jobs-dashboard-banner.png']);
+const OPTIONAL_APPROVED_FILES = new Set(['jobs-dashboard-banner.png', 'jobs-tasks-banner.png', 'jobs-timesheets-banner.png', 'jobs-about-banner.png']);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const fail = message => { throw Error(`Release verification failed: ${message}`); };
 const check = (condition, message) => { if (!condition) fail(message); };
