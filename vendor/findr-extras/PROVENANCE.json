@@ -1,0 +1,114 @@
+{
+  "sourceRepository": "https://github.com/william2535/Findr",
+  "sourceCommit": "8bdd8b03feb8babd6266b80b57dbc5d53efeadb2",
+  "sourceWorkingFilesClean": true,
+  "purpose": "Owner-authorised reuse of current FINDR Resistor Lab and FESS revision in Jobs.",
+  "licensing": "Original rights and source notices retained. No MIT or other licence grant is introduced by this copy. See NOTICE.txt.",
+  "inventory": {
+    "subjectQuizzes": 31,
+    "quickMocks": 20,
+    "fullPapers": 10,
+    "revisionQuestions": 196,
+    "fullPaperQuestions": 60,
+    "practiceMinutes": 60,
+    "officialMinutesNotice": 75
+  },
+  "unchangedComponents": [
+    "resistor calculations and search",
+    "FESS scoring and persistence validation",
+    "paper deadlines and scoring",
+    "generated audio",
+    "paper view content and official format notice",
+    "complete question pack and source links"
+  ],
+  "adaptations": [
+    "Controller read/write dependencies injected into separate Jobs IndexedDB database.",
+    "Local route object replaces global location.hash; app wrapper intercepts internal navigation.",
+    "Explicit lifecycle cleanup for app/document/window listeners, paper timer, generated audio and search yields.",
+    "Pending writes and failed changes guard leaving; explicit discard preserves the last saved record.",
+    "Unsubmitted resistor field drafts survive repaint, selection changes and invalid submission.",
+    "CSS selectors scoped to .toolbox-extra; palette adapted to Jobs light/deep-blue theme; touch targets and inputs adjusted."
+  ],
+  "storage": {
+    "database": "jobs-toolbox-extras",
+    "version": 1,
+    "objectStore": "settings",
+    "keys": [
+      "resistor-lab:v1",
+      "fess-mocks:v1"
+    ],
+    "separateFromJobsAndFindr": true
+  },
+  "files": [
+    {
+      "file": "resistor-lab-engine.mjs",
+      "sourcePath": "public/app/resistor-lab-engine.mjs",
+      "sourceSha256": "65213acd18b1263843d2a00076ef6af5d8a171ad26f49bff2cb68c0a52b8b918",
+      "includedSha256": "65213acd18b1263843d2a00076ef6af5d8a171ad26f49bff2cb68c0a52b8b918",
+      "unchanged": true
+    },
+    {
+      "file": "resistor-lab.mjs",
+      "sourcePath": "public/app/resistor-lab.mjs",
+      "sourceSha256": "8a709e301353d467fcaedbe6547b66742771c1b65ed4b4c47bed42cbc2cf5823",
+      "includedSha256": "7991c3baba25373ac519d19ad06184247569c2b50a3e30cad104a049f504de68",
+      "unchanged": false
+    },
+    {
+      "file": "resistor-lab.css",
+      "sourcePath": "public/app/resistor-lab.css",
+      "sourceSha256": "7d3453e82e1148a6afda3accfdde910a22cc8f3a3ad850e8fe23f3e5981d2918",
+      "includedSha256": "0aea45c378ef8d107b162943100fea27ec1dbebb0aba7eb56b62911b5e189e8a",
+      "unchanged": false
+    },
+    {
+      "file": "fess-mock-engine.mjs",
+      "sourcePath": "public/app/fess-mock-engine.mjs",
+      "sourceSha256": "4880f1bb8a71bd421798558317c12123fbfaf1a2babf2163265cead59fb99fe6",
+      "includedSha256": "4880f1bb8a71bd421798558317c12123fbfaf1a2babf2163265cead59fb99fe6",
+      "unchanged": true
+    },
+    {
+      "file": "fess-paper-engine.mjs",
+      "sourcePath": "public/app/fess-paper-engine.mjs",
+      "sourceSha256": "0c6c14dfc3398cdb4450118918090df33df6c29df0c9cda18304ea9178f8f0cf",
+      "includedSha256": "0c6c14dfc3398cdb4450118918090df33df6c29df0c9cda18304ea9178f8f0cf",
+      "unchanged": true
+    },
+    {
+      "file": "fess-papers-view.mjs",
+      "sourcePath": "public/app/fess-papers-view.mjs",
+      "sourceSha256": "d7bf4271412bd9470918df13d5627d273372d486245d22638f568d84b5de7010",
+      "includedSha256": "d7bf4271412bd9470918df13d5627d273372d486245d22638f568d84b5de7010",
+      "unchanged": true
+    },
+    {
+      "file": "fess-audio.mjs",
+      "sourcePath": "public/app/fess-audio.mjs",
+      "sourceSha256": "02992a8780393b715b298abb2371e8457d2cab70820ac44997bd3c24aa510097",
+      "includedSha256": "02992a8780393b715b298abb2371e8457d2cab70820ac44997bd3c24aa510097",
+      "unchanged": true
+    },
+    {
+      "file": "fess-mocks.mjs",
+      "sourcePath": "public/app/fess-mocks.mjs",
+      "sourceSha256": "b909f57c4f3613c891bd0543d24946a4626536b30760cc9aa2936b974476bbab",
+      "includedSha256": "5543734c4c6218523455e192bbdd43d9474dc78711483cdf673c9c4ecc77dd68",
+      "unchanged": false
+    },
+    {
+      "file": "fess-mocks.css",
+      "sourcePath": "public/app/fess-mocks.css",
+      "sourceSha256": "bd736360a39f209771b0aa989144a1f4a1589f422fad87e7bc6b41dbbb3f4af4",
+      "includedSha256": "c616b8b9be95739b0f83c648ab8da147d6baca4f945b13cd3bd6a5082a34094b",
+      "unchanged": false
+    },
+    {
+      "file": "data/fess-mocks.json",
+      "sourcePath": "public/app/data/fess-mocks.json",
+      "sourceSha256": "d03bc770a1522b7ee8773690b5a610cdf10e285f20bf80fe96fe0dad6905459f",
+      "includedSha256": "d03bc770a1522b7ee8773690b5a610cdf10e285f20bf80fe96fe0dad6905459f",
+      "unchanged": true
+    }
+  ]
+}

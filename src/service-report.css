@@ -1,0 +1,149 @@
+/* Scoped preview and paper layout. The print lifecycle controls the snapshot. */
+.service-report {
+  --report-ink: #25354d;
+  --report-blue: #14386b;
+  --report-rule: #d5dce5;
+  --report-tint: #edf1f6;
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid var(--report-rule);
+  background: #fff;
+  color: var(--report-ink);
+  font: 14px/1.5 Arial, Helvetica, sans-serif;
+  overflow-wrap: anywhere;
+}
+.service-report *, .service-report *::before, .service-report *::after { box-sizing: border-box; }
+.service-report h1, .service-report h2, .service-report h3, .service-report h4,
+.service-report p, .service-report dl, .service-report figure { margin: 0; }
+.service-report p + p { margin-top: 8px; }
+.service-report p, .service-report dd, .service-report td { white-space: pre-wrap; }
+.service-report h1 { color: inherit; font-size: 25px; line-height: 1.2; letter-spacing: -.4px; }
+.service-report h2 { margin: 0 0 12px; padding: 10px 13px; color: var(--report-blue); background: var(--report-tint); font-size: 16px; line-height: 1.4; border-radius: 2px; }
+.service-report h3 { margin: 16px 0 9px; color: var(--report-blue); font-size: 14px; line-height: 1.4; }
+.service-report h4 { margin: 10px 0 5px; font-size: 13px; line-height: 1.4; }
+.service-report-header { position: static; top: auto; z-index: auto; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 20px; color: #fff; background: var(--report-blue); border-radius: 0 0 22px 0; }
+.service-report-draft-badge { display: inline-block; margin-bottom: 9px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.service-report-brand { flex: 0 0 auto; font-size: 20px; font-weight: 800; letter-spacing: 3px; }
+.service-report-document-title { margin: 10px 0 12px !important; font-size: 11px; color: #586577; }
+.service-report-property { margin-bottom: 12px; padding: 14px; background: #f6f7f9; }
+.service-report-metadata { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px 18px; margin: 10px 0 !important; font-size: 12px; }
+.service-report-metadata > div { min-width: 0; }
+.service-report-metadata dt { margin-bottom: 3px; color: #526175; font-weight: 700; }
+.service-report-metadata dd { margin: 0; line-height: 1.5; }
+.service-report-property .service-report-metadata { margin: 0 !important; }
+.service-report-section { margin: 22px 0 0; }
+.service-report-scope > p, .service-report-scope > .service-report-text-block { padding: 0 13px; }
+.service-report-text-block { margin: 10px 0; }
+.service-report-text-block > p { margin-top: 4px; }
+.service-report-caption { margin: 9px 0 !important; font-size: 11px; color: #59677a; }
+.service-report-review { padding: 9px 12px; border-left: 3px solid #9a6315; background: #fff6e8; }
+.service-report-table { width: 100%; min-width: 0; margin: 10px 0; border: 0; border-collapse: collapse; table-layout: fixed; color: inherit; font-size: 12px; }
+.service-report-table th, .service-report-table td { padding: 9px 10px; vertical-align: top; text-align: left; border: 0; border-bottom: 1px solid var(--report-rule); overflow-wrap: anywhere; }
+.service-report-table th { color: var(--report-blue); background: #f4f6f9; font-weight: 700; }
+.service-report-table th:first-child, .service-report-table td:first-child { width: 42%; }
+.service-report-defect-summary .service-report-table td:not(:first-child),
+.service-report-defect-summary .service-report-table th:not(:first-child) { text-align: center; }
+.service-report-defect-summary tr[data-severity] td:first-child { border-left: 5px solid #738096; font-weight: 700; }
+.service-report-defect-summary tr[data-severity="Critical defect"] td:first-child { border-left-color: #b42338; background: #fbeff1; }
+.service-report-defect-summary tr[data-severity="Major defect"] td:first-child { border-left-color: #ad5d13; background: #fff4e7; }
+.service-report-defect-summary tr[data-severity="Minor defect"] td:first-child { border-left-color: #9a7613; background: #fff9e5; }
+.service-report-defect-summary tr[data-severity="Observation"] td:first-child { border-left-color: #3666a5; background: #edf3fb; }
+.service-report-service-counts th:first-child, .service-report-service-counts td:first-child { width: 32%; }
+.service-report-service-counts th:not(:first-child), .service-report-service-counts td:not(:first-child) { padding-right: 5px; padding-left: 5px; text-align: center; }
+.service-report-maintenance > h2 { color: #fff; background: var(--report-blue); }
+.service-report-system-questions, .service-report-equipment-questions { margin-top: 17px; }
+.service-report-questions th:first-child, .service-report-questions td:first-child { width: 48%; }
+.service-report-questions th:nth-child(2), .service-report-questions td:nth-child(2) { width: 22%; }
+.service-report-questions th:nth-child(3), .service-report-questions td:nth-child(3) { width: 30%; }
+.service-report-state { display: inline-block; padding: 3px 7px; border: 1px solid #c5ccd5; border-radius: 3px; background: #f4f5f7; color: #4b5666; font-size: 11px; line-height: 1.4; font-weight: 700; white-space: normal; }
+.service-report-state[data-state="Satisfactory"], .service-report-state[data-state="Pass"] { color: #173b70; border-color: #9fb5d7; background: #edf3fc; }
+.service-report-state[data-state="Unsatisfactory"], .service-report-state[data-state="Fail"] { color: #922638; border-color: #dba5ae; background: #fcf0f2; }
+.service-report-state[data-state="Inaccessible"] { color: #775114; border-color: #d2bd8e; background: #fcf7eb; }
+.service-report-device { padding: 15px 0; border-bottom: 1px solid var(--report-rule); }
+.service-report-device-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 8px 11px; background: #f3f5f8; border-top: 1px solid var(--report-rule); }
+.service-report-device-heading > h3 { margin: 1px 0; }
+.service-report-device-heading > .service-report-state { flex: 0 0 auto; max-width: 42%; }
+.service-report-remark { margin: 12px 0; padding: 0 0 10px 12px; border-left: 3px solid #adbbcf; }
+.service-report-remark > h4 { font-size: 14px; }
+.service-report-remark .service-report-metadata { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.service-report-photos { display: flex; flex-wrap: wrap; gap: 12px; margin: 13px 0; }
+.service-report-photos > h4 { flex-basis: 100%; margin: 0; }
+.service-report-photos figure { width: calc(50% - 6px); margin: 0; }
+.service-report-photos img, .service-report .job-notes-report img { display: block; width: 100%; max-width: 100%; height: auto; max-height: 290px; object-fit: contain; object-position: left center; border: 1px solid var(--report-rule); background: #fafbfc; }
+.service-report figcaption { padding-top: 5px; color: #526175; font-size: 11px; white-space: pre-wrap; }
+.service-report .job-notes-report, .service-report .workflow-report, .service-report .checklist-report { margin: 24px 0 0; padding: 0; border: 0; background: #fff; color: inherit; }
+.service-report .job-notes-report > figure { display: inline-block; width: calc(50% - 8px); margin: 12px 8px 12px 0; vertical-align: top; }
+.service-report .job-notes-report p { margin: 8px 0; }
+.service-report .workflow-report .result-record { margin: 8px 0; padding: 8px 0; border: 0; border-bottom: 1px solid var(--report-rule); background: #fff; border-radius: 0; }
+.service-report .workflow-report dl, .service-report .checklist-report dl { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr); gap: 5px 12px; margin: 12px 0; }
+.service-report .workflow-report dt, .service-report .checklist-report dt { font-weight: 700; }
+.service-report .workflow-report dd, .service-report .checklist-report dd { margin: 0; }
+.service-report .checklist-report table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+.service-report .checklist-report th, .service-report .checklist-report td { padding: 8px; text-align: left; border-bottom: 1px solid var(--report-rule); overflow-wrap: anywhere; }
+.service-report .checklist-report ul { padding-left: 20px; }
+.service-report-archived { border-top: 2px solid var(--report-rule); padding-top: 14px; }
+.service-report-archived-device, .service-report-archived .service-report-saved-maintenance { margin-top: 20px; }
+.service-report-footer { display: block; margin-top: 28px; padding: 12px 0 0; border-top: 2px solid var(--report-blue); color: #526175; font-size: 11px; letter-spacing: normal; text-align: left; }
+.service-report-footer strong { color: var(--report-blue); }
+.service-report-footer p { margin: 4px 0; }
+
+@media (max-width: 600px) {
+  .service-report { padding: 13px; font-size: 12px; }
+  .service-report-header { padding: 15px 13px; gap: 10px; }
+  .service-report h1 { font-size: 22px; }
+  .service-report-brand { font-size: 14px; letter-spacing: 1.5px; }
+  .service-report-metadata, .service-report-remark .service-report-metadata { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; font-size: 11px; }
+  .service-report-property { padding: 11px; }
+  .service-report-table { font-size: 10px; }
+  .service-report-table th, .service-report-table td { padding: 7px 5px; }
+  .service-report-service-counts { font-size: 9px; }
+  .service-report-service-counts th:not(:first-child), .service-report-service-counts td:not(:first-child) { padding-right: 2px; padding-left: 2px; }
+  .service-report-state { padding: 3px 5px; font-size: 10px; }
+  .service-report-device-heading { padding: 8px; gap: 8px; }
+  .service-report-photos figure, .service-report .job-notes-report > figure { width: 100%; margin-right: 0; }
+  .service-report .workflow-report dl, .service-report .checklist-report dl { grid-template-columns: minmax(85px, 1fr) minmax(0, 2fr); font-size: 11px; }
+}
+
+@media print {
+  html, body { background: #fff !important; }
+  @page {
+    size: A4;
+    margin: 12mm 11mm 14mm;
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt Arial, Helvetica, sans-serif; color: #526175; }
+  }
+  body[data-print-report="ready"] > #app { display: none !important; }
+  body:not([data-print-report="ready"]) > #app { display: block; }
+  #print-report.service-report { display: block; }
+  .service-report, #print-report.service-report { width: 100%; max-width: none; margin: 0; padding: 0; border: 0; font: 9pt/1.45 Arial, Helvetica, sans-serif; color: #25354d; background: #fff; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .service-report h1 { font-size: 20pt; }
+  .service-report h2 { font-size: 11pt; padding: 7pt 9pt; border-top: 1pt solid #bcc8d8; }
+  .service-report h3 { font-size: 10pt; }
+  .service-report h4 { font-size: 9pt; }
+  /* Dark ink also remains readable when the browser omits background graphics. */
+  .service-report-header { padding: 10pt 12pt; color: #14386b; background: #edf1f6; border-top: 5pt solid #14386b; border-bottom: 1pt solid #bcc8d8; }
+  .service-report-maintenance > h2 { color: #14386b; background: #edf1f6; border-top: 3pt solid #14386b; }
+  .service-report-document-title { font-size: 8pt; }
+  .service-report-metadata, .service-report-remark .service-report-metadata { grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 8pt; gap: 7pt 11pt; }
+  .service-report-table, .service-report .checklist-report table { font-size: 8pt; }
+  .service-report-table th, .service-report-table td { padding: 6pt; }
+  .service-report-service-counts { font-size: 7.5pt; }
+  .service-report-state, .service-report-caption, .service-report figcaption { font-size: 8pt; }
+  .service-report table { overflow: visible; }
+  .service-report thead { display: table-header-group; }
+  .service-report tfoot { display: table-footer-group; }
+  .service-report tr, .service-report td, .service-report th { break-inside: auto; }
+  .service-report h1, .service-report h2, .service-report h3, .service-report h4,
+  .service-report-device-heading, .service-report-metadata dt,
+  .service-report-equipment-questions > .service-report-metadata { break-after: avoid; }
+  .service-report p, .service-report dd { orphans: 3; widows: 3; }
+  .service-report-device, .service-report-remark, .service-report-saved-maintenance,
+  .service-report .result-record, .service-report-section { break-inside: auto !important; }
+  .service-report-photos { display: block; }
+  .service-report-photos figure, .service-report .job-notes-report > figure { display: inline-block; width: calc(50% - 8pt); margin: 7pt 8pt 7pt 0; vertical-align: top; break-inside: avoid; }
+  .service-report-photos img, .service-report .job-notes-report img { width: 100%; max-height: 65mm; object-fit: contain; }
+  .service-report figcaption { break-before: avoid; }
+  .service-report-footer { display: block !important; font-size: 8pt; break-inside: avoid; }
+  .service-report button, .service-report input, .service-report select, .service-report textarea { display: none !important; }
+}
