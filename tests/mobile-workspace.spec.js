@@ -63,7 +63,7 @@ test('mobile dashboard navigation and schedule reflect the saved records', async
   await page.locator('[data-action="home"]:visible').first().click();
   const zoneSketch = nav.getByRole('link', { name: 'Zone Sketch', exact: true });
   await expect(zoneSketch).toBeVisible();
-  await expect(zoneSketch).toHaveAttribute('href', 'https://william2535.github.io/FIRE-ZONE-PLAN-APP/');
+  await expect(zoneSketch).toHaveAttribute('href', 'https://william2535.github.io/ZoneSketch-Unstable/');
   await expect(zoneSketch).toHaveAttribute('target', '_blank');
   await expect(nav.getByRole('button', { name: 'Stock', exact: true })).toHaveCount(0);
   await nav.getByRole('button', { name: 'Timesheets', exact: true }).click();
