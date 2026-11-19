@@ -1,4 +1,5 @@
 name: Deploy Jobs website to GitHub Pages
+# Pages configured; publish the verified Jobs release branch.
 
 on:
   workflow_dispatch:
