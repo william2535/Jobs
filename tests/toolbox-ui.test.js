@@ -206,6 +206,6 @@ test('mobile Toolbox opens the internal workspace while FINDR and Zone Sketch re
   assert.equal(findr.href, 'https://findr-fault-finder.floodyyy21.chatgpt.site/app/');
   assert.equal(findr.target, '_blank');
   const zoneSketch = [...root.querySelectorAll('a')].find(link => link.textContent.trim() === 'Zone Sketch');
-  assert.equal(zoneSketch.href, 'https://william2535.github.io/FIRE-ZONE-PLAN-APP/');
+  assert.equal(zoneSketch.href, 'https://william2535.github.io/ZoneSketch-Unstable/');
   assert.equal(zoneSketch.target, '_blank');
 });
