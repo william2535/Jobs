@@ -1649,3 +1649,27 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   line-height:1.2!important
  }
 }
+
+/* Final mobile Jobs header: crisp artwork with natural proportions, never stretch logo. */
+@media (max-width:700px){
+ body[data-page="home"] .workspace > header.jobs-banner-app-header{
+  box-sizing:border-box!important;
+  height:clamp(78px,22vw,98px)!important;
+  min-height:0!important;
+  max-height:98px!important;
+  aspect-ratio:auto!important;
+  background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png")!important;
+  background-size:contain!important;
+  background-position:left center!important;
+  background-repeat:no-repeat!important;
+  background-color:#031126!important;
+  background-blend-mode:normal!important;
+ }
+ body[data-page="home"] .jobs-banner-home-button{
+  left:0!important;top:0!important;width:24%!important;height:100%!important;
+ }
+ body[data-page="home"] .mobile-workspace .mw-banner-dashboard .mw-open-jobs{
+  top:calc(-1 * clamp(72px,20vw,92px))!important;
+  right:10px!important;
+ }
+}
