@@ -532,9 +532,12 @@ export function renderMobileWorkspace({
     }
     root.replaceChildren();
     const header = node("div", undefined, "mw-header");
+    if (tab === "Dashboard") header.classList.add("mw-banner-dashboard");
     const title = node("a", undefined, "mw-home-link");
     title.href = "#";
     title.dataset.action = "home";
+    title.setAttribute("aria-label", "Jobs home");
+    title.setAttribute("title", "Go to Jobs dashboard");
     title.onclick = (event) => {
       event.preventDefault();
       onAction("home");
