@@ -1626,3 +1626,26 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
  }
  body[data-page="home"] .jobs-banner-home-button{width:27%!important}
 }
+
+/* Mobile header: keep original banner aspect and move live storage status below content. */
+@media(max-width:700px){
+ body[data-page="home"] .workspace>header.jobs-banner-app-header{
+  min-height:0!important;height:auto!important;aspect-ratio:1734/600!important;
+  background-size:contain!important;background-position:center!important;
+  background-color:#031126!important;overflow:visible!important;
+ }
+ body[data-page="home"] .workspace>header.jobs-banner-app-header .connection{
+  position:fixed!important;left:12px!important;right:12px!important;
+  top:auto!important;bottom:calc(90px + env(safe-area-inset-bottom))!important;
+  transform:none!important;z-index:15!important;max-width:none!important;
+  width:auto!important;padding:7px 10px!important;text-align:center!important;
+  border:1px solid #b8c8dc!important;border-radius:8px!important;
+  background:#f8fafff2!important;color:#233a5a!important;
+  text-shadow:none!important;font-size:11px!important;line-height:1.25!important;
+  pointer-events:none!important
+ }
+ body[data-page="home"] .workspace>header.jobs-banner-app-header .connection small{
+  display:block!important;color:#425675!important;font-size:10px!important;
+  line-height:1.2!important
+ }
+}
