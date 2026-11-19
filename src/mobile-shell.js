@@ -1,5 +1,5 @@
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
-import { DEFAULT_ZONE_SKETCH_URL } from "./zone-handoff.js";
+const FREE_ZONE_SKETCH_URL = "https://william2535.github.io/ZoneSketch-Unstable/";
 import { jobTypeLabel } from "./job-options.js";
 import { renderTimesheets } from "./timesheets-ui.js";
 import { timesheetEntries, splitTimesheetByDay, minutesForTimesheet, isWorkSession } from "./timesheets.js";
@@ -598,10 +598,10 @@ export function renderMobileWorkspace({
     ]) {
       if (label === "Zone Sketch") {
         const link = node("a", undefined, "mw-zone-sketch");
-        link.href = DEFAULT_ZONE_SKETCH_URL;
+        link.href = FREE_ZONE_SKETCH_URL;
         link.target = "_blank";
         link.rel = "noopener noreferrer";
-        link.title = "Open Zone Sketch";
+        link.title = "Open free Zone Sketch browser build (unstable; export backups regularly)";
         const logo = node("img", undefined, "mw-zone-sketch-logo");
         logo.src = "./zone-sketch-logo.png";
         logo.alt = "";
