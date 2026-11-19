@@ -1722,3 +1722,13 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   color:white!important
  }
 }
+
+/* Fill the entire mobile header without stretching uploaded artwork.
+   Cover preserves aspect ratio; crop excess height rather than leave a blank right strip. */
+@media(max-width:700px){
+ body[data-page="home"] .workspace>header.jobs-banner-app-header{
+  background-size:cover!important;
+  background-position:left center!important;
+  background-repeat:no-repeat!important;
+ }
+}
