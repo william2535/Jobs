@@ -1673,3 +1673,52 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   right:10px!important;
  }
 }
+
+/* Unified mobile navigation headers: user-uploaded original artwork on each tab.
+   One compact header, no duplicated blue title block or distorted artwork. */
+@media (max-width:700px){
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .workspace>header.jobs-banner-app-header,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .workspace>header.jobs-banner-app-header,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .workspace>header.jobs-banner-app-header{
+  height:clamp(78px,22vw,98px)!important;min-height:0!important;
+  max-height:98px!important;aspect-ratio:auto!important;
+  background-size:contain!important;background-position:left center!important;
+  background-repeat:no-repeat!important;background-color:#031126!important;
+  background-blend-mode:normal!important;
+ }
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .workspace>header.jobs-banner-app-header{
+  background-image:url("../jobs-tasks-banner.png")!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .workspace>header.jobs-banner-app-header{
+  background-image:url("../jobs-timesheets-banner.png")!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="about"] .workspace>header.jobs-banner-app-header{
+  background-image:url("../jobs-about-banner.png")!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header{
+  height:0!important;min-height:0!important;padding:0!important;
+  margin:0!important;background:transparent!important;overflow:visible!important;
+  position:relative!important;z-index:4!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header::after,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header::after,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header::after{
+  display:none!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header .mw-home-link,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header .mw-home-link,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header .mw-home-link{
+  display:none!important
+ }
+ body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header .mw-open-jobs,
+ body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header .mw-open-jobs,
+ body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header .mw-open-jobs{
+  position:absolute!important;top:calc(-1 * clamp(72px,20vw,92px))!important;
+  right:10px!important;z-index:9!important;width:44px!important;height:44px!important;
+  min-height:44px!important;background:#04182cbf!important;
+  border:1px solid #69c9f399!important;border-radius:12px!important;
+  color:white!important
+ }
+}
