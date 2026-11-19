@@ -1687,13 +1687,13 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   background-blend-mode:normal!important;
  }
  body[data-page="home"][data-jobs-mobile-tab="tasks"] .workspace>header.jobs-banner-app-header{
-  background-image:url("../jobs-tasks-banner.png")!important
+  background-image:url("/jobs-tasks-banner.png")!important
  }
  body[data-page="home"][data-jobs-mobile-tab="timesheets"] .workspace>header.jobs-banner-app-header{
-  background-image:url("../jobs-timesheets-banner.png")!important
+  background-image:url("/jobs-timesheets-banner.png")!important
  }
  body[data-page="home"][data-jobs-mobile-tab="about"] .workspace>header.jobs-banner-app-header{
-  background-image:url("../jobs-about-banner.png")!important
+  background-image:url("/jobs-about-banner.png")!important
  }
  body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header,
  body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header,
