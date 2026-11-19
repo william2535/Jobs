@@ -1732,3 +1732,16 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   background-repeat:no-repeat!important;
  }
 }
+
+/* Full-bleed final fix: scale uploaded banner to the header's real width,
+   preserve image aspect ratio, and crop vertically if required. */
+@media(max-width:700px){
+ body[data-page="home"] .workspace>header.jobs-banner-app-header{
+  width:100%!important;
+  max-width:none!important;
+  background-size:100% auto!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  background-color:#031126!important;
+ }
+}
