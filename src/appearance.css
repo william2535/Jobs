@@ -1,0 +1,12 @@
+/* Jobs appearance: preserves existing light mode, adds dark palette globally. */
+:root[data-theme="dark"]{--canvas:#04111c;--surface:#0a2032;--subtle:#102c43;--ink:#f2f8ff;--ink-soft:#d2e4f1;--muted:#a3bcd0;--line:#315875;--soft-line:#25455f;--accent:#17c9f1;--accent-dark:#0879b0;--accent-light:#64ddff;--focus:#31dfff;--rail:#030e1b;--on-rail:#eef8ff;--rail-muted:#b1cde1;--rail-active:#104060;--rail-line:#2b668b;color-scheme:dark}
+:root[data-theme="dark"] body,:root[data-theme="dark"] .workspace,:root[data-theme="dark"] main{background:var(--canvas);color:var(--ink)}
+:root[data-theme="dark"] button:not(.primary),:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#0c2539;color:#f2f8ff;border-color:#315875}
+:root[data-theme="dark"] input::placeholder,:root[data-theme="dark"] textarea::placeholder{color:#a6bfd0}
+:root[data-theme="dark"] .mobile-workspace{--mw-blue:#092a48;--mw-blue-deep:#031b31;--mw-link:#52d9ff;--mw-bg:#041421;--mw-line:#2d5470;--mw-ink:#f3faff;--mw-muted:#b3cadb;color-scheme:dark}
+:root[data-theme="dark"] .mobile-workspace :is(.mw-card,.mw-job-card,.mw-panel,.mw-section,.mw-stat,.mw-action,.mw-task-card,.mw-job-row){background:#0b263b!important;color:#f3faff!important;border-color:#315875!important}
+:root[data-theme="dark"] .mobile-workspace :is(button,input,select,textarea){color:inherit}
+:root[data-theme="dark"] .mobile-workspace .mw-bottom-nav{background:#071b2b!important;color:#f3faff!important;border-color:#315875!important}
+:root[data-theme="dark"] .mobile-workspace .mw-bottom-nav button{color:#c8e3f2!important}
+:root[data-theme="dark"] .mobile-workspace .mw-bottom-nav button[aria-current="page"]{color:#27ddff!important}
+.mw-appearance-toggle{min-width:44px;min-height:44px;flex-shrink:0;border:1px solid #57c8ee!important;border-radius:50%!important;background:#082c4c!important;color:#a5f1ff!important;font-size:24px!important;padding:0!important}
