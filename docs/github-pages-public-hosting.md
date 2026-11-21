@@ -1,6 +1,8 @@
-# Public GitHub Pages hosting — Jobs
+# Legacy optional Jobs-Web export
 
-The actual Jobs web application is built from the private `release/jobs-android` branch and published **as compiled files only** to a separate public repository. This does **not** publish the private Jobs source or customer example files.
+The current website is **https://william2535.github.io/Jobs/**. Its automatic deployment is documented in [deployment.md](deployment.md). No separate repository or publishing token is required for that existing workflow.
+
+This guide retains the older, optional export to a separate `Jobs-Web` repository. Its workflow is **manual-only** and is not the current website's deployment route. If explicitly configured, it builds `release/jobs-android` and publishes **compiled files only**, excluding private source and customer examples.
 
 ## One-time setup
 
@@ -11,12 +13,12 @@ The actual Jobs web application is built from the private `release/jobs-android`
 5. In `Jobs-Web` Settings → Pages, select **Deploy from a branch**, branch `main`, folder `/(root)`. Save.
 6. Visit `https://william2535.github.io/Jobs-Web/`. Initial Pages activation may take a few minutes. Verify the blue banner, logo-to-home interaction, open-jobs badge, local saves and offline readiness.
 
-The workflow runs on relevant updates to `release/jobs-android` as well as manual dispatch. It runs tests and release validation, bundles the approved blue banner, and force-replaces only the generated `Jobs-Web` branch content. Do not put hand-edited files in the public output repository; they will be overwritten.
+This optional workflow runs only by manual dispatch. It runs tests and release validation, bundles the approved blue banners, and force-replaces only the generated `Jobs-Web` branch content. Do not put hand-edited files in the output repository; they will be overwritten.
 
 ## Security and data
 
 Only `dist/` is published. Do not publish the original private repository, its example customer data, keystore, signing secrets or full git history. Jobs stores work locally in each browser's IndexedDB; browser storage is not synced between the old hosted domain and the new GitHub Pages domain. **Export a workspace backup from the existing Jobs site and restore it on the new site** before relying on the new URL. Never assume existing jobs automatically appear at the new address.
 
-Keep the original hosted site running until the new site is verified. Once it works, update the Jobs Free Test button in the App Hub to `https://william2535.github.io/Jobs-Web/`.
+Existing app links should continue to use **https://william2535.github.io/Jobs/**. Do not change links to this optional export destination unless deliberately migrating and verifying that separate deployment.
 
 If the workflow fails, inspect the failing step in GitHub Actions. The most likely missing prerequisite is the token secret or the empty public repository. No publication occurs until these are configured.
