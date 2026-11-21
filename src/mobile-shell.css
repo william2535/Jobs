@@ -614,14 +614,6 @@
     font-size: 20px;
     line-height: 1.2;
   }
-  .mobile-workspace.mw-timesheets-active .mw-open-jobs span {
-    top: -2px;
-    right: -1px;
-    min-width: 19px;
-    height: 19px;
-    font-size: 10px;
-    line-height: 17px;
-  }
 }
 @media (max-width: 360px) {
   .mobile-workspace .mw-header h1 {
@@ -709,7 +701,9 @@
   min-height:44px!important
  }
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
-  position:relative!important;min-height:112px!important
+  /* Keep every tab at the approved Dashboard height, with no competing clamp. */
+  position:relative!important;height:112px!important;min-height:112px!important;
+  max-height:none!important;aspect-ratio:auto!important
  }
  body[data-page="home"] .jobs-banner-home-button{
   position:absolute;z-index:4;left:0;top:0;width:66%;height:100%;
