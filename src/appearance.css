@@ -13,6 +13,7 @@
      appearance choice share one 48px row immediately below it. */
   body[data-page="home"] .workspace > header.jobs-banner-app-header { overflow:visible !important; margin-bottom:48px; }
   body[data-page="home"] .workspace > header > .appearance-control { position:absolute; right:12px; top:calc(100% + 4px); z-index:8; }
+  body[data-page="home"] .appearance-control > label > span { position:static; width:auto; height:auto; margin:0; overflow:visible; clip:auto; white-space:normal; }
   body[data-page="home"] .mobile-workspace .mw-header .mw-open-jobs { top:-44px !important; left:16px !important; right:auto !important; }
   body[data-page]:not([data-page="home"]) .workspace > header { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; }
   body[data-page]:not([data-page="home"]) .workspace > header > div:not(.connection):not(.appearance-control) { grid-column:1; grid-row:1; }
@@ -83,6 +84,8 @@
   :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav :is(button,a) { background:transparent; color:var(--muted); }
   :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav button[aria-current="page"] { background:var(--subtle); color:var(--accent-light); }
   :root[data-theme="dark"] .mobile-workspace .mw-update-button { color:var(--accent-light); background:var(--surface); border-color:var(--line); }
+  :root[data-theme="dark"] body[data-page="home"] .workspace > header.jobs-banner-app-header .connection { background:#102438f2 !important; color:var(--ink) !important; border-color:var(--line) !important; }
+  :root[data-theme="dark"] body[data-page="home"] .workspace > header.jobs-banner-app-header .connection small { color:var(--muted) !important; }
 
   /* Notebook controls go dark; paper remains light to preserve saved text colours. */
   :root[data-theme="dark"] :is(.notes-toolbar button,.notes-extra-actions button) { color:var(--ink); background:transparent; border-color:var(--line); }

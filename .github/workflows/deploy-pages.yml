@@ -35,7 +35,7 @@ jobs:
       - name: Check out actual Jobs application
         uses: actions/checkout@v4
         with:
-          ref: release/jobs-android
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:

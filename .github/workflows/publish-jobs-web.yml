@@ -1,18 +1,8 @@
 name: Publish Jobs browser build to public GitHub Pages repository
 
 on:
+  # Legacy export destination; the supported live site uses deploy-pages.yml.
   workflow_dispatch:
-  push:
-    branches: [release/jobs-android]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.js'
-      - 'scripts/**'
-      - '.github/workflows/publish-jobs-web.yml'
 
 permissions:
   contents: read

@@ -20,7 +20,43 @@ async function home(page) {
 }
 
 async function assertNoOverflow(page) {
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
+  try {
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
+  } catch (error) {
+    try {
+      const diagnostics = await page.evaluate(() => {
+        const crossing = [...document.body.querySelectorAll('*')].flatMap(node => {
+          const rect = node.getBoundingClientRect(), style = getComputedStyle(node);
+          if (!rect.width || !rect.height || style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return [];
+          const overflow = Math.max(0, -rect.left, rect.right - innerWidth);
+          if (overflow <= 1) return [];
+          return [{
+            tag: node.tagName, id: node.id, classes: node.getAttribute('class'),
+            rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
+            computed: { width: style.width, minWidth: style.minWidth, maxWidth: style.maxWidth, position: style.position, overflowX: style.overflowX },
+            parent: node.parentElement ? { tag: node.parentElement.tagName, id: node.parentElement.id, classes: node.parentElement.getAttribute('class'), overflowX: getComputedStyle(node.parentElement).overflowX } : null,
+            overflow,
+          }];
+        }).sort((a, b) => b.overflow - a.overflow).slice(0, 20);
+        return {
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+          innerWidth, scrollX,
+          visualViewport: visualViewport ? { width: visualViewport.width, scale: visualViewport.scale, offsetLeft: visualViewport.offsetLeft } : null,
+          crossing,
+        };
+      });
+      const json = JSON.stringify(diagnostics, null, 2);
+      console.log('LAYOUT_OVERFLOW', json);
+      await test.info().attach('layout-overflow.json', { body: json, contentType: 'application/json' });
+      const screenshot = test.info().outputPath('layout-overflow.png');
+      await page.screenshot({ path: screenshot, fullPage: true });
+      await test.info().attach('layout-overflow.png', { path: screenshot, contentType: 'image/png' });
+    } catch (diagnosticError) {
+      console.log('Overflow diagnostics could not complete:', diagnosticError.message);
+    }
+    throw error;
+  }
 }
 
 /** Contrast against the actual nearest painted surfaces, including translucent controls. */
