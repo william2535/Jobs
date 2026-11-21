@@ -614,14 +614,6 @@
     font-size: 20px;
     line-height: 1.2;
   }
-  .mobile-workspace.mw-timesheets-active .mw-open-jobs span {
-    top: -2px;
-    right: -1px;
-    min-width: 19px;
-    height: 19px;
-    font-size: 10px;
-    line-height: 17px;
-  }
 }
 @media (max-width: 360px) {
   .mobile-workspace .mw-header h1 {

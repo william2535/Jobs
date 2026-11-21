@@ -1693,7 +1693,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   height:0!important;min-height:0!important;padding:0!important;
   flex:0 0 0!important;
   margin:0!important;background:transparent!important;overflow:visible!important;
-  position:relative!important;z-index:4!important
+  position:relative!important
  }
  body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header::after,
  body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header::after,
