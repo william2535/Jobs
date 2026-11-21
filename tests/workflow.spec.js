@@ -156,6 +156,7 @@ test('manual site and repair visit keep fresh results and require explanations',
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Inaccessible');
   await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Locked plant room; key holder unavailable.');
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
+  await expect(page.locator('#notice')).toContainText('Work saved on this device.');
   await page.reload();
   await page.getByTestId('job-card').click();
   await openJobSection(page, 'Devices');

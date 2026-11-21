@@ -22,7 +22,7 @@ export default defineConfig({
   projects: [
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"], launchOptions: chromiumLaunchOptions } },
-    { name: "iphone-webkit", testMatch: "**/public-release.spec.js", use: { ...devices["iPhone 13"], browserName: "webkit" } },
+    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit" } },
   ],
   webServer: {
     command: "npm run preview -- --port 4173 --strictPort",

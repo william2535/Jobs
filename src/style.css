@@ -1589,14 +1589,14 @@ main:has(.drawing-editor) > .job-tools {
 }
 
 /* Jobs uploaded feature banner on home dashboard header; text remains readable on offline fallback */
-body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:linear-gradient(90deg,rgba(3,18,36,.84),rgba(3,18,36,.2)),url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png");background-position:center;background-size:cover;background-repeat:no-repeat;min-height:126px;display:flex;align-items:flex-end;color:#fff}
+body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:linear-gradient(90deg,rgba(3,18,36,.84),rgba(3,18,36,.2)),url("/jobs-dashboard-banner.png");background-position:center;background-size:cover;background-repeat:no-repeat;min-height:126px;display:flex;align-items:flex-end;color:#fff}
 body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[data-page="home"] .workspace > header.jobs-banner-app-header .eyebrow{color:#fff;text-shadow:0 1px 5px #000b}
 @media(max-width:600px){body[data-page="home"] .workspace > header.jobs-banner-app-header{min-height:112px;background-position:center}}
 
 /* Jobs mobile banner: vibrant original artwork, no duplicate bottom-left Jobs label. */
 @media(max-width:700px){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
-  background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png")!important;
+  background-image:url("/jobs-dashboard-banner.png")!important;
   background-color:#03152c!important;
   background-blend-mode:normal!important;
  }
@@ -1606,12 +1606,12 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 }
 
 /* Approved deep-navy Jobs header artwork uploaded by owner; keep logo hotspot and badge functional. */
-@media(max-width:700px){body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;min-height:112px!important}}
+@media(max-width:700px){body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:url("/jobs-dashboard-banner.png")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;min-height:112px!important}}
 
 /* Exact owner-uploaded Jobs banner, no fading; preserve separate live status and task badge. */
 @media(max-width:700px){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
-  background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png")!important;
+  background-image:url("/jobs-dashboard-banner.png")!important;
   background-size:100% 100%!important;background-position:center!important;
   background-blend-mode:normal!important;min-height:112px!important;
  }
@@ -1658,7 +1658,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
   min-height:0!important;
   max-height:98px!important;
   aspect-ratio:auto!important;
-  background-image:url("https://raw.githubusercontent.com/william2535/Jobs/main/A712B0C0-990E-441C-A317-D2A8D3EA694E.png")!important;
+  background-image:url("/jobs-dashboard-banner.png")!important;
   background-size:contain!important;
   background-position:left center!important;
   background-repeat:no-repeat!important;

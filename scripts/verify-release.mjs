@@ -6,7 +6,7 @@ import { getBuildInfo } from './build-info.mjs';
 
 export const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC_FILES = new Set([
-  'icon-192.png', 'icon-512.png', 'icon.svg', 'manifest.webmanifest',
+  'icon-192.png', 'icon-512.png', 'icon.svg', 'manifest.webmanifest', 'appearance-init.js',
   'findr-logo.png', 'zone-sketch-logo.png', 'jobs-share-banner.png', 'demo.zonesketch.json',
   'findr-tools-NOTICE.txt', 'zonesketch-LICENSE.txt', 'zonesketch-NOTICE.txt',
 ]);

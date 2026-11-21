@@ -28,6 +28,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
+      - name: Upload appearance previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appearance-previews-${{ github.sha }}
+          path: test-results/**/dark-*.png
+          if-no-files-found: ignore
+          retention-days: 14
       - run: npm run release:package
       - name: Upload verified release build
         uses: actions/upload-artifact@v4

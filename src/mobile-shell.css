@@ -668,7 +668,7 @@
  .mobile-workspace .mw-header.mw-banner-dashboard{
   width:100%;height:auto;min-height:0;aspect-ratio:1734/907;
   padding:0 12px 0 0;align-items:flex-start;overflow:hidden;
-  background:#06162b url("https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png") center center / contain no-repeat;
+  background:#06162b url("/jobs-dashboard-banner.png") center center / contain no-repeat;
  }
  .mobile-workspace .mw-header.mw-banner-dashboard::after{display:none}
  .mobile-workspace .mw-banner-dashboard .mw-home-link{
