@@ -1,0 +1,6 @@
+{
+  "applicationId": "com.willflood.jobs",
+  "keyAlias": "jobs-upload",
+  "certificateSha256": "acf91c1eec7e09ace7e48468c68c4e9581f70a6ff4f11405465bcee3c574616f",
+  "purpose": "Upload certificate; private key is not stored in this repository."
+}

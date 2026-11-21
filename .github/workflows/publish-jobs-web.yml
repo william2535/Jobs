@@ -1,0 +1,59 @@
+name: Publish Jobs browser build to public GitHub Pages repository
+
+on:
+  # Legacy export destination; the supported live site uses deploy-pages.yml.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-jobs-web
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out actual Jobs app source
+        uses: actions/checkout@v4
+        with:
+          ref: release/jobs-android
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Test application
+        run: npm test
+      - name: Build real offline-capable Jobs website
+        run: npm run build
+      - name: Validate release output
+        run: npm run release:verify
+      - name: Prepare public-only deployment
+        run: |
+          test -f dist/index.html
+          test -f dist/sw.js
+          test -f dist/jobs-dashboard-banner.png
+          test ! -e dist/.env
+          touch dist/.nojekyll
+          echo 'Public output is compiled dist only; private source, sample customer files and repository history are not copied.'
+      - name: Publish compiled files to public Jobs-Web repository
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JOBS_WEB_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$PUBLISH_TOKEN" ]; then
+            echo "::error::Create a fine-grained token with Contents read/write for william2535/Jobs-Web and add it as JOBS_WEB_PUBLISH_TOKEN to this private repository."
+            exit 1
+          fi
+          git config --global user.name "jobs-web-publisher"
+          git config --global user.email "actions@users.noreply.github.com"
+          cd dist
+          git init -b main
+          git add -A
+          git commit -m "Publish Jobs browser build ${GITHUB_SHA}"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$PUBLISH_TOKEN" | base64 -w0)" \
+            push --force "https://github.com/william2535/Jobs-Web.git" main

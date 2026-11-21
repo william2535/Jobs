@@ -1,0 +1,40 @@
+.device-section-tabs {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line); margin: 8px 0 20px;
+}
+.device-section-tabs button {
+  min-width: 0; min-height: 48px; border: 0; border-radius: 0;
+  background: transparent; padding: 8px 4px; font-size: 13px;
+  color: var(--muted); border-bottom: 3px solid transparent;
+}
+.device-section-tabs button[aria-current="page"] { color: var(--accent-dark); border-bottom-color: var(--accent-dark); font-weight: 700; }
+.device-section-tabs span { font-size: 10px; }
+.device-section-label { padding: 13px 16px; margin: 0 0 15px; background: #eef0f3; font-size: 14px; color: #263546; }
+.device-quick-result { margin-bottom: 22px; }
+.device-quick-result[hidden] { display: none; }
+.device-result-choices { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: #edf0f4; border-radius: 8px; }
+.device-result-choices button { flex: 1 1 90px; min-height: 44px; border: 0; background: transparent; font-weight: 500; padding: 8px; }
+.device-result-choices button[aria-pressed="true"] { background: var(--accent-dark); color: white; }
+.device-result-choices .result-fail[aria-pressed="true"] { background: #ba3843; }
+.device-quick-result > .muted { font-size: 12px; margin: 10px 0 16px; }
+.device-quick-result textarea { min-height: 62px; }
+@media (max-width: 700px) {
+  .device-editor:has([data-remark-form]) { padding: 0; border: 0; border-radius: 0; }
+  .device-editor:has([data-remark-form]) > .device-switcher,
+  .device-editor:has([data-remark-form]) > .section-head,
+  .device-editor:has([data-remark-form]) > .device-section-tabs { display: none; }
+  .device-editor:has([data-remark-form]) .remark-editor-head { padding: 12px; margin: 0; background: #f4f5f8; }
+  .device-editor:has([data-remark-form]) .remark-editor-head h3 { font-size: 17px; }
+  .device-editor:has([data-remark-form]) .remark-editor-head small { font-size: 12px; color: var(--muted); }
+  .device-editor:has([data-remark-form]) .remark-section { border: 0; border-radius: 0; }
+  .device-editor:has([data-remark-form]) .remark-field { padding: 10px 0; border: 0; }
+  .device-editor:has([data-remark-form]) .remark-field :is(input,textarea,select) { font-weight: 400; border-radius: 5px; }
+  .device-editor:has([data-remark-form]) .remark-section > h4 { background: #eef0f3; color: #263546; }
+  .device-editor:not([data-section="Record"]) .device-step-actions,
+  .device-editor:not([data-section="Record"]) .device-switcher > label { display: none; }
+  .device-editor:not([data-section="Record"]) .device-switcher { margin-bottom: 4px; }
+  .device-section-tabs { margin-inline: -14px; background: #f4f5f8; }
+  .device-section-tabs button { font-size: 12px; letter-spacing: -.15px; }
+  .device-editor .device-section-label { margin-inline: -14px; }
+  .device-result-choices button { flex-basis: 85px; font-size: 13px; }
+}

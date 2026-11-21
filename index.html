@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#123763" />
+    <script src="/appearance-init.js"></script>
+    <meta
+      name="description"
+      content="Your working day. All in one place. Jobs, plans, notes and timesheets for independent engineers."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jobs" />
+    <meta property="og:title" content="Jobs — Your working day. All in one place." />
+    <meta property="og:description" content="Jobs, plans, notes and timesheets for independent engineers. Works offline after preparation and keeps your jobs on your device." />
+    <meta property="og:url" content="https://william2535.github.io/Jobs/" />
+    <meta property="og:image" content="https://william2535.github.io/Jobs/jobs-share-banner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1734" />
+    <meta property="og:image:height" content="907" />
+    <meta property="og:image:alt" content="Jobs with a blue uptick logo and its mobile dashboard showing job progress, tools, plans and timesheets." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jobs — Your working day. All in one place." />
+    <meta name="twitter:description" content="Jobs, plans, notes and timesheets for independent engineers." />
+    <meta name="twitter:image" content="https://william2535.github.io/Jobs/jobs-share-banner.png" />
+    <meta name="twitter:image:alt" content="Jobs with a blue uptick logo and its mobile dashboard." />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" />
+    <title>Jobs · Field workspace</title>
+  <style>
+#jobs-startup{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#020509;color:white;transition:opacity .35s ease,visibility .35s ease;pointer-events:none}
+#jobs-startup.is-done{opacity:0;visibility:hidden}
+#jobs-startup img{width:min(42vw,190px);aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 0 18px #04dfff80);animation:jobsLogoEnter .85s ease both}
+#jobs-startup strong{font:900 clamp(30px,8vw,52px) system-ui;animation:jobsLogoEnter .5s ease .7s both}
+#jobs-startup small{font:600 10px system-ui;letter-spacing:.22em;color:#c9d9e7;animation:jobsLogoEnter .5s ease 1s both}
+#jobs-startup .track{width:min(58vw,240px);height:4px;border-radius:5px;background:#19344b;overflow:hidden}
+#jobs-startup .track i{display:block;width:100%;height:100%;background:#20d9ff;transform-origin:left;animation:jobsStartupLoad 1.7s ease .4s both}
+@keyframes jobsLogoEnter{from{opacity:0;transform:translateY(12px) scale(.93)}to{opacity:1;transform:none}}
+@keyframes jobsStartupLoad{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){#jobs-startup{display:none}}
+</style></head>
+  <body><div id="jobs-startup" aria-hidden="true"><img src="./icon-192.png" alt=""><strong>Jobs</strong><small>YOUR WORK. SORTED.</small><span class="track"><i></i></span></div><script>window.addEventListener("DOMContentLoaded",()=>{setTimeout(()=>document.getElementById("jobs-startup")?.classList.add("is-done"),2350)})</script>
+    <div id="app"><div role="status"><h1>Jobs</h1><p>Opening your local workspace…</p><p>If Jobs does not open, reconnect and reload. Keep this browser’s website data to preserve your saved work.</p></div></div>
+    <noscript>Jobs needs JavaScript to open local records. Enable JavaScript for this website, then reload.</noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

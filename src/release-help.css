@@ -1,0 +1,38 @@
+.release-help { --help-blue:#153d76; --help-line:#d6e0ed; max-width:1120px; margin:0 auto; color:#21324b; min-width:0; }
+.release-help [hidden] { display:none !important; }
+.release-help-heading { margin-bottom:20px; }
+.release-help-eyebrow { color:#536b89; font-size:10px; letter-spacing:1.3px; font-weight:700; }
+.release-help h1 { margin:7px 0 8px; color:#123357; font-size:30px; }
+.release-help-version { display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin:0; color:#617188; font-size:12px; }
+.release-help-version code { overflow-wrap:anywhere; font-size:11px; }
+.release-help-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+.release-help-card { min-width:0; background:#fff; border:1px solid var(--help-line); border-radius:12px; padding:22px; }
+.release-help-card h2 { margin:0 0 14px; font-size:18px; line-height:1.35; color:#15365f; }
+.release-help-card p { margin:12px 0; font-size:13px; line-height:1.65; color:#465971; overflow-wrap:anywhere; }
+.release-help-card p:last-child { margin-bottom:0; }
+.release-help-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; margin:14px 0; }
+.release-help-actions button { min-height:44px; padding:10px 13px; border:1px solid #b8c9df; border-radius:7px; background:#f6f9fe; color:var(--help-blue); font-size:13px; line-height:1.35; cursor:pointer; touch-action:manipulation; }
+.release-help-actions .release-help-primary { color:#fff; background:var(--help-blue); border-color:var(--help-blue); }
+.release-help button:disabled { opacity:.55; cursor:wait; }
+.release-help :is(button,summary):focus-visible { outline:3px solid #5b8cc5; outline-offset:3px; }
+.release-help-status { display:grid; grid-template-columns:minmax(80px,auto) minmax(0,1fr); gap:8px 12px; margin:0 0 15px; font-size:13px; padding:12px; background:#edf3fb; border-radius:8px; }
+.release-help-status dt { color:#526984; }.release-help-status dd { color:#173c6c; margin:0; font-weight:650; overflow-wrap:anywhere; }
+.release-help-details { margin-top:14px; border-top:1px solid #e2e8f0; }
+.release-help-details summary { min-height:44px; padding:13px 0 10px; color:var(--help-blue); font-size:13px; font-weight:650; cursor:pointer; line-height:1.45; }
+.release-help-details p { margin:9px 0 14px; }
+.release-help-policy h3 { margin:18px 0 8px; font-size:14px; line-height:1.4; color:var(--help-blue); }
+.release-help-policy ul { margin:9px 0 14px; padding-left:20px; font-size:13px; line-height:1.65; color:#465971; }
+.release-help-policy li + li { margin-top:6px; }
+.release-help .release-help-update,.release-help .release-help-recovery-hint { padding:11px 12px; border-radius:7px; background:#eaf1fc; color:#214b7d; }
+.release-help-error { padding:12px 15px; border:1px solid #d9a9b2; border-radius:8px; background:#fff1f3; color:#8c2c3d; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+@media (max-width:700px) {
+ .release-help h1 { font-size:25px; }
+ .release-help-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
+ .release-help-card { padding:17px; border-radius:10px; }
+ .release-help-card h2 { font-size:17px; }
+ .release-help-actions { gap:8px; }
+ .release-help-actions button { flex:1 1 150px; }
+ .release-help-status { grid-template-columns:minmax(0,1fr); gap:4px; }
+ .release-help-status dd + dt { margin-top:7px; }
+}
+@media print { .release-help-actions { display:none; } }

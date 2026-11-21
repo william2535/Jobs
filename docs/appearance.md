@@ -1,0 +1,15 @@
+# Appearance on the current Jobs build
+
+Jobs runs at **https://william2535.github.io/Jobs/**. The current application and its Pages workflow are on `release/jobs-android`; `main` currently holds the brief and uploaded reference artwork. This change is based on the Android/Pages branch, including its newer banner headers, approved logo, About update controls, native export/printing bridge and free Zone Sketch launcher. The separate project-tools foundation branch currently contains planning documentation, not an implemented Gantt screen.
+
+On the mobile workspace, tap the **sun/moon button** on the left below the branded header. The sun switches to Light; the moon switches to Dark. This replaces the former top Tasks shortcut and right-hand appearance dropdown on Dashboard, Tasks, Timesheets and About. Tasks remains available in the bottom navigation. Inside a job and on desktop, the header selector offers **System**, **Light** and **Dark**.
+
+System follows changes to the device's colour preference until an explicit choice is made. The mobile button switches to the opposite of the currently displayed theme, including when System is active. Light/Dark choices remain in effect after a reload and offline. A blocking local initialization script applies the choice before the main stylesheet paints. Browser chrome and native form controls use the matching colour scheme.
+
+The preference is stored separately as `jobs-appearance`. It never changes IndexedDB job records, export packages, observations or saved text formatting. Changing appearance does not redraw forms or discard an unfinished note. Other open Jobs tabs follow saved preference changes. If browser preference storage is unavailable, Jobs still opens and the selection applies for the session with a visible message.
+
+Dark surfaces cover dashboard cards, job forms and navigation, device results/remarks, maintenance questions, timesheets and dialogs, Help, Toolbox calculators and FESS practice. Pass/Fail/N/A retain explicit selected states. Drawings, photo pixels, picture guides and resistor colours are not inverted. The formatted notebook keeps light paper so existing custom text/highlight colours remain readable; report previews and printed reports also retain white paper.
+
+The four approved header banners are now included as their original PNG bytes in `public/`, rather than downloaded and rewritten during publication. CI, local builds, Android preparation and GitHub Pages therefore use the same header artwork and offline cache. Sharing metadata points to the current GitHub Pages URL. No source or deployment changes are made to the older private Sites instance.
+
+Verification covers theme persistence, system changes, blocked storage, cross-tab synchronization, retained unfinished notes, offline reopen, representative text contrast, transparent plan hit targets, selected results, narrow screens and white printing. Automated browser coverage runs in desktop Chromium, Pixel 7 emulation and iPhone WebKit. Physical-device installation and operating-system share sheets remain separate checks.

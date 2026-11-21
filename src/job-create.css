@@ -1,0 +1,19 @@
+/* A short, explicit setup sequence; job evidence is recorded after creation. */
+body button[data-action="create"]:disabled {
+  opacity: 1;
+  background: #e5e7eb;
+  border-color: #d1d5db;
+  color: #717985;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+body button[data-action="create"]:disabled :is(strong, small, span, svg) { color: inherit; }
+.job-create { max-width: 680px; }
+.job-create [hidden] { display: none; }
+.job-create textarea { min-height: 120px; }
+.job-create .creation-fields { display: grid; gap: 18px; }
+.job-create .record-save { margin-top: 22px; }
+@media (max-width: 700px) {
+  .job-create :is(input, select, textarea) { font-size: 16px; }
+  .job-create .record-save button { width: 100%; }
+}

@@ -1,0 +1,147 @@
+.job-checklist {
+  margin-bottom: 16px;
+}
+.job-checklist .section-head {
+  align-items: flex-start;
+}
+.job-checklist h2 {
+  margin: 5px 0;
+}
+.checklist-intro,
+.checklist-boundary,
+.checklist-save-state {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.checklist-boundary {
+  color: var(--muted);
+}
+.checklist-count {
+  font-size: 12px;
+  text-align: right;
+  color: var(--accent);
+}
+.checklist-fields {
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.job-checklist .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.checklist-grid,
+.checklist-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 10px;
+}
+.checklist-item {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px;
+  background: var(--surface);
+  min-width: 0;
+}
+.job-checklist label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.job-checklist input,
+.job-checklist select,
+.job-checklist textarea {
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-weight: 400;
+}
+.job-checklist summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.checklist-visit-details,
+.checklist-evidence,
+.checklist-gaps {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.checklist-evidence {
+  padding-top: 12px;
+}
+.checklist-evidence p,
+.checklist-gaps li,
+.checklist-gaps p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.checklist-gaps ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.checklist-document-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.checklist-document-actions button {
+  min-height: 44px;
+}
+.checklist-report td,
+.checklist-report dd {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .job-checklist {
+    padding: 14px;
+    margin: 0 0 14px;
+  }
+  .job-checklist input,
+  .job-checklist select,
+  .job-checklist textarea {
+    font-size: 16px;
+  }
+  .checklist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .checklist-item {
+    padding: 9px;
+  }
+  .checklist-item label {
+    font-size: 12px;
+  }
+  .checklist-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .checklist-detail-grid label:has(textarea),
+  .checklist-detail-grid label:has([name="standard"]),
+  .checklist-detail-grid label:has([name="premisesScope"]) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 359px) {
+  .checklist-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  .checklist-report {
+    break-before: auto;
+  }
+  .checklist-report tr {
+    break-inside: avoid;
+  }
+}

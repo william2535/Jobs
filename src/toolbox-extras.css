@@ -1,0 +1,66 @@
+@import '../vendor/findr-extras/resistor-lab.css';
+@import '../vendor/findr-extras/fess-mocks.css';
+
+/* Scoped Jobs presentation; original tool calculations and question choices are retained. */
+.toolbox-extra {
+  --text: #21324b;
+  --muted: #586a84;
+  --accent: #153d76;
+  --surface: #fff;
+  --line: #ccd7e5;
+  --bg: #f3f6fa;
+  min-width: 0;
+  color: var(--text);
+  background: #f8fafe;
+  padding: clamp(13px, 3vw, 28px);
+  border: 1px solid #d6e0ec;
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+.toolbox-extra *, .toolbox-extra *::before, .toolbox-extra *::after { box-sizing: border-box; }
+.toolbox-extra h1, .toolbox-extra h2, .toolbox-extra h3 { color: #15365f; }
+.toolbox-extra h1 { margin: 14px 0; }
+.toolbox-extra a { color: #153d76; }
+.toolbox-extra .eyebrow { color: #5c708e; font-size: 11px; letter-spacing: 1.2px; font-weight: 700; }
+.toolbox-extra :is(button, a.primary, a.secondary, a.subtle, a.back, summary) { min-height: 44px; touch-action: manipulation; }
+.toolbox-extra :is(a.primary, a.secondary, a.subtle, a.back) { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 8px; text-decoration: none; }
+.toolbox-extra .back { justify-content: flex-start; padding-left: 0; font-weight: 700; }
+.toolbox-extra :is(button, a.secondary, a.subtle) { border: 1px solid #bdcce0; background: #fff; color: #153d76; border-radius: 8px; font: inherit; line-height: 1.35; padding: 10px 14px; cursor: pointer; }
+.toolbox-extra :is(button.primary, a.primary) { border: 1px solid #153d76; background: #153d76; color: #fff; font-weight: 700; }
+.toolbox-extra :is(button, a):focus-visible { outline: 3px solid #5685c8; outline-offset: 3px; }
+.toolbox-extra button:disabled { cursor: default; opacity: .6; }
+.toolbox-extra :is(input, select, textarea) { min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #aebfd5; border-radius: 8px; background: #fff; color: #21324b; font-family: inherit; font-size: 16px; line-height: 1.4; }
+.toolbox-extra .resistor-lab :is(input, select, textarea), .toolbox-extra .fess-page :is(input, select, textarea) { font-size: 16px; min-height: 44px; color: #21324b; background: #fff; }
+.toolbox-extra summary { display: flex; align-items: center; cursor: pointer; font-weight: 650; line-height: 1.5; }
+.toolbox-extra summary::before { content: '›'; margin-right: 9px; font-size: 20px; }
+.toolbox-extra details[open] > summary::before { content: '⌄'; }
+.toolbox-extra .toolbox-extra-notice { padding: 12px; border: 1px solid #c0828a; border-radius: 8px; color: #8e2935; background: #fff0f1; }
+.toolbox-extra .toolbox-extra-notice[hidden] { display: none; }
+.toolbox-extra .lab-tabs [aria-pressed=true] { color: #153d76; background: #e7effb; border-color: #153d76; }
+.toolbox-extra .lab-diagram-node .lab-hit { fill: transparent; }
+.toolbox-extra .lab-diagram-node.selected > .lab-hit { fill: #153d7610; }
+.toolbox-extra .fess-option.is-correct { color: #153d76; border-color: #426da9; background: #e8f0fc; opacity: 1; }
+.toolbox-extra .fess-option.is-wrong { color: #8f2936; border-color: #bd6975; background: #fff0f2; opacity: 1; }
+.toolbox-extra .fess-answer-mark, .toolbox-extra .fess-correct-text { color: #153d76; }
+.toolbox-extra .fess-option.is-wrong .fess-answer-mark { color: #8f2936; }
+.toolbox-extra .fess-mode-tabs { flex-wrap: wrap; }
+.toolbox-extra .fess-mode-tabs a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.toolbox-extra .fess-subject-filter select { width: 100%; max-width: 100%; }
+.toolbox-extra .fess-history-row, .toolbox-extra .fess-history-row > a { min-width: 0; }
+.toolbox-extra .fess-paper-grid button { min-width: 44px; min-height: 44px; }
+.toolbox-extra .fess-progress-circle { color: #153d76; }
+
+@media (max-width: 600px) {
+  .toolbox-extra { padding: 13px; border-radius: 10px; }
+  .toolbox-extra :is(.resistor-lab, .fess-page) h1 { font-size: 26px; }
+  .toolbox-extra .fess-toolbar { flex-wrap: wrap; gap: 9px; }
+  .toolbox-extra .fess-mock-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .toolbox-extra .fess-mock-card { padding: 13px; }
+  .toolbox-extra .fess-mock-card h2 { font-size: 17px; }
+  .toolbox-extra .fess-mock-card :is(button, a) { width: 100%; }
+  .toolbox-extra .lab-result { padding: 13px; }
+  .toolbox-extra .fess-mode-tabs a { padding: 9px 10px; }
+}
+@media (max-width: 360px) {
+  .toolbox-extra .fess-mock-grid { grid-template-columns: minmax(0, 1fr); }
+}

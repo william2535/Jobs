@@ -1,0 +1,64 @@
+FINDR toolbox components reused in Jobs
+
+Source: https://github.com/william2535/Findr
+Source checkout: 8bdd8b03feb8babd6266b80b57dbc5d53efeadb2
+Original on-site pack release reference: d6cfb85034994f73cbbf6b24a8490a9002ed7c62
+
+Included at the repository owner's explicit request. Original FINDR content,
+source publisher rights, safety notes and source references retain their existing
+ownership. No new licence or project-wide open-source licence is granted by this
+copy. No root licence file was supplied for these original FINDR components.
+
+The two toolbox calculator modules, original pack manifest, pack.json and six
+original picture guides are unchanged. The diagnostic-calculators dependency is
+an exact extract containing only the original warning, blank/r/unitSets helpers
+and parseDiagnosticQuantity. It includes no FINDR field engine/model, UI,
+storage, downloader, service worker, user manuals or model files.
+
+These tools perform arithmetic on entered values. They do not perform tests,
+authorise live work, infer equipment identity, approve system design or certify
+compliance. The original tool-specific assumptions, limitations and sources are
+included with the calculators and guides. External source material remains with
+its publisher and is not redistributed.
+
+SHA-256 of included source/assets (paths relative to vendor/findr-tools):
+90cc97ae17a142f44cb48f3e52a786055cfaa4330c9bfeccb6efd1e333abbd0f  toolbox-calculators.mjs
+d91c23de372591721b558af423653f7640b0be1bafb841e8707d9a6460474eda  toolbox-pack-calculators.mjs
+dfb26778c0f5c8036a358bcc3111ca880d3385ebadfb2db8bd2aca884f61676b  toolbox-pack-manifest.mjs
+2d1beb68c1b87f95c1af12ef4f1c16995d42cebea0616ba261c7b47085f66518  diagnostic-calculators.mjs
+43d4cc5192c37500031a7ce67f57196352940a82cca0c627b2af865562920805  onsite-v1/pack.json
+e280d03275caeba8b9122671a9a77b46398d1f611c97eebdccda844f2ef37d33  onsite-v1/camera-path.svg
+204300f86134d9e5899d9e26c1989c4b3058c57ad19414f2fda0f367bc60f8ee  onsite-v1/dc-points.svg
+9c7386a91549f8080dd469a14bfe1db0e74847473e4911abd88256810963a1a8  onsite-v1/ohms.svg
+36a58e272a12619174a6dce349157225bee19055a44ca20a4ae17f48e6c77011  onsite-v1/poe-budget.svg
+b8b77fa692f88fe270734321d51924e6716589bd05284c5548fd8a2aaef38d45  onsite-v1/relay.svg
+f3c9efa81cfcc063a0ff2f83f14bae44fce865b6002fdab96362520ac482bf9a  onsite-v1/resistors.svg
+
+Exact source paths, extraction lines and original-file hashes are retained in
+vendor/findr-tools/PROVENANCE.json in the editable Jobs source.
+
+FINDR Resistor Lab and FESS revision components for Jobs
+
+Source: https://github.com/william2535/Findr
+Source revision: 8bdd8b03feb8babd6266b80b57dbc5d53efeadb2
+Original location: public/app/
+
+Reused at the project owner's explicit request. Original source comments,
+question explanations, attribution and external reference links are retained.
+The inspected source does not include an overarching licence for these
+components. This integration does not grant an MIT licence or otherwise
+relicense the FINDR source, educational question content or cited material.
+Their existing rights remain with their respective owners.
+
+The resistor, quiz and full-paper engines, generated-audio module, paper
+view and question data are byte-for-byte copies. Controllers adapt storage,
+local navigation and lifecycle handling; styles use Jobs' light blue theme.
+Exact original and included SHA-256 hashes are in vendor/findr-extras/PROVENANCE.json in the editable Jobs source.
+
+FESS quizzes and papers are practice only, not official examination papers
+or assessment results. The included full papers have a 60-minute practice
+timer. The original notice that Highfield's cited FESS kit v5.0 lists
+60 questions in 75 minutes is retained, with its source link.
+
+No tool calculation, practice answer or score writes to engineer-confirmed
+job results. Saved tool progress uses a separate local Jobs database.

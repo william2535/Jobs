@@ -1,0 +1,101 @@
+plugins {
+    id 'com.android.application'
+}
+
+def releaseProperties = new Properties()
+def releaseFile = rootProject.file('release.properties')
+if (releaseFile.exists()) {
+    releaseFile.withInputStream { releaseProperties.load(it) }
+}
+def applicationIdentifier = releaseProperties.getProperty('APPLICATION_ID', 'com.willflood.jobs')
+def releaseVersionName = System.getenv('JOBS_VERSION_NAME') ?: releaseProperties.getProperty('VERSION_NAME', '1.0.0')
+def releaseVersionCode = (System.getenv('JOBS_VERSION_CODE') ?: releaseProperties.getProperty('VERSION_CODE', '1')).toInteger()
+def releaseBuildId = System.getenv('JOBS_BUILD_ID') ?: releaseProperties.getProperty('BUILD_ID', 'unknown')
+def quotedBuildId = '"' + releaseBuildId.replace('\\', '\\\\').replace('"', '\\"') + '"'
+def signingNames = ['JOBS_UPLOAD_STORE_FILE', 'JOBS_UPLOAD_STORE_PASSWORD', 'JOBS_UPLOAD_KEY_ALIAS', 'JOBS_UPLOAD_KEY_PASSWORD']
+def signingValues = signingNames.collectEntries { [(it): System.getenv(it)] }
+def hasSigning = signingValues.values().every { it != null && !it.isEmpty() }
+def hasAnySigning = signingValues.values().any { it != null && !it.isEmpty() }
+def unsignedRequested = providers.gradleProperty('jobsUnsigned').orNull == 'true'
+
+if (releaseVersionCode < 1 || releaseVersionCode > 2100000000) {
+    throw new GradleException('JOBS_VERSION_CODE must be between 1 and 2100000000.')
+}
+
+android {
+    namespace 'com.willflood.jobs'
+    compileSdk 36
+    buildToolsVersion '36.0.0'
+
+    defaultConfig {
+        applicationId applicationIdentifier
+        minSdk 24
+        targetSdk 36
+        versionCode releaseVersionCode
+        versionName releaseVersionName
+        buildConfigField 'String', 'BUILD_ID', quotedBuildId
+    }
+
+    signingConfigs {
+        if (hasSigning) {
+            upload {
+                storeType 'PKCS12'
+                storeFile rootProject.file(signingValues.JOBS_UPLOAD_STORE_FILE)
+                storePassword signingValues.JOBS_UPLOAD_STORE_PASSWORD
+                keyAlias signingValues.JOBS_UPLOAD_KEY_ALIAS
+                keyPassword signingValues.JOBS_UPLOAD_KEY_PASSWORD
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            debuggable false
+            minifyEnabled false
+            if (hasSigning) {
+                signingConfig signingConfigs.upload
+            }
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+def verifyReleaseSigning = tasks.register('verifyReleaseSigning') {
+    group = 'verification'
+    description = 'Require the persistent upload key before producing a release bundle.'
+    doLast {
+        if (hasAnySigning && !hasSigning) {
+            throw new GradleException('Upload signing is incomplete. Set all four JOBS_UPLOAD_* environment variables.')
+        }
+        if (!hasSigning && !unsignedRequested) {
+            throw new GradleException('Release signing is required. Set all four JOBS_UPLOAD_* environment variables. For validation only, explicitly use -PjobsUnsigned=true; that output cannot be uploaded to Play.')
+        }
+        if (hasSigning && !rootProject.file(signingValues.JOBS_UPLOAD_STORE_FILE).isFile()) {
+            throw new GradleException('The configured upload keystore does not exist.')
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == 'preReleaseBuild') {
+        dependsOn verifyReleaseSigning
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.14.0'
+    implementation 'androidx.core:core:1.17.0'
+}
