@@ -1668,10 +1668,6 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
  body[data-page="home"] .jobs-banner-home-button{
   left:0!important;top:0!important;width:24%!important;height:100%!important;
  }
- body[data-page="home"] .mobile-workspace .mw-banner-dashboard .mw-open-jobs{
-  top:calc(-1 * clamp(72px,20vw,92px))!important;
-  right:10px!important;
- }
 }
 
 /* Unified mobile navigation headers: user-uploaded original artwork on each tab.
@@ -1704,15 +1700,6 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
  body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header .mw-home-link,
  body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header .mw-home-link{
   display:none!important
- }
- body[data-page="home"][data-jobs-mobile-tab="tasks"] .mobile-workspace .mw-header .mw-open-jobs,
- body[data-page="home"][data-jobs-mobile-tab="timesheets"] .mobile-workspace .mw-header .mw-open-jobs,
- body[data-page="home"][data-jobs-mobile-tab="about"] .mobile-workspace .mw-header .mw-open-jobs{
-  position:absolute!important;
-  z-index:9!important;width:44px!important;height:44px!important;
-  min-height:44px!important;background:#04182cbf!important;
-  border:1px solid #69c9f399!important;border-radius:12px!important;
-  color:white!important
  }
 }
 
@@ -1794,8 +1781,5 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
  }
  body[data-page="home"] .workspace>header.jobs-banner-app-header .jobs-banner-home-button{
   width:18%!important;height:100%!important;
- }
- body[data-page="home"] .mobile-workspace .mw-header .mw-open-jobs{
-  top:calc(-1 * clamp(68px,18.5vw,82px))!important;
  }
 }

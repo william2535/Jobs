@@ -6,12 +6,22 @@ import { newJob } from '../src/model.js';
 import { createJobPackage } from '../src/packages.js';
 import { openJobSection } from './helpers/job-creation.js';
 
-const appearance = page => page.getByRole('combobox', { name: 'Appearance', exact: true });
+const appearanceSelect = page => page.getByRole('combobox', { name: 'Appearance', exact: true });
+const appearanceToggle = page => page.getByRole('button', { name: /^Switch to (light|dark) mode$/ });
+const appearance = page => appearanceSelect(page).or(appearanceToggle(page));
+
+async function chooseAppearance(page, preference) {
+  await expect(appearance(page)).toBeVisible();
+  if (await appearanceSelect(page).count()) await appearanceSelect(page).selectOption(preference);
+  else await page.getByRole('button', { name: `Switch to ${preference} mode`, exact: true }).click();
+}
 
 async function expectTheme(page, preference, resolved) {
   await expect(page.locator('html')).toHaveAttribute('data-appearance', preference);
   await expect(page.locator('html')).toHaveAttribute('data-theme', resolved);
-  await expect(appearance(page)).toHaveValue(preference);
+  await expect(appearance(page)).toBeVisible();
+  if (await appearanceSelect(page).count()) await expect(appearanceSelect(page)).toHaveValue(preference);
+  else await expect(appearanceToggle(page)).toHaveAttribute('aria-label', `Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`);
   expect(await page.locator('html').evaluate(node => node.style.colorScheme)).toBe(resolved);
 }
 
@@ -94,7 +104,7 @@ test('System follows the device and an explicit appearance survives reload witho
   await expectTheme(page, 'system', 'dark');
   const darkChrome = await page.locator('meta[name="theme-color"]').getAttribute('content');
 
-  await appearance(page).selectOption('light');
+  await chooseAppearance(page, 'light');
   await expectTheme(page, 'light', 'light');
   expect(await page.locator('meta[name="theme-color"]').getAttribute('content')).not.toBe(darkChrome);
   await page.reload();
@@ -103,7 +113,13 @@ test('System follows the device and an explicit appearance survives reload witho
   await page.emulateMedia({ colorScheme: 'dark' });
   await expectTheme(page, 'light', 'light');
 
-  await appearance(page).selectOption('system');
+  // The mobile home has a single quick toggle. Jobs retain the full selector
+  // so an engineer can explicitly return to following the system appearance.
+  if (!await appearanceSelect(page).count()) {
+    await page.locator('[data-action="create"]:visible').first().click();
+    await expect(page.locator('.job-notes')).toBeVisible();
+  }
+  await appearanceSelect(page).selectOption('system');
   await expectTheme(page, 'system', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expectTheme(page, 'system', 'light');
@@ -124,7 +140,7 @@ test('changing appearance preserves an unsaved notebook and the saved theme and 
   await expect(page.getByTestId('save-status')).toContainText('Unsaved');
 
   for (const preference of ['dark', 'light', 'dark']) {
-    await appearance(page).selectOption(preference);
+    await chooseAppearance(page, preference);
     await expectTheme(page, preference, preference);
     expect(await originalEditor.evaluate(node => node.isConnected)).toBe(true);
     await expect(editor).toContainText('Unfinished observations must survive an appearance change.');
@@ -143,7 +159,7 @@ test('changing appearance preserves an unsaved notebook and the saved theme and 
   await expectTheme(page, 'dark', 'dark');
   await page.getByTestId('job-card').click();
   await expect(editor).toContainText('Further work can still be recorded.');
-  await appearance(page).selectOption('light');
+  await chooseAppearance(page, 'light');
   await expectTheme(page, 'light', 'light');
   await expect(page.getByTestId('save-status')).toContainText('Saved');
 });
@@ -152,7 +168,7 @@ test('dark tools, timesheets and plan results remain readable while drawings and
   test.setTimeout(90_000);
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto('/');
-  await appearance(page).selectOption('dark');
+  await chooseAppearance(page, 'dark');
   await readable(appearance(page), { dark: true });
   await page.screenshot({ path: testInfo.outputPath('dark-overview.png'), fullPage: true });
   await page.getByRole('button', { name: 'Toolbox', exact: true }).click();

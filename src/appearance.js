@@ -72,30 +72,47 @@ export function initializeAppearance() {
   return activeController;
 }
 
-export function createAppearanceControl({ controller = initializeAppearance(), document: doc = document, compact = false } = {}) {
+export function createAppearanceControl({ controller = initializeAppearance(), document: doc = document, compact = false, toggle = false } = {}) {
   const root = doc.createElement("div");
-  root.className = `appearance-control${compact ? " appearance-control--compact" : ""}`;
-  const label = doc.createElement("label"), caption = doc.createElement("span"), select = doc.createElement("select");
-  caption.textContent = "Appearance";
-  select.setAttribute("aria-label", "Appearance");
-  select.title = "Choose System, Light or Dark appearance";
-  for (const value of choices) {
-    const option = doc.createElement("option");
-    option.value = value;
-    option.textContent = value[0].toUpperCase() + value.slice(1);
-    select.append(option);
+  root.className = `appearance-control${compact ? " appearance-control--compact" : ""}${toggle ? " appearance-control--toggle" : ""}`;
+  const input = doc.createElement(toggle ? "button" : "select");
+  if (toggle) {
+    input.type = "button";
+    input.className = "appearance-toggle";
+    input.addEventListener("click", () => controller.setPreference(controller.getState().theme === "dark" ? "light" : "dark"));
+    root.append(input);
+  } else {
+    const label = doc.createElement("label"), caption = doc.createElement("span");
+    caption.textContent = "Appearance";
+    input.setAttribute("aria-label", "Appearance");
+    input.title = "Choose System, Light or Dark appearance";
+    for (const value of choices) {
+      const option = doc.createElement("option");
+      option.value = value;
+      option.textContent = value[0].toUpperCase() + value.slice(1);
+      input.append(option);
+    }
+    label.append(caption, input);
+    root.append(label);
+    input.addEventListener("change", () => controller.setPreference(input.value));
   }
   const status = doc.createElement("span");
   status.id = `appearance-status-${++controlCount}`;
   status.className = "appearance-status";
   status.setAttribute("role", "status");
   status.hidden = true;
-  select.setAttribute("aria-describedby", status.id);
-  label.append(caption, select);
-  root.append(label, status);
-  select.addEventListener("change", () => controller.setPreference(select.value));
+  input.setAttribute("aria-describedby", status.id);
+  root.append(status);
   const unsubscribe = controller.subscribe(state => {
-    select.value = state.preference;
+    if (toggle) {
+      const next = state.theme === "dark" ? "light" : "dark";
+      input.setAttribute("aria-label", `Switch to ${next} mode`);
+      input.title = `Switch to ${next} mode`;
+      const shape = next === "light"
+        ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+        : '<path d="M20.5 13.3A9 9 0 0 1 10.7 3.5a9 9 0 1 0 9.8 9.8Z"/>';
+      input.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${shape}</svg>`;
+    } else input.value = state.preference;
     status.hidden = state.persisted;
     status.textContent = state.persisted ? "" : "Appearance applies for this session; this browser could not save the preference.";
   });
