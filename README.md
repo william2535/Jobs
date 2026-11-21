@@ -1,6 +1,6 @@
 # Jobs
 
-**[Open the Jobs website](https://jobs-field-workspace.floodyyy21.chatgpt.site)** · [Hosting and access details](docs/deployment.md)
+**[Open the Jobs website](https://william2535.github.io/Jobs/)** · [Hosting and access details](docs/deployment.md)
 
 An independent, local-first job workspace for fire and security engineers. Public release 1.0.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
@@ -58,6 +58,8 @@ Inside a job, **‹ Home** returns to the dashboard. For a linked job, the **sit
 Home offers **Explore demonstration site** when there are no jobs. `public/demo.zonesketch.json` is a synthetic save verified by importing it into the actual Zone Sketch application and using its real exporter. The customer example added by the repository owner was used only for local validation; it is not copied into `public/`, the build or test fixtures.
 
 ## Interface direction
+
+Choose **System**, **Light** or **Dark** from the appearance selector at the top of the app. System follows the device setting; your choice is saved on this device and works offline. Switching does not reload the page or discard an unfinished job. Dark mode covers the current dashboard, jobs, equipment, timesheets and Toolbox. Drawings, photographs, formatted notebook paper and printed reports retain their original colours. See [appearance and current GitHub build](docs/appearance.md).
 
 Deep contrasting blue provides the headers and accents. The mobile workspace follows the supplied field-service layout: a compact dashboard, actual local work totals, scheduled job cards and fixed bottom navigation. Job cards open a compact notes editor; optional settings and detailed records stay behind their controls. The desktop sidebar, grids and workspace layout stay in place. Create/import/site choices remain compact grids; devices stay paged, with included photographs available on each record. The linked site name or job title and save status remain visible.
 

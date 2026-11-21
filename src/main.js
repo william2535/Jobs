@@ -1,6 +1,4 @@
-import "./appearance.css";
-import { initializeAppearance } from "./appearance.js";
-initializeAppearance();
+import { initializeAppearance, createAppearanceControl } from "./appearance.js";
 import "./style.css";
 import "./mobile-job.css";
 import "./mobile-shell.css";
@@ -64,6 +62,7 @@ import { renderServiceReport } from "./service-report.js";
 import { installReportPrinting, printServiceReport } from "./print-report.js";
 import "./fire-maintenance-ui.css";
 import "./service-report.css";
+import "./appearance.css";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
 const $ = (s) => document.querySelector(s),
@@ -80,6 +79,7 @@ const $ = (s) => document.querySelector(s),
         })[c],
     );
 const toolboxChest = createToolboxChest();
+initializeAppearance();
 let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
@@ -618,6 +618,7 @@ function openJobField(target) {
 const holdField = (group, field) =>
   `data-job-edit="${group}" data-edit-field="${field}" data-hold-edit tabindex="0" title="Hold for 3 seconds to edit"`;
 function render() {
+  document.querySelector(".appearance-control")?.dispose?.();
   timesheetDate = document.querySelector(".timesheets-ui")?.getViewState?.().date || timesheetDate;
   const previousPlan = document.querySelector('.plan-preview');
   const planScroll = previousPlan ? { x: window.scrollX, y: window.scrollY } : null;
@@ -649,6 +650,8 @@ function render() {
   $("#app").innerHTML =
     `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${page === "home" ? "jobs-banner-app-header" : ""}">${mobileHome ? '<button type="button" class="jobs-banner-home-button" data-action="home" aria-label="Jobs home" title="Go to dashboard"></button>' : ""}<div><span class="eyebrow">${j ? "JOB / " + esc(j.id.slice(0, 8)) : "YOUR FIELD WORKSPACE"}</span>${headerSite}</div><div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main><div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}</div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
+  const appHeader = document.querySelector(".workspace > header");
+  if (appHeader) appHeader.append(createAppearanceControl({ compact: true }));
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {

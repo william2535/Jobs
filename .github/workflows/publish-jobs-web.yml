@@ -1,18 +1,8 @@
 name: Publish Jobs browser build to public GitHub Pages repository
 
 on:
+  # Legacy export destination; the supported live site uses deploy-pages.yml.
   workflow_dispatch:
-  push:
-    branches: [release/jobs-android]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'index.html'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.js'
-      - 'scripts/**'
-      - '.github/workflows/publish-jobs-web.yml'
 
 permissions:
   contents: read
@@ -39,20 +29,6 @@ jobs:
         run: npm ci
       - name: Test application
         run: npm test
-      - name: Bundle approved blue banner locally
-        run: |
-          curl --fail --location --retry 3 --silent --show-error \
-            'https://raw.githubusercontent.com/william2535/FIRE-SECURITY-APP-PORTAL/main/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png' \
-            -o public/jobs-dashboard-banner.png
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('src/mobile-shell.css')
-          s = p.read_text()
-          original = 'https://william2535.github.io/FIRE-SECURITY-APP-PORTAL/ACF1F676-BBEF-4344-8DDC-ED246B636A28.png'
-          if original not in s:
-              raise SystemExit('Approved Jobs banner reference missing; refusing to publish.')
-          p.write_text(s.replace(original, './jobs-dashboard-banner.png'))
-          PY
       - name: Build real offline-capable Jobs website
         run: npm run build
       - name: Validate release output

@@ -1,4 +1,15 @@
-# Jobs website
+# Current Jobs website: GitHub Pages
+
+Current address: **https://william2535.github.io/Jobs/**
+
+As of 21 November 2026, the supported application source is on `release/jobs-android`. `.github/workflows/deploy-pages.yml` builds and verifies the exact triggering commit, then deploys only `dist/` to the existing GitHub Pages site. The older optional `publish-jobs-web.yml` export is manual-only; it does not compete with the current automatic Pages deployment. The four owner-approved navigation banners are pinned in `public/`, so local, CI, Android and hosted builds use the same artwork without publication-time source rewriting.
+
+Use **About → Check for updates** in the installed browser app, save open work, then apply an available update. Close other Jobs windows if prompted. Wait for **Ready offline** before disconnecting. The native Android app contains its own bundled files and requires an app update to receive new code; updating the website does not replace an installed APK.
+
+The previous Sites website below is historical. Its access was restricted to the owner on 16 November 2026; this GitHub update does not change that access or publish to Sites. Browser records are tied to each website origin: moving from Sites to GitHub Pages does not move records automatically. Use an exported workspace backup to restore into an empty workspace on the new address.
+
+## Historical Sites publication record
+
 
 Live address: **https://jobs-field-workspace.floodyyy21.chatgpt.site**
 
@@ -7,7 +18,7 @@ The website uses Sites hosting and is public to anyone with the link, following 
 ## Publication record
 
 - Site project: `appgprj_6af79deede5c8191be60addd5d6bedc0`
-- Current audience: **public**, confirmed by Sites access policy revision 2. Future publication must use the public-compatible publishing operation, not owner-only deployment.
+- Audience at publication: **public** (revision 2). Subsequently changed to owner-only custom access (revision 3) on 16 November 2026. Check the current Sites access policy before any future Sites publication.
 - Saved version: `appgprj_6af79deede5c8191be60addd5d6bedc0~appgver_27e4c41b5610819199b17cad6011dc59` (hosting version 16, Jobs 1.0.0 sharing banner)
 - Successful deployment: `appgdep_6afabbda89a08191a0e5cd4b22149a74`
 - Application source: Jobs commit `27da639cddadbfb8cdfb767dedc4390a4b8ac6a9`

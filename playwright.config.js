@@ -11,6 +11,7 @@ export default defineConfig({
   testMatch: "**/*.spec.js",
   fullyParallel: false,
   workers: 1,
+  maxFailures: process.env.CI ? 1 : 0,
   timeout: 45_000,
   expect: { timeout: 10_000 },
   reporter: [["list"], ["html", { open: "never" }]],
@@ -20,9 +21,9 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit" } },
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"], launchOptions: chromiumLaunchOptions } },
-    { name: "iphone-webkit", testMatch: "**/public-release.spec.js", use: { ...devices["iPhone 13"], browserName: "webkit" } },
   ],
   webServer: {
     command: "npm run preview -- --port 4173 --strictPort",

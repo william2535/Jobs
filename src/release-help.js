@@ -116,7 +116,7 @@ export function renderReleaseHelp({
   const privacy = card('Your data and connected apps');
   paragraph(privacy, native
     ? 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. Its app files are bundled on this device. Exports go to the document provider and folder you choose; choosing a cloud provider may send that exported file to that service. External websites have their own data handling.'
-    : 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. Sites hosting receives normal website requests and may process basic request metadata, such as IP address, browser information and request time, to serve and protect the website.');
+    : 'The core Jobs app does not upload your customer records and includes no analytics or advertising scripts. The website host receives normal website requests and may process basic request metadata, such as IP address, browser information and request time, to serve and protect the website.');
   paragraph(privacy, native
     ? 'Anyone who can unlock this device and open Jobs may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and keep exported work private.'
     : 'Anyone who can use this browser profile may be able to read its saved jobs. Jobs has no separate sign-in or encrypted local vault. Use your device lock and your own browser profile on shared equipment. Avoid private or incognito browsing for work you need to keep.');
