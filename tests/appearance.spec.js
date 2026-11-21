@@ -21,7 +21,7 @@ async function home(page) {
 
 async function assertNoOverflow(page) {
   try {
-    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= Math.min(innerWidth, document.documentElement.clientWidth) + 1)).toBeTruthy();
   } catch (error) {
     try {
       const diagnostics = await page.evaluate(() => {

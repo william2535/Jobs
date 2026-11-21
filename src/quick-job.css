@@ -28,6 +28,9 @@
 .empty-job-plan { padding: 28px; }
 .empty-job-plan p { color: var(--muted); line-height: 1.6; }
 @media (max-width: 700px) {
+  /* Match the notebook workspace's 12px gutters on both sides of the plan. */
+  body[data-page="job"] .plan-actions.panel,
+  body[data-page="job"] #plan-root.panel { margin-inline: -12px; }
   body[data-page="job"] .sidebar { display: none; }
   body[data-page="job"] .workspace > header { min-height: 74px; padding: 10px 16px; }
   body[data-page="job"] main { padding: 0 12px 20px; }
