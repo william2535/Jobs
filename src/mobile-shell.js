@@ -558,22 +558,7 @@ export function renderMobileWorkspace({
           : tab,
       ),
     );
-    const open = control(
-      "",
-      () => {
-        if (!confirmLeave()) return;
-        onDirty(false);
-        tab = "Tasks";
-        dateFilter = "";
-        query = "";
-        onlyOverdue = false;
-        paint();
-      },
-      "mw-open-jobs",
-    );
-    open.setAttribute("aria-label", `${summary.open} open jobs`);
-    open.append(icon("tasks"), node("span", String(summary.open)));
-    header.append(title, open);
+    header.append(title);
     const content =
       tab === "Dashboard"
         ? dashboard()
