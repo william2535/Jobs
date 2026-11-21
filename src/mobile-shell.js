@@ -2,6 +2,7 @@
 const FREE_ZONE_SKETCH_URL = "https://william2535.github.io/ZoneSketch-Unstable/";
 import { jobTypeLabel } from "./job-options.js";
 import { renderTimesheets } from "./timesheets-ui.js";
+import { scrollPageToTop } from "./page-scroll.js";
 import { timesheetEntries, splitTimesheetByDay, minutesForTimesheet, isWorkSession } from "./timesheets.js";
 const list = (value) => (Array.isArray(value) ? value : []);
 const pad = (value) => String(value).padStart(2, "0");
@@ -149,6 +150,7 @@ export function renderMobileWorkspace({
     return saved;
   };
   let tab = "Dashboard",
+    paintedTab = null,
     dateFilter = "",
     query = "",
     onlyOverdue = false,
@@ -614,14 +616,14 @@ export function renderMobileWorkspace({
       const button = control(
         "",
         () => {
-          if (label === tab || !confirmLeave()) return;
+          if (label === tab) { scrollPageToTop(); return; }
+          if (!confirmLeave()) return;
           onDirty(false);
           tab = label;
           dateFilter = "";
           query = "";
           onlyOverdue = false;
           paint();
-          root.scrollIntoView({ block: "start" });
         },
         tab === label ? "active" : "",
       );
@@ -630,6 +632,9 @@ export function renderMobileWorkspace({
       navigation.append(button);
     }
     root.append(header, content, navigation);
+    const changedTab = paintedTab !== tab;
+    paintedTab = tab;
+    if (changedTab && root.isConnected) scrollPageToTop();
   }
   root.confirmLeave = confirmLeave;
   root.dispose = () => {
