@@ -1,4 +1,5 @@
 import { initializeAppearance, createAppearanceControl } from "./appearance.js";
+import { initializePageScroll, scrollPageToTop } from "./page-scroll.js";
 import "./style.css";
 import "./mobile-job.css";
 import "./mobile-shell.css";
@@ -80,6 +81,7 @@ const $ = (s) => document.querySelector(s),
     );
 const toolboxChest = createToolboxChest();
 initializeAppearance();
+initializePageScroll();
 let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
@@ -880,7 +882,7 @@ function render() {
     toolboxTrigger.setAttribute("aria-controls", "toolbox-chest");
     toolboxChest.refreshAnchor(toolboxTrigger);
   }
-  if (changedRoute) window.scrollTo(0, 0);
+  if (changedRoute) scrollPageToTop();
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
 }
 function startupView() {
@@ -1317,6 +1319,7 @@ async function action(a, source) {
     message = "";
     if (storageReady) error = "";
     render();
+    scrollPageToTop();
     return;
   }
   if (a === "import-zone") {
@@ -1376,6 +1379,7 @@ async function action(a, source) {
     tab = a.slice(4);
     if (tab === "Devices") selectedAsset = null;
     render();
+    scrollPageToTop();
     return;
   }
   if (a.startsWith("asset:")) {
