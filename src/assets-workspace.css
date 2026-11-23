@@ -1,0 +1,83 @@
+/* Equipment register and reusable templates, using the active appearance tokens. */
+.assets-workspace { min-width: 0; color: var(--ink, #203047); }
+.assets-workspace [hidden] { display: none !important; }
+.assets-workspace button { min-height: 44px; touch-action: manipulation; }
+.assets-workspace :is(input, select, textarea) { min-width: 0; max-width: 100%; width: 100%; min-height: 44px; color: var(--ink, #203047); background: var(--surface, #fff); border: 1px solid var(--line, #d3dce7); font-size: 16px; }
+.assets-workspace :is(button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--focus, #4688cf); outline-offset: 3px; }
+.assets-workspace-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 14px; }
+.assets-workspace-heading h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 23px; letter-spacing: -.4px; }
+.assets-total { font-size: 13px; line-height: 1; color: var(--accent, #174a80); background: var(--subtle, #edf2f8); padding: 6px 8px; border-radius: 6px; }
+.assets-workspace .assets-plan-button { border: 0; background: transparent; color: var(--accent, #174a80); padding: 8px 0 8px 10px; font-size: 13px; }
+.assets-workspace-actions { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.assets-workspace-actions button { flex: 1; padding: 10px 12px; }
+.assets-workspace .assets-create-button { flex: 1.5; background: var(--accent-dark, #123763); color: #fff; border-color: var(--accent-dark, #123763); font-weight: 700; }
+.assets-status { padding: 10px 12px; margin: 12px 0; border-radius: 7px; border: 1px solid var(--line, #d3dce7); background: var(--subtle, #edf2f8); color: var(--ink, #203047); font-size: 13px; }
+.assets-status.is-error, .assets-editor-error { border-left: 3px solid var(--danger, #b43c4f); color: var(--ink, #203047); background: var(--subtle, #edf2f8); padding: 10px 12px; overflow-wrap: anywhere; font-size: 13px; }
+.assets-create-form { margin: 0 0 18px; padding: 15px; background: var(--surface, #fff); border: 1px solid var(--line, #d3dce7); border-radius: 10px; }
+.assets-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; }
+.assets-editor-heading h3 { margin: 0; color: var(--ink, #203047); font-size: 17px; }
+.assets-editor-heading button { color: var(--accent, #174a80); padding: 8px 0 8px 12px; border: 0; background: transparent; }
+.assets-editor-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.assets-editor-fields label { display: flex; flex-direction: column; gap: 6px; margin: 0; font-size: 12px; font-weight: 650; color: var(--ink-soft, #556276); }
+.assets-editor-fields :is(input, select, textarea) { margin: 0; border-radius: 7px; padding: 10px; font-weight: 400; }
+.assets-editor-fields .assets-description { grid-column: 1 / -1; }
+.assets-extra-fields { margin-top: 12px; padding: 0; border: 0; }
+.assets-extra-fields summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-size: 13px; color: var(--accent, #174a80); }
+.assets-extra-fields summary::before { content: '+'; margin-right: 8px; }
+.assets-extra-fields[open] summary::before { content: '−'; }
+.assets-editor-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
+.assets-editor-footer span { font-size: 11px; color: var(--muted, #637188); }
+.assets-editor-footer button { padding: 10px 16px; flex: 0 0 auto; }
+.assets-favourites { padding: 0; margin-bottom: 16px; background: var(--surface, #fff); border: 1px solid var(--line, #d3dce7); border-radius: 9px; }
+.assets-favourites > summary { min-height: 48px; padding: 12px; color: var(--ink, #203047); font-size: 13px; cursor: pointer; font-weight: 650; }
+.assets-favourites > summary span { margin-left: 5px; color: var(--muted, #637188); font-size: 12px; font-weight: 400; }
+.assets-template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px; padding: 0 10px 10px; }
+.assets-template-empty { grid-column: 1 / -1; margin: 0; padding: 4px 3px 7px; color: var(--muted, #637188); font-size: 12px; }
+.assets-template-card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px; border: 1px solid var(--line, #d3dce7); border-radius: 7px; background: var(--canvas, #f5f7fa); }
+.assets-template-card strong, .assets-template-card small { display: block; overflow-wrap: anywhere; }
+.assets-template-card strong { font-size: 13px; line-height: 1.4; }
+.assets-template-card small { margin-top: 4px; color: var(--muted, #637188); font-size: 11px; }
+.assets-template-actions { display: flex; justify-content: space-between; gap: 8px; margin-top: auto; }
+.assets-template-actions button { padding: 8px 10px; color: var(--accent, #174a80); font-size: 12px; }
+.assets-template-actions button:first-child { flex: 1; }
+.assets-template-actions button:last-child { width: 44px; min-width: 44px; display: grid; place-items: center; padding: 10px; }
+.assets-template-actions button:last-child svg { fill: currentColor; }
+.assets-search label { display: block; margin: 0; color: var(--muted, #637188); font-size: 12px; font-weight: 600; }
+.assets-search input { display: block; margin: 5px 0 0; padding: 11px 12px; border-radius: 8px; }
+.assets-register-count { font-size: 12px; color: var(--muted, #637188); margin: 12px 0; }
+.assets-register-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); align-items: start; gap: 12px; }
+.assets-register-item { min-width: 0; background: var(--surface, #fff); border: 1px solid var(--line, #d3dce7); border-radius: 9px; overflow: hidden; }
+.assets-workspace .assets-register-item .plan-asset-card.plan-asset-work-row,
+body:has(.job-main-nav) .assets-workspace .assets-register-item .plan-asset-card.plan-asset-work-row { min-width: 0; padding: 11px 9px; border: 0; border-radius: 0; background: var(--surface, #fff); color: var(--ink, #203047); }
+.assets-workspace .assets-register-item .plan-asset-name { color: var(--ink, #203047); }
+.assets-workspace .assets-register-item .plan-asset-name small { color: var(--muted, #637188); }
+.assets-basic-card { padding: 13px; }
+.assets-basic-card strong, .assets-basic-card small { display: block; overflow-wrap: anywhere; }
+.assets-basic-card small { margin-top: 4px; color: var(--muted, #637188); font-size: 12px; }
+.assets-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 8px 3px; border-top: 1px solid var(--soft-line, #e4eaf2); }
+.assets-item-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; padding: 8px; background: transparent; border: 0; border-radius: 5px; color: var(--muted, #637188); font-size: 11px; }
+.assets-item-actions button:hover, .assets-item-actions button[aria-pressed="true"] { color: var(--accent, #174a80); background: var(--subtle, #edf2f8); }
+.assets-item-actions button[aria-pressed="true"] svg { fill: currentColor; }
+.assets-item-actions svg { flex: 0 0 18px; }
+.assets-empty { padding: 25px 16px; text-align: center; border: 1px dashed var(--line, #d3dce7); border-radius: 9px; background: var(--surface, #fff); }
+.assets-empty strong { display: block; color: var(--ink, #203047); font-size: 15px; }
+.assets-empty p { margin: 8px auto 0; max-width: 330px; color: var(--muted, #637188); font-size: 13px; }
+.assets-pagination { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; margin: 15px 0 3px; }
+.assets-pagination button { padding: 9px 6px; font-size: 12px; min-width: 0; }
+.assets-pagination span { font-size: 12px; color: var(--muted, #637188); }
+@media (max-width: 700px) {
+  .assets-workspace-heading h2 { font-size: 21px; }
+  .assets-register-list { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .assets-template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .assets-workspace .assets-register-item .plan-asset-card.plan-asset-work-row,
+  body:has(.job-main-nav) .assets-workspace .assets-register-item .plan-asset-card.plan-asset-work-row { padding: 9px 6px; }
+  .assets-create-form { padding: 13px 11px; }
+  .assets-editor-fields { gap: 13px 10px; }
+}
+@media (max-width: 400px) {
+  .assets-editor-fields { grid-template-columns: minmax(0, 1fr); }
+  .assets-editor-footer { align-items: flex-start; flex-direction: column; }
+  .assets-editor-footer button { width: 100%; }
+  .assets-pagination { gap: 5px; }
+  .assets-pagination button, .assets-pagination span { font-size: 11px; }
+}

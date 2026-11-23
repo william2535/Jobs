@@ -65,3 +65,15 @@
   .notes-photo input { font-size: 16px; }
 }
 @media print { .job-notes-report { break-before: auto; }.job-notes-report h2 { break-after: avoid; } }
+
+/* Common formatting stays visible, including on phones. */
+.notes-toolbar .notes-colour { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 3px 7px; font-size: 11px; line-height: 1.2; min-height: 44px; justify-content: center; }
+.notes-toolbar .notes-colour input[type="color"] { display: block; width: 54px; height: 25px; min-height: 25px; padding: 2px; border-radius: 5px; cursor: pointer; }
+.notes-editor ul[data-note-checklist], .notes-editor ol[data-note-checklist], .job-notes-report [data-note-checklist] { list-style: none; padding-left: 0; }
+.notes-editor [data-note-checklist] > li { position: relative; padding: 8px 0 8px 44px; min-height: 44px; }
+.notes-editor .note-check { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--accent, #214f80); font-size: 25px; line-height: 1; user-select: none; cursor: pointer; }
+.notes-editor .note-check:hover, .notes-editor .note-check:focus-visible { background: var(--subtle, #edf3fa); }
+.notes-editor .note-check:focus-visible { outline: 2px solid var(--accent, #214f80); outline-offset: -2px; }
+.notes-editor .note-check[aria-checked="true"] { color: var(--accent, #214f80); }
+.job-notes-report [data-note-checklist] > li { break-inside: avoid; margin: 5px 0; }
+.job-notes-report .note-check { display: inline-block; width: 1.5em; color: inherit; font-size: 1.1em; }

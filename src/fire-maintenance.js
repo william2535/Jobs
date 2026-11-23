@@ -153,6 +153,8 @@ export function createFireMaintenanceEquipment(templateId, asset = null) {
 function selectedDrawing(job, drawing) {
   if (!job || typeof job !== 'object') throw Error('Choose a job before recording maintenance.');
   if (job.drawingId == null) {
+    if (drawing && drawing.id === job.assetRegister?.id && Array.isArray(drawing.assets))
+      return { drawingId: drawing.id, drawingRevision: String(drawing.revision ?? '') };
     if (drawing != null) throw Error('The selected drawing does not belong to this job.');
     return { drawingId: null, drawingRevision: '' };
   }

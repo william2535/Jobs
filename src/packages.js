@@ -485,7 +485,22 @@ export function validateJobPackage(input) {
   if (standalone && (job.siteId !== null || job.drawingId !== null))
     fail("a standalone job must have null site and drawing references.");
   if (!standalone && job.siteId !== site.id) fail("job references another site.");
-  const selected = standalone ? { assets: [] } : site.drawings.find((value) => value.id === job.drawingId);
+  if (job.assetRegister !== undefined) {
+    if (!standalone) fail("a site job must retain its register in the site's drawing revisions.");
+    drawing(job.assetRegister, "job.assetRegister");
+    if (job.assetRegister.kind !== 'working' || job.assetRegister.source !== null || job.assetRegister.floors.length || job.assetRegister.issuedSnapshots?.length)
+      fail("a standalone asset register must be working, unplaced equipment without source or issued drawings.");
+    for (const asset of job.assetRegister.assets) {
+      if (asset.floorId != null || asset.x != null || asset.y != null || asset.sourceId != null || asset.sourceFloorId != null || asset.source != null)
+        fail("standalone register equipment must be unplaced without source mappings.");
+      for (const [field, limit] of [['type', 200], ['reference', 200], ['typeName', 200], ['manufacturer', 200], ['model', 200], ['description', 5000], ['location', 500]]) {
+        if (asset[field] === undefined && !['type', 'reference'].includes(field)) continue;
+        string(asset[field], `job.assetRegister.asset.${field}`, ['type', 'reference'].includes(field));
+        if (asset[field].length > limit) fail(`standalone asset ${field} exceeds ${limit} characters.`);
+      }
+    }
+  }
+  const selected = standalone ? job.assetRegister || { assets: [] } : site.drawings.find((value) => value.id === job.drawingId);
   if (!selected) fail("job references a missing drawing.");
   if (!Number.isSafeInteger(job.revision) || job.revision < 1)
     fail("job.revision must be a positive integer.");
@@ -505,6 +520,7 @@ export function validateJobPackage(input) {
   }
   resultRecords(job.results, selected, "job.results");
   const drawings = new Map((site?.drawings || []).map((value) => [value.id, value]));
+  if (job.assetRegister) drawings.set(job.assetRegister.id, job.assetRegister);
   if (checklist) {
     for (const record of [checklist, ...checklist.history]) {
       if (!drawings.has(record.drawingId))
@@ -515,7 +531,7 @@ export function validateJobPackage(input) {
     for (const record of [fireMaintenance, ...fireMaintenance.history]) {
       if (record.basedOnJobRevision > job.revision)
         fail("fire maintenance references a future job revision.");
-      const sourceDrawing = record.drawingId === null ? null : drawings.get(record.drawingId);
+      const sourceDrawing = record.drawingId === null ? job.assetRegister || null : drawings.get(record.drawingId);
       if (record.drawingId !== null && !sourceDrawing)
         fail("fire maintenance record references a missing drawing.");
       for (const item of record.equipment)
@@ -624,6 +640,7 @@ export function validateJobPackage(input) {
     value.issuedSnapshots.forEach(normalizeDrawing);
   };
   normalized.site?.drawings.forEach(normalizeDrawing);
+  if (normalized.job.assetRegister) normalizeDrawing(normalized.job.assetRegister);
   normalized.job.aiProposals ??= [];
   for (const result of normalized.job.results) {
     result.photos ??= [];

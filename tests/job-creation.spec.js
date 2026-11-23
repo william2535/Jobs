@@ -51,7 +51,7 @@ test('a blank job needs no site, saves only on Save and opens as notes with sett
   await page.getByTestId('job-card').click();
   await expect(page.locator('.job-notes')).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Job workflow', exact: true });
-  expect(await nav.getByRole('button').allTextContents()).toEqual(['Notes', 'Plan', 'Finalisation']);
+  expect(await nav.getByRole('button').allTextContents()).toEqual(['Notes', 'Assets', 'Finalisation']);
   await page.getByRole('button', { name: '‹ Home', exact: true }).click();
   await page.getByTestId('job-settings').click();
   const settings = page.locator('.job-settings');
