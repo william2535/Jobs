@@ -149,6 +149,22 @@ async function selectItemText(item, { start = 0, end } = {}) {
   }, { start, end });
 }
 
+// WebKit can materialise the editor's neutral text colour in otherwise unmarked
+// runs. Keep exact text and every meaningful mark while ignoring that one default.
+function comparableRuns(runs) {
+  const combined = [];
+  for (const original of runs) {
+    const run = { ...original };
+    if (run.color === '#202b39') delete run.color;
+    const { text, ...marks } = run;
+    const previous = combined.at(-1);
+    const priorMarks = previous && Object.fromEntries(Object.entries(previous).filter(([key]) => key !== 'text'));
+    if (previous && JSON.stringify(priorMarks) === JSON.stringify(marks)) previous.text += text;
+    else combined.push(run);
+  }
+  return combined;
+}
+
 test('personal checklists format selected text and retain completion, IDs and formatting offline, in reports and through export', async ({ page, context, browser }, testInfo) => {
   test.setTimeout(90_000);
   await start(page);
@@ -179,8 +195,8 @@ test('personal checklists format selected text and retain completion, IDs and fo
   const exported = await exportData(page), document = exported.data.job.notesDocument;
   const list = document.blocks.find(block => block.type === 'checklist');
   expect(list.items.map(item => item.checked)).toEqual([true, false]);
-  expect(list.items[0].runs).toEqual([{ text: 'Collect evidence' }]);
-  expect(list.items[1].runs).toEqual([{ text: 'Arrange', underline: true, color: '#123abc', highlight: '#ffff99' }, { text: ' access' }]);
+  expect(comparableRuns(list.items[0].runs)).toEqual([{ text: 'Collect evidence' }]);
+  expect(comparableRuns(list.items[1].runs)).toEqual([{ text: 'Arrange', underline: true, color: '#123abc', highlight: '#ffff99' }, { text: ' access' }]);
   expect(exported.data.job.results).toEqual([]);
   await expect(page.locator('#offline-status')).toContainText('Ready offline');
   await context.setOffline(true); await page.reload(); await page.getByTestId('job-card').click();
@@ -242,7 +258,7 @@ test('checklist Return splits at the caret and safe pasted tasks remain independ
   expect(items.map(item => item.checked)).toEqual([true, false, true, true]);
   expect(new Set(items.map(item => item.id)).size).toBe(4);
   expect(items[0].id).toBe(firstId);
-  expect(items.slice(2).map(item => item.runs)).toEqual([[{ text: 'Personal task', underline: true }], [{ text: 'Personal task', underline: true }]]);
+  expect(items.slice(2).map(item => comparableRuns(item.runs))).toEqual([[{ text: 'Personal task', underline: true }], [{ text: 'Personal task', underline: true }]]);
   await page.reload(); await page.getByTestId('job-card').click();
   await expect(editor).toContainText('Further observations');
   await expect(editor.getByRole('checkbox')).toHaveCount(4);

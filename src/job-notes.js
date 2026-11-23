@@ -153,7 +153,7 @@ function decorateChecklistItem(item, editable = true) {
   const existing = item.querySelector(':scope > [data-note-check]');
   if (existing) existing.remove();
   item.prepend(checklistControl(item, editable));
-  if (![...item.childNodes].some(node => node.nodeType === 3 || (node.nodeType === 1 && !node.hasAttribute('data-note-check')))) item.append(document.createElement('br'));
+  if (!inlineRuns(item).some(run => run.text) && !item.querySelector('br')) item.append(document.createElement('br'));
 }
 function appendBlocks(parent, blocks, { editable = false } = {}) {
   for (const block of blocks) {
