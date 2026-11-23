@@ -9,7 +9,7 @@ import { newDeviceRemark } from '../src/device-remarks.js';
 import { saveTimesheet, submitTimesheets, deleteTimesheet } from '../src/timesheets.js';
 
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN9sAAAAASUVORK5CYII=';
-const empty = () => ({ sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [] });
+const empty = () => ({ sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [], assetTemplates: [] });
 const canonical = value => Array.isArray(value) ? `[${value.map(canonical).join(',')}]` : value && typeof value === 'object'
   ? `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}` : JSON.stringify(value);
 const hash = value => createHash('sha256').update(canonical(value)).digest('hex');
@@ -63,7 +63,7 @@ test('workspace backup round trip includes unused sites, issued plans, photos, n
   const wireBefore = structuredClone(wire);
   const inspected = await inspectWorkspaceBackup(JSON.stringify(wire));
   assert.deepEqual(inspected.workspace, workspace);
-  assert.deepEqual(inspected.summary, { sites: 2, jobs: 2, drawings: 2, assets: 1, quickDefects: 1, unassignedTimesheets: 2, attachments: 1 });
+  assert.deepEqual(inspected.summary, { sites: 2, jobs: 2, drawings: 2, assets: 1, quickDefects: 1, unassignedTimesheets: 2, assetTemplates: 0, attachments: 1 });
   assert.equal(inspected.metadata.appVersion, '1.0.0');
   assert.match(inspected.metadata.checksum, /^sha256:[a-f0-9]{64}$/);
   assert.deepEqual(wire, wireBefore);

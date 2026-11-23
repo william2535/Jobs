@@ -21,6 +21,9 @@ import { applyQuickDeviceResult } from "./device-results.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
 import { renderDeviceRemarks, renderDeviceRemarkReport, renderRemarkProducts, renderRemarkPhotos, renderRemarkHistory } from "./device-remarks-ui.js";
 import { renderJobNotes, validateNotesDocument } from "./job-notes.js";
+import { renderAssetsWorkspace } from "./assets-workspace.js";
+import "./assets-workspace.css";
+import { addJobAsset, duplicateJobAsset, saveAssetTemplate, validateAssetTemplates, attachAssetJobToSite } from "./asset-library.js";
 import { renderJobSettings, effectiveJob, adoptSiteSettings, captureJobOverrides } from "./job-settings.js";
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
@@ -110,8 +113,9 @@ let state = { sites: [], jobs: [] },
   storageReady = false,
   operationPending = false;
 const siteOf = (j) => state.sites.find((s) => s.id === j.siteId),
-  drawingOf = (s, j) => s?.drawings.find((d) => d.id === j?.drawingId),
+  drawingOf = (s, j) => s?.drawings.find((d) => d.id === j?.drawingId) || j?.assetRegister,
   currentJob = () => draftJob?.id === activeJob ? draftJob : state.jobs.find((job) => job.id === activeJob);
+const assetViews = new Map();
 const field = (label, name, value = "", type = "text", required = false) =>
   `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${required ? "required" : ""}></label>`;
 const area = (label, name, value = "") =>
@@ -320,12 +324,12 @@ async function saveWorkflow(updatedJob) {
   const original = currentJob();
   return saveJob(captureJobOverrides(original, updatedJob, siteOf(original)));
 }
-async function saveJob(updatedJob, afterTab = null) {
+async function saveJob(updatedJob, afterTab = null, attachSiteId = null) {
   if (operationPending) return false;
   operationPending = true;
   updateInteractionLock();
   try {
-    const next = structuredClone(state);
+    let next = structuredClone(state);
     const index = next.jobs.findIndex((j) => j.id === updatedJob.id);
     if (index < 0 && updatedJob.id !== draftJob?.id) throw Error("This job is no longer available.");
     const saved = {
@@ -335,6 +339,8 @@ async function saveJob(updatedJob, afterTab = null) {
     };
     if (index < 0) next.jobs.push(saved);
     else next.jobs[index] = saved;
+    if (attachSiteId && saved.assetRegister)
+      next = attachAssetJobToSite(next, saved.id, attachSiteId).state;
     if (await persist(next)) {
       draftJob = null;
       if (afterTab) tab = afterTab;
@@ -342,6 +348,23 @@ async function saveJob(updatedJob, afterTab = null) {
       return true;
     }
     return false;
+  } finally {
+    operationPending = false;
+    updateInteractionLock();
+  }
+}
+async function saveAssetChange(change, success, saveDraft = false) {
+  if (operationPending || busy) return false;
+  operationPending = true;
+  updateInteractionLock();
+  try {
+    const next = structuredClone(state);
+    if (saveDraft && draftJob) next.jobs.push(structuredClone(draftJob));
+    const changed = change(next);
+    if (!(await persist(changed.state || changed, success))) return false;
+    if (saveDraft) draftJob = null;
+    render();
+    return true;
   } finally {
     operationPending = false;
     updateInteractionLock();
@@ -621,6 +644,10 @@ const holdField = (group, field) =>
   `data-job-edit="${group}" data-edit-field="${field}" data-hold-edit tabindex="0" title="Hold for 3 seconds to edit"`;
 function render() {
   document.querySelector(".appearance-control")?.dispose?.();
+  const previousAssets = document.querySelector('.assets-workspace');
+  if (previousAssets?.dataset.jobId && previousAssets.getViewState)
+    assetViews.set(previousAssets.dataset.jobId, previousAssets.getViewState());
+  previousAssets?.dispose?.();
   timesheetDate = document.querySelector(".timesheets-ui")?.getViewState?.().date || timesheetDate;
   const previousPlan = document.querySelector('.plan-preview');
   const planScroll = previousPlan ? { x: window.scrollX, y: window.scrollY } : null;
@@ -801,6 +828,25 @@ function render() {
       onNavigate: (destination) => runTask(() => action(destination === "settings" ? "job-settings:" + rawJob.id : "tab:" + destination)),
     }));
   }
+  if (page === "job" && rawJob && $("#assets-root")) {
+    const assets = renderAssetsWorkspace({
+      drawing: drawingOf(s, j),
+      templates: state.assetTemplates || [],
+      initialViewState: assetViews.get(rawJob.id),
+      renderAssetCard: asset => planAssetCard(asset, { issued: false }),
+      onCreate: values => saveAssetChange(next => addJobAsset(next, rawJob.id, values), "Asset saved.", true),
+      onDuplicate: (assetId, values) => saveAssetChange(next => duplicateJobAsset(next, rawJob.id, assetId, values), "Asset duplicated. Ready for its own inspection.", true),
+      onSaveTemplate: asset => saveAssetChange(next => ({ ...next, assetTemplates: saveAssetTemplate(next.assetTemplates, asset) }), "Asset saved to favourites."),
+      onRemoveTemplate: templateId => saveAssetChange(next => ({ ...next, assetTemplates: validateAssetTemplates((next.assetTemplates || []).filter(item => item.id !== templateId)) }), "Favourite removed."),
+      onViewPlan: () => runTask(() => action("tab:Plan")),
+      onImport: () => runTask(() => action(s ? "import-job-plan" : "job-settings:" + rawJob.id)),
+      importLabel: s ? "Import plan" : "Link site for plan",
+      onDirty: markDirty,
+      onBeforeBrowse: beforePlanNavigate,
+    });
+    assets.dataset.jobId = rawJob.id;
+    $("#assets-root").append(assets);
+  }
   if (page === "job" && rawJob && $("#job-settings-root")) {
     $("#job-settings-root").append(renderJobSettings({
       job: rawJob,
@@ -808,7 +854,9 @@ function render() {
       onDirty: markDirty,
       onSave: (updated, siteId) => {
         const selected = state.sites.find((site) => site.id === siteId);
-        return saveJob(selected ? attachJobToSite(updated, selected) : updated, "Notes");
+        return selected && updated.assetRegister
+          ? saveJob(updated, "Notes", selected.id)
+          : saveJob(selected ? attachJobToSite(updated, selected) : updated, "Notes");
       },
     }));
   }
@@ -842,11 +890,11 @@ function render() {
       onEdit: openJobField,
     });
   }
-  if (page === "job" && tab === "Plan" && j && s && $("#plan-root")) {
+  if (page === "job" && tab === "Plan" && j && $("#plan-root")) {
     mountPlanPreview("#plan-root", drawingOf(s, j), {
         renderAssetCard: draftJob ? undefined : planAssetCard,
         onBeforeNavigate: beforePlanNavigate,
-        onPreviewsReady: (drawing) => savePreviewCache(s.id, drawing),
+        onPreviewsReady: s ? (drawing) => savePreviewCache(s.id, drawing) : undefined,
         onSelectAsset: (aid) => {
           runTask(() => action(`asset:${aid}`));
         },
@@ -967,17 +1015,18 @@ function importReview() {
 }
 function jobTools(j, s) {
   if (draftJob) return '<p class="muted">Save this job to use the detailed work tools.</p>';
-  const tools = [...(s ? [["Job details", "Details"], ["Devices", "Devices"], ["Results", "Results"], ["Checklist", "Quick checklist"]] : []), ["Maintenance", "Fire maintenance questions"], ["Work", "Work"], ["Products", "Products"], ["POs", "POs"], ["Visit records", "Visit records"]];
+  const tools = [...(s ? [["Job details", "Details"], ["Checklist", "Quick checklist"]] : []), ...(drawingOf(s, j) ? [["Assets", "Assets"], ["Results", "Results"]] : []), ["Maintenance", "Fire maintenance questions"], ["Work", "Work"], ["Products", "Products"], ["POs", "POs"], ["Visit records", "Visit records"]];
   return `<details class="quick-job-tools"><summary>More job tools</summary><div class="quick-tool-grid">${tools.map(([key, label]) => button(label, "tab:" + key)).join("")}${s ? button("Site settings", "site:" + s.id) : ""}</div>${s ? `<div class="integration-note"><span>FINDR adapter: future work.</span>${button("Export Panel Pal context", "panel-export")}</div>` : ""}</details>`;
 }
 function jobView(j, s) {
   if (!j) return "";
   const d = drawingOf(s, j);
-  const mainSection = ["Plan", "Devices", "Results"].includes(tab) ? "Plan" : ["Finalisation", "Checklist", "Maintenance", "Visit records"].includes(tab) ? "Finalisation" : "Notes";
-  const primary = `<nav class="job-main-nav quick-job-nav" aria-label="Job workflow">${["Notes", "Plan", "Finalisation"].map(label => button(label, "tab:" + label, label === mainSection ? "active" : "")).join("")}</nav>`;
+  const mainSection = ["Assets", "Plan", "Devices", "Results"].includes(tab) ? "Assets" : ["Finalisation", "Checklist", "Maintenance", "Visit records"].includes(tab) ? "Finalisation" : "Notes";
+  const primary = `<nav class="job-main-nav quick-job-nav" aria-label="Job workflow">${["Notes", "Assets", "Finalisation"].map(label => button(label, "tab:" + label, label === mainSection ? "active" : "")).join("")}</nav>`;
   const top = `<div class="quick-job-top">${button("‹ Home", "home", "text-button job-home-link")}<button class="job-settings-icon" data-action="job-settings:${esc(j.id)}" aria-label="Job settings" title="Job settings">${settingsIcon}</button></div>`;
   let content;
   if (tab === "Notes") content = '<div id="notes-root"></div>';
+  else if (tab === "Assets") content = '<div id="assets-root"></div>';
   else if (tab === "Settings") content = `<div id="job-settings-root"></div>${jobTools(j, s)}`;
   else if (tab === "Finalisation") content = draftJob
     ? `<section class="panel"><h1>Finalisation</h1><p>Save your job to prepare its report.</p>${button("Return to notes", "tab:Notes", "primary")}</section>`
@@ -985,10 +1034,10 @@ function jobView(j, s) {
   else if (tab === "Maintenance" && !draftJob) content = `<div class="quick-section-title">${button("Back to report", "tab:Finalisation", "text-button")}</div><div id="fire-maintenance-root"></div>`;
   else if (["Job details", "Work", "Products", "POs", "Visit records"].includes(tab)) content = `<div class="quick-section-title"><h1>${esc(tab === "Job details" ? "Details" : tab)}</h1>${button("Settings & tools", "job-settings:" + j.id, "text-button")}</div><div id="workflow-root"></div>`;
   else if (tab === "Checklist" && s) content = '<div id="checklist-root"></div>';
-  else if (tab === "Plan" && d) content = `<section class="plan-actions panel"><div><h1>Plan</h1><p>Drawing ${esc(d.revision || "Unlabelled")}</p></div>${draftJob ? '<p class="muted">Save the job before recording work on this plan.</p>' : `<div class="actions">${button("Import Zone Sketch plan", "import-job-plan")}${button("Devices", "tab:Devices")}${button("Results", "tab:Results")}</div><details><summary>Drawing tools</summary>${drawingConnection(d)}<div class="actions">${button("Export editable drawing", "edited-source-export")}${d.source ? button("Original drawing", "source-export") : ""}</div></details>`}</section><div id="plan-root" class="panel"></div>`;
+  else if (tab === "Plan" && d?.floors.length) content = `<section class="plan-actions panel"><div><h1>Plan</h1><p>Drawing ${esc(d.revision || "Unlabelled")}</p></div><div class="actions">${button("Back to assets", "tab:Assets")}${s && !draftJob ? button("Import Zone Sketch plan", "import-job-plan") : ""}${!draftJob ? button("Devices", "tab:Devices") + button("Results", "tab:Results") : ""}</div>${draftJob ? '<p class="muted">Save the job before recording work on this plan.</p>' : s ? `<details><summary>Drawing tools</summary>${drawingConnection(d)}<div class="actions">${button("Export editable drawing", "edited-source-export")}${d.source ? button("Original drawing", "source-export") : ""}</div></details>` : ""}</section><div id="plan-root" class="panel"></div>`;
   else if (tab === "Devices" && d) content = devices(j, d);
   else if (tab === "Results" && d) content = results(j, d);
-  else content = `<section class="panel empty-job-plan"><h1>Site plan</h1><p>Add a site in job settings to use its saved plan and equipment.</p>${button("Choose site", "job-settings:" + j.id, "primary")}</section>`;
+  else content = `<section class="panel empty-job-plan"><h1>No plan added</h1><p>You can create assets without a plan. To use a site drawing, choose its site in job settings.</p><div class="actions">${button("Back to assets", "tab:Assets")}${button("Choose site", "job-settings:" + j.id, "primary")}</div></section>`;
   return `${top}${primary}${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 
@@ -1046,7 +1095,7 @@ function planAssetCard(asset, { issued }) {
   const row = document.createElement('article');
   row.className = 'plan-asset-card plan-asset-work-row';
   row.dataset.assetId = asset.id;
-  row.innerHTML = `<button class="plan-asset-name" data-action="asset:${esc(asset.id)}" aria-label="${esc(reference)}"><strong>${esc(reference)}</strong><small>${esc(asset.typeName || asset.type)}${positioned ? "" : " · Position not recorded"}</small></button>${resultButtons(asset, result, "plan-inline-results")}<button class="plan-asset-edit" data-action="edit-defects:${esc(asset.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects">${pencilIcon}</button>${resultReason(asset.id)}`;
+  row.innerHTML = `<button class="plan-asset-name" data-action="asset:${esc(asset.id)}" aria-label="${esc(reference)}"><strong>${esc(reference)}</strong><small>${esc(asset.typeName || asset.type)}${asset.location ? " · " + esc(asset.location) : positioned ? "" : " · Position not recorded"}</small></button>${resultButtons(asset, result, "plan-inline-results")}<button class="plan-asset-edit" data-action="edit-defects:${esc(asset.id)}" aria-label="Edit defects for ${esc(reference)}" title="Edit defects">${pencilIcon}</button>${resultReason(asset.id)}`;
   bindActions(row);
   bindCardResultForms(row);
   return row;
@@ -1082,7 +1131,7 @@ function devices(j, d) {
     <div class="device-browser-tools"><label>Search devices<input id="device-search" type="search" value="${esc(deviceQuery)}" placeholder="Reference, type or floor" aria-label="Search devices"></label><label>Result filter<select id="device-state"><option value="">All results</option>${states.map((state) => `<option value="${state}" ${state === deviceState ? "selected" : ""}>${state}</option>`).join("")}</select></label></div>
     <div id="device-grid-results">${d.assets.length ? deviceCards(j, d) : '<p class="empty">No equipment recorded. Add equipment to the site before creating a new visit.</p>'}</div></section>`;
   const index = d.assets.findIndex((asset) => asset.id === a.id);
-  const record = `    <details class="device-context"><summary>Drawing details &amp; photographs (${a.photos?.length || 0})</summary><p class="muted">Drawing status: ${esc(a.drawingStatus || "Not supplied")} · Manufacturer / model / loop / address: not confirmed</p>${photos(a.photos, "Drawing photograph")}</details>
+  const record = `    <details class="device-context"><summary>Drawing details &amp; photographs (${a.photos?.length || 0})</summary><p class="muted">Drawing status: ${esc(a.drawingStatus || "Not supplied")} · Manufacturer: ${esc(a.manufacturer || "Not recorded")} · Model: ${esc(a.model || "Not recorded")}</p>${a.location ? `<p>Location: ${esc(a.location)}</p>` : ""}${a.description ? `<p>${esc(a.description)}</p>` : ""}${photos(a.photos, "Drawing photograph")}</details>
     <form data-form="result" data-asset="${esc(a.id)}"><div class="record-grid">${select("Result", "state", states, r.state)}${area("Observations", "observations", r.observations)}</div>
       <div id="reading-rows">${(r.readings.length ? r.readings : [{}]).map((x) => `<div class="form-grid readings">${field("Reading name", "readingName", x.name)}${field("Value", "readingValue", x.value)}${field("Unit", "readingUnit", x.unit)}</div>`).join("")}</div><button type="button" data-action="add-reading">Add reading</button>
       <div class="record-secondary-grid">${area("Notes", "notes", r.notes)}${area("Defects", "defects", r.defects)}</div>
@@ -1374,7 +1423,7 @@ async function action(a, source) {
     return;
   }
   if (a.startsWith("tab:")) {
-    if (draftJob && !["Notes", "Plan", "Finalisation", "Settings"].includes(a.slice(4)))
+    if (draftJob && !["Notes", "Assets", "Plan", "Finalisation", "Settings"].includes(a.slice(4)))
       throw Error("Save this job before recording detailed work.");
     tab = a.slice(4);
     if (tab === "Devices") selectedAsset = null;

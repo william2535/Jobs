@@ -113,7 +113,7 @@ test('editable visit sections retain work, materials, purchase records and final
   await expect(page.locator('.workflow-module')).toContainText('Total recorded time: 2.5 hours');
   await screenshot(page, testInfo.outputPath('finalisation.png'));
 
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   const savedPNG = await pngSource(page);
 
   await page.evaluate(async () => navigator.serviceWorker.ready);
@@ -176,7 +176,7 @@ async function importPlan(page, project, name = 'synthetic-update.zonesketch.jso
 
 test('PNG plans, issued evidence and revised imports survive offline package round trips', async ({ page, context, browser }, testInfo) => {
   await createJob(page);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   const firstPNG = await pngSource(page);
   await expect(page.locator('#plan-root .plan-preview-viewport svg')).toHaveCount(0);
   await expect(page.locator('.drawing-editor')).toHaveCount(0);
@@ -224,7 +224,7 @@ test('PNG plans, issued evidence and revised imports survive offline package rou
   floor.data.walls.push({ id: 'synthetic-added-wall', points: [{ x: 0.2, y: 0.4 }, { x: 0.4, y: 0.4 }] });
   // Actual saves mirror active-floor fields at project level; retain that shape.
   for (const [key, value] of Object.entries(floor.data)) incoming.project[key] = structuredClone(value);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   await importPlan(page, incoming);
   const updatedPNG = await pngSource(page);
   expect(updatedPNG).not.toBe(firstPNG);
@@ -246,7 +246,7 @@ test('PNG plans, issued evidence and revised imports survive offline package rou
   await context.setOffline(true);
   await page.reload();
   await page.getByTestId('job-card').click();
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   await expect(page.getByTestId('plan-png')).toHaveAttribute('src', updatedPNG);
   await pngSource(page);
   const downloaded = page.waitForEvent('download');
@@ -268,7 +268,7 @@ test('PNG plans, issued evidence and revised imports survive offline package rou
     await fresh.setOffline(true);
     await reopened.reload();
     await reopened.getByTestId('job-card').click();
-    await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
+    await openJobSection(reopened, 'Plan');
     await expect(reopened.getByTestId('plan-png')).toHaveAttribute('src', updatedPNG);
     await pngSource(reopened);
     await reopened.getByLabel('Drawing record').selectOption(snapshotId);
@@ -296,7 +296,7 @@ test('manual equipment stays unplaced and an unrelated supplied plan preserves i
   await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Manual check recorded before a supplied plan.');
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   await expect(page.locator('.drawing-editor')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Open SD-MANUAL', exact: true })).toHaveCount(0);
   const unplaced = await exportJob(page);

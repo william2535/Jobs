@@ -150,7 +150,8 @@ function deviceEvidence({ asset, result }, { archived = false } = {}) {
   const root = el('article', 'service-report-device'); root.dataset.assetId = asset?.id || result.assetId || '';
   const head = el('div', 'service-report-device-heading');
   head.append(el('h3', '', assetName(asset)), status(result.state || 'Not tested')); root.append(head);
-  metadata(root, [['Equipment', assetType(asset)], ['Floor / location', asset?.floorName], ['Asset ID', asset?.id || result.assetId], ['Result ID', result.id], ['Recorded by', result.recordedBy], ['Recorded at', result.recordedAt]]);
+  metadata(root, [['Equipment', assetType(asset)], ['Floor / location', [asset?.floorName, asset?.location].filter(Boolean).join(' · ')], ['Manufacturer', asset?.manufacturer], ['Model', asset?.model], ['Asset ID', asset?.id || result.assetId], ['Result ID', result.id], ['Recorded by', result.recordedBy], ['Recorded at', result.recordedAt]]);
+  textBlock(root, 'Equipment description', asset?.description);
   textBlock(root, 'Observations', result.observations);
   textBlock(root, 'Notes', result.notes);
   textBlock(root, 'Defect notes — classification / status not recorded', result.defects);

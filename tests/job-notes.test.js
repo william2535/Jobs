@@ -106,3 +106,59 @@ test('canonical formatting removes false marks and preserves blank captions', ()
   assert.equal(normalized.photos[0].caption, '');
   assert.deepEqual(validateNotesDocument(normalized), normalized);
 });
+
+test('personal checklist completion is explicit and retains IDs and formatting independently of ordinary lists', () => {
+  const value = createEmptyNotesDocument();
+  value.blocks = [{ id: 'tasks', type: 'checklist', align: 'left', items: [
+    { id: 'todo-1', checked: false, runs: [{ text: 'Ask for access', underline: true, color: '#123ABC' }] },
+    { id: 'todo-2', checked: true, runs: [{ text: 'Collect photographs', highlight: '#FFFF99' }] },
+  ] }];
+  const normalized = validateNotesDocument(value);
+  assert.deepEqual(normalized.blocks[0].items.map(item => [item.id, item.checked]), [['todo-1', false], ['todo-2', true]]);
+  assert.equal(normalized.blocks[0].items[0].runs[0].color, '#123abc');
+  assert.equal(normalized.blocks[0].items[1].runs[0].highlight, '#ffff99');
+  assert.deepEqual(validateNotesDocument(normalized), normalized);
+  for (const invalid of [undefined, 'true', 1, null]) {
+    const changed = structuredClone(value); changed.blocks[0].items[0].checked = invalid;
+    assert.throws(() => validateNotesDocument(changed), /Checklist completion/);
+  }
+  const ordinary = structuredClone(value); ordinary.blocks[0].type = 'bulletList';
+  assert.throws(() => validateNotesDocument(ordinary), /invalid structure/);
+  const duplicate = structuredClone(value); duplicate.blocks[0].items[1].id = 'todo-1';
+  assert.throws(() => validateNotesDocument(duplicate), /unique/);
+});
+
+test('pasted checklists retain only supported text, formatting and state, with independent repeated item IDs', async t => {
+  const { Window } = await import('happy-dom');
+  const { readNotesBlocks } = await import('../src/job-notes.js');
+  const dom = new Window(), previous = globalThis.document; globalThis.document = dom.document;
+  t.after(() => { globalThis.document = previous; dom.close(); });
+  const root = dom.document.createElement('div');
+  root.innerHTML = '<ul data-note-checklist="true" data-note-id="list"><li data-note-id="item" data-note-checked="true"><button data-note-check onclick="alert(1)">☑</button><u>Collect evidence</u><script>bad()</script><img src="https://example.invalid/track"></li></ul><ul><li data-note-id="item"><input type="checkbox" checked><span style="background-color:#ffff99">Ask for access</span></li></ul>';
+  const blocks = readNotesBlocks(root);
+  assert.equal(blocks.length, 2);
+  assert.deepEqual(blocks.map(block => block.type), ['checklist', 'checklist']);
+  assert.deepEqual(blocks.map(block => block.items[0].checked), [true, true]);
+  assert.deepEqual(blocks[0].items[0].runs, [{ text: 'Collect evidence', underline: true }]);
+  assert.deepEqual(blocks[1].items[0].runs, [{ text: 'Ask for access', highlight: '#ffff99' }]);
+  assert.notEqual(blocks[0].items[0].id, blocks[1].items[0].id);
+  assert.deepEqual(readNotesBlocks(root), blocks, 'Repeated reads retain canonical item IDs');
+});
+
+test('reports show inert completion markers while retaining checklist IDs, text and state on readback', async t => {
+  const { Window } = await import('happy-dom');
+  const { renderNotesReport, readNotesBlocks } = await import('../src/job-notes.js');
+  const dom = new Window(), previous = globalThis.document; globalThis.document = dom.document;
+  t.after(() => { globalThis.document = previous; dom.close(); });
+  const notesDocument = { version: 1, photos: [], blocks: [{ id: 'checks', type: 'checklist', align: 'left', items: [
+    { id: 'checked', checked: true, runs: [{ text: '<img onerror=bad()>', underline: true }] },
+    { id: 'unchecked', checked: false, runs: [{ text: 'Still to do', color: '#123456', highlight: '#ffff99' }] },
+  ] }] };
+  const report = renderNotesReport({ notesDocument });
+  assert.equal(report.querySelectorAll('button,input,img,script').length, 0);
+  assert.equal(report.querySelector('[aria-label="Completed checklist item"]').textContent, '☑');
+  assert.equal(report.querySelector('[aria-label="Incomplete checklist item"]').textContent, '☐');
+  assert.ok(report.textContent.includes('<img onerror=bad()>'));
+  report.querySelector('h2').remove();
+  assert.deepEqual(readNotesBlocks(report), notesDocument.blocks);
+});

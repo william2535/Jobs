@@ -2,7 +2,7 @@
 
 A job workspace backup is a portable copy of saved sites, jobs and their included evidence. Use **Back up workspace** in Help & data before changing devices, clearing browser storage or making other changes that could remove local records. Keep the downloaded file somewhere separate from this browser and protect it as a copy of your customer information. Browser storage and a persistence request are not backups.
 
-The backup contains all sites, including sites without jobs; all working drawings and issued snapshots; original imported projects; job notes, photographs, device results, retained history and import receipts; reusable quick defects; and unassigned time entries, including submitted snapshots and trashed entries. Job-linked time remains inside its job. Embedded raster photographs and plan images are included and pooled once when their bytes are identical.
+The backup contains all sites, including sites without jobs; all working drawings and issued snapshots; original imported projects; job notes, photographs, device results, retained history and import receipts; reusable quick defects and favourite asset specifications; and unassigned time entries, including submitted snapshots and trashed entries. Job-linked time remains inside its job. Embedded raster photographs and plan images are included and pooled once when their bytes are identical.
 
 FINDR practice progress, calculator convenience drafts, external websites and the application cache are excluded. The feature is labelled **job workspace backup**, not a backup of the entire browser. It does not synchronize devices or send information to another person.
 
@@ -10,7 +10,7 @@ FINDR practice progress, calculator convenience drafts, external websites and th
 
 Open the downloaded file through **Restore workspace**, review its date, kind and record counts, then confirm the restore. The application validates the complete file before proposing any storage write. Its existing IndexedDB transaction and stale-tab check commit the restored workspace together or leave the previous copy intact.
 
-A different backup can be restored only into an **empty job workspace**. Existing sites, jobs, quick defects or unassigned timesheets prevent replacement, even if the backup contains fewer records. Restore on a new device or in a separate browser profile when you need to keep both workspaces. Use normal individual job-package imports to combine jobs with an existing workspace and retain their normal conflict handling. There is no automatic overwrite or merge in this recovery flow.
+A different backup can be restored only into an **empty job workspace**. Existing sites, jobs, quick defects, asset favourites or unassigned timesheets prevent replacement, even if the backup contains fewer records. Restore on a new device or in a separate browser profile when you need to keep both workspaces. Use normal individual job-package imports to combine jobs with an existing workspace and retain their normal conflict handling. There is no automatic overwrite or merge in this recovery flow.
 
 Importing an identical workspace again is a no-op. Comparison tolerates IndexedDB returning sites and jobs in ID order after reopening; drawing revision and evidence order remain significant. Import receipts remain present, so a previously received individual job package still deduplicates after workspace restoration.
 
@@ -28,7 +28,7 @@ await inspectWorkspaceBackup(fileTextOrObject);
 await restoreWorkspaceBackup(currentRawWorkspace, fileTextOrObject);
 ```
 
-The raw workspace has `sites`, `jobs`, `quickDefects` and `unassignedTimesheets`. It must be the actual stored/candidate state, not a display projection with inherited site defaults applied to jobs. Optional absent metadata collections normalize to empty arrays. JSON object fields whose value is `undefined` are omitted; unsupported non-JSON values are rejected.
+The raw workspace has `sites`, `jobs`, `quickDefects`, `assetTemplates` and `unassignedTimesheets`. It must be the actual stored/candidate state, not a display projection with inherited site defaults applied to jobs. Optional absent metadata collections normalize to empty arrays. JSON object fields whose value is `undefined` are omitted; unsupported non-JSON values are rejected.
 
 The wire envelope contains `format: "JobsWorkspaceBackup"`, `version: 1`, UTC `createdAt`, `appVersion`, `kind`, a pooled `workspace`, `attachments`, `attachmentRefs`, `checksum` and `backupId`. Each attachment contains an `image-<SHA-256>` ID and an included raster data URL. Reference paths begin with `workspace` and point to null placeholders. All referenced images must exist, all attachment bytes must match their IDs, and every attachment must be referenced exactly once or more. Duplicate paths and unsafe object/path keys are rejected.
 

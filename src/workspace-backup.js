@@ -2,12 +2,13 @@
 import { validateJobPackage } from './packages.js';
 import { validateQuickDefects } from './quick-defects.js';
 import { validateTimesheetEntries } from './timesheets.js';
+import { validateAssetTemplates } from './asset-library.js';
 
 export const WORKSPACE_BACKUP_FORMAT = 'JobsWorkspaceBackup';
 export const WORKSPACE_BACKUP_VERSION = 1;
 export const MAX_BACKUP_BYTES = 100 * 1024 * 1024;
 export const MAX_BACKUP_EXPANDED_BYTES = 256 * 1024 * 1024;
-const WORKSPACE_KEYS = ['sites', 'jobs', 'quickDefects', 'unassignedTimesheets'];
+const WORKSPACE_KEYS = ['sites', 'jobs', 'quickDefects', 'unassignedTimesheets', 'assetTemplates'];
 const ENVELOPE_KEYS = ['format', 'version', 'createdAt', 'appVersion', 'kind', 'workspace', 'attachments', 'attachmentRefs', 'checksum', 'backupId'];
 const unsafe = new Set(['__proto__', 'constructor', 'prototype']);
 const encoder = new TextEncoder();
@@ -123,10 +124,12 @@ function validatedWorkspace(input) {
   uniqueRecords(checked.sites, 'sites'); uniqueRecords(checked.jobs, 'jobs');
   checked.quickDefects ??= [];
   checked.unassignedTimesheets ??= [];
+  checked.assetTemplates ??= [];
   // Use the existing strict validators, but retain the actual saved JSON rather than
   // their default-filled/trimmed return values. Recovery preserves import receipts.
   validateQuickDefects(checked.quickDefects);
   validateTimesheetEntries(checked.unassignedTimesheets);
+  validateAssetTemplates(checked.assetTemplates);
   const sites = new Map();
   for (const site of checked.sites) {
     collection(site.drawings, 'site drawings');
@@ -201,9 +204,10 @@ async function expandWorkspace(pack) {
 function summary(workspace, attachments) {
   return {
     sites: workspace.sites.length, jobs: workspace.jobs.length,
-    drawings: workspace.sites.reduce((sum, site) => sum + site.drawings.length, 0),
-    assets: workspace.sites.reduce((sum, site) => sum + (site.drawings.at(-1)?.assets.length || 0), 0),
+    drawings: workspace.sites.reduce((sum, site) => sum + site.drawings.length, 0) + workspace.jobs.filter(job => job.assetRegister).length,
+    assets: workspace.sites.reduce((sum, site) => sum + (site.drawings.at(-1)?.assets.length || 0), 0) + workspace.jobs.reduce((sum, job) => sum + (job.assetRegister?.assets.length || 0), 0),
     quickDefects: workspace.quickDefects.length, unassignedTimesheets: workspace.unassignedTimesheets.length,
+    assetTemplates: workspace.assetTemplates.length,
     attachments,
   };
 }

@@ -6,7 +6,9 @@ import { loadState, saveState, openDB } from '../src/storage.js';
 import { quickDefectFromRemark } from '../src/quick-defects.js';
 import { newDeviceRemark } from '../src/device-remarks.js';
 import { saveTimesheet, submitTimesheets } from '../src/timesheets.js';
-const withDefaults = state => ({ ...state, quickDefects: state.quickDefects || [], unassignedTimesheets: state.unassignedTimesheets || [] });
+import { saveAssetTemplate, addJobAsset } from '../src/asset-library.js';
+import { createQuickJob } from '../src/model.js';
+const withDefaults = state => ({ ...state, quickDefects: state.quickDefects || [], unassignedTimesheets: state.unassignedTimesheets || [], assetTemplates: state.assetTemplates || [] });
 
 test('IndexedDB persists complete structured records across loads', async () => {
   const state = { sites: [{ id: 'site-1', name: 'Synthetic site', drawings: [{ id: 'drawing-1', source: { geometry: [[0, 0], [1, 1]] } }] }], jobs: [{ id: 'job-1', siteId: 'site-1', results: [{ id: 'r-1', photos: [{ id: 'p-1', image: 'data:image/png;base64,AAAA' }] }] }] };
@@ -36,7 +38,7 @@ test('stale tabs cannot silently overwrite a newer local snapshot', async () => 
   assert.deepEqual(await loadState(), withDefaults(newest));
   await otherTab.loadState();
   await otherTab.saveState({ sites: [], jobs: [] });
-  assert.deepEqual(await loadState(), { sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [] });
+  assert.deepEqual(await loadState(), withDefaults({ sites: [], jobs: [] }));
 });
 
 test('old metadata loads an empty library, and older snapshot writes retain a later saved library', async () => {
@@ -131,4 +133,30 @@ test('unassigned-session metadata failure rolls back jobs, libraries and workspa
   await saveState({ ...state, unassignedTimesheets: [] });
   await assert.rejects(otherTab.saveState(state), /Another Jobs tab/);
   assert.deepEqual((await loadState()).unassignedTimesheets, []);
+});
+
+test('asset favourites and standalone results reload, survive omitted old keys, and fail atomically', async () => {
+  const job = createQuickJob();
+  let state = addJobAsset({ sites: [], jobs: [job] }, job.id, { reference: 'Manual 1', type: 'pir' }).state;
+  state.assetTemplates = saveAssetTemplate([], state.jobs[0].assetRegister.assets[0]);
+  state.quickDefects = []; state.unassignedTimesheets = [];
+  await saveState(state);
+  assert.deepEqual(await loadState(), state);
+  await saveState({ sites: [], jobs: state.jobs });
+  assert.deepEqual(await loadState(), state, 'omitting assetTemplates preserves the library');
+  const originalPut = IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put = function(value, ...args) {
+    if (this.name === 'metadata' && value.key === 'asset-templates') throw new DOMException('Synthetic asset save failure', 'QuotaExceededError');
+    return originalPut.call(this, value, ...args);
+  };
+  try { await assert.rejects(saveState({ ...state, jobs: [], assetTemplates: [] }), /asset save failure/); }
+  finally { IDBObjectStore.prototype.put = originalPut; }
+  assert.deepEqual(await loadState(), state);
+  await assert.rejects(saveState({ ...state, jobs: [], assetTemplates: [{ ...state.assetTemplates[0], sourceId: 'not-reusable' }] }), /invalid structure/);
+  assert.deepEqual(await loadState(), state);
+  const otherTab = await import('../src/storage.js?asset-library-tab');
+  await otherTab.loadState();
+  await saveState({ ...state, assetTemplates: [] });
+  await assert.rejects(otherTab.saveState(state), /Another Jobs tab/);
+  assert.deepEqual((await loadState()).assetTemplates, []);
 });

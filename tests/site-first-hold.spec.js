@@ -241,7 +241,7 @@ test('a site job receives its Zone Sketch plan without duplicating the named fol
   await createSite(page);
   await createJob(page);
   const initial = await exportJob(page);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Import Zone Sketch plan', exact: true }).click();
   await (await chooserPromise).setFiles(zoneFixture);
@@ -277,7 +277,7 @@ test('each visit keeps its included map when the site gains a newer drawing', as
   expect(originalPreview.image).toMatch(/^data:image\/png;base64,/);
   const originalBytes = Buffer.from(originalPreview.image.split(',')[1], 'base64');
   expect(originalBytes.length).toBeGreaterThan(1000);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   expect(await pngSource(page)).toBe(sitePNG);
 
   const revisedSource = structuredClone(zoneSave);
@@ -295,7 +295,7 @@ test('each visit keeps its included map when the site gains a newer drawing', as
   expect(await pngSource(page)).not.toBe(sitePNG);
   await expect(page.getByTestId('site-job-card')).toHaveCount(1);
   await page.getByTestId('site-job-card').click();
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   expect(await pngSource(page)).toBe(sitePNG);
   const preserved = await exportJob(page);
   expect(preserved.data.site.id).toBe(original.data.site.id);
@@ -315,7 +315,7 @@ test('each visit keeps its included map when the site gains a newer drawing', as
     await receiving.setOffline(true);
     await reopened.reload();
     await reopened.getByTestId('job-card').click();
-    await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
+    await openJobSection(reopened, 'Plan');
     expect(await pngSource(reopened)).toBe(sitePNG);
     const returned = await exportJob(reopened);
     const returnedDrawing = returned.data.site.drawings.find(drawing => drawing.id === returned.data.job.drawingId);

@@ -22,7 +22,7 @@ async function createVisit(page) {
   await page.locator('[data-action="create"]').last().click();
   await fillJobCreation(page, { siteName: 'Westfield Training Centre', description: 'Synthetic maintenance visit' });
   await saveJobCreation(page);
-  await expect(page.getByRole('button', { name: 'Plan', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Job workflow', exact: true }).getByRole('button', { name: 'Assets', exact: true })).toBeVisible();
 }
 async function capture(page, path) {
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -46,7 +46,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await expect(page.locator('.site-card')).toContainText('1 drawing revisions');
   await page.locator('.site-card').click();
   await createVisit(page);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   await expect(page.getByLabel('Drawing record')).toHaveValue('');
   await expect(page.getByRole('button', { name: 'Open FAP-01', exact: true })).toBeVisible();
   const issueValue = await page.getByLabel('Drawing record').locator('option').nth(1).getAttribute('value');
@@ -85,7 +85,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();
   await expect(page.locator('#notice')).toContainText('Work saved on this device');
   await expect(page.getByTestId('save-status')).toContainText('Saved');
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await openJobSection(page, 'Plan');
   await expect(page.getByRole('button', { name: 'Open FAP-01', exact: true })).toBeVisible();
   const exported = await exportPackage(page);
   expect(JSON.stringify(exported.data)).toContain(devicePhoto);
@@ -123,7 +123,7 @@ test('drawing → visit → offline recording → package → fresh import prese
     await reopened.getByTestId('job-card').click();
     await openJobSection(reopened, 'Devices');
     await capture(reopened, testInfo.outputPath('device-grid.png'));
-    await reopened.getByRole('button', { name: 'Plan', exact: true }).click();
+    await openJobSection(reopened, 'Plan');
     await capture(reopened, testInfo.outputPath('plan.png'));
   } finally { await fresh.close(); }
 });

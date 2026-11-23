@@ -10,6 +10,16 @@ export async function openJobSection(page, section) {
   const target = ({ Details: 'Job details', 'Quick checklist': 'Checklist' })[label] || section;
   if (await page.locator('body').getAttribute('data-job-tab') === target) return;
   const primary = page.getByRole('navigation', { name: 'Job workflow', exact: true });
+  if (section === 'Plan') {
+    await primary.getByRole('button', { name: 'Assets', exact: true }).click();
+    await page.getByRole('button', { name: 'View plan', exact: true }).click();
+    return;
+  }
+  if (section === 'Devices') {
+    await openJobSection(page, 'Plan');
+    await page.getByRole('button', { name: 'Devices', exact: true }).click();
+    return;
+  }
   const primaryButton = primary.getByRole('button', { name: label, exact: true });
   if (await primaryButton.count()) {
     await primaryButton.click();

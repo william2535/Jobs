@@ -1,5 +1,6 @@
 import { validateQuickDefects } from "./quick-defects.js";
 import { validateTimesheetEntries } from "./timesheets.js";
+import { validateAssetTemplates } from "./asset-library.js";
 
 const DATABASE = "jobs-local";
 const VERSION = 2;
@@ -61,12 +62,14 @@ export async function loadState() {
     const revision = transaction.objectStore("metadata").get("revision");
     const quickDefects = transaction.objectStore("metadata").get("quick-defects");
     const unassignedTimesheets = transaction.objectStore("metadata").get("unassigned-timesheets");
+    const assetTemplates = transaction.objectStore("metadata").get("asset-templates");
     transaction.oncomplete = () => {
       try {
         const library = validateQuickDefects(quickDefects.result?.value);
         const sessions = validateTimesheetEntries(unassignedTimesheets.result?.value);
+        const templates = validateAssetTemplates(assetTemplates.result?.value);
         lastSeenRevision = revision.result?.value || 0;
-        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions });
+        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions, assetTemplates: templates });
       } catch (error) {
         reject(error);
       }
@@ -86,6 +89,7 @@ export async function saveState(state) {
   // an explicitly supplied empty array is the deliberate clear operation.
   const quickDefects = state.quickDefects === undefined ? undefined : validateQuickDefects(state.quickDefects);
   const unassignedTimesheets = state.unassignedTimesheets === undefined ? undefined : validateTimesheetEntries(state.unassignedTimesheets);
+  const assetTemplates = state.assetTemplates === undefined ? undefined : validateAssetTemplates(state.assetTemplates);
   for (const collection of [state.sites, state.jobs]) {
     if (
       collection.some(
@@ -143,6 +147,8 @@ export async function saveState(state) {
           transaction.objectStore("metadata").put({ key: "quick-defects", value: quickDefects });
         if (unassignedTimesheets !== undefined)
           transaction.objectStore("metadata").put({ key: "unassigned-timesheets", value: unassignedTimesheets });
+        if (assetTemplates !== undefined)
+          transaction.objectStore("metadata").put({ key: "asset-templates", value: assetTemplates });
         transaction
           .objectStore("metadata")
           .put({ key: "revision", value: expectedRevision + 1 });

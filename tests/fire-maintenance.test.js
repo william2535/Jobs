@@ -5,6 +5,7 @@ import {
   createFireMaintenanceDraft, createFireMaintenanceEquipment, saveFireMaintenance, validateFireMaintenance,
 } from '../src/fire-maintenance.js';
 import { createQuickJob, newSite } from '../src/model.js';
+import { addJobAsset } from '../src/asset-library.js';
 import { createJobPackage, importJobPackage, validateJobPackage } from '../src/packages.js';
 
 function fixture() {
@@ -51,6 +52,21 @@ test('explicit maintenance records work for unclassified jobs without changing c
   assert.equal(job.discipline, '');
   assert.equal(job.workType, '');
   assert.deepEqual(job.results, []);
+});
+
+test('standalone job assets are available for maintenance and survive job export', async () => {
+  const original = createQuickJob();
+  const { job, asset } = addJobAsset({ sites: [], jobs: [original] }, original.id, { type: 'panel', reference: 'Panel 1' });
+  const draft = createFireMaintenanceDraft(job, job.assetRegister);
+  draft.equipment.push(createFireMaintenanceEquipment('fire-panel', asset));
+  job.fireMaintenance = saveFireMaintenance(job, draft, job.assetRegister);
+  assert.equal(job.fireMaintenance.drawingId, job.assetRegister.id);
+  assert.equal(job.fireMaintenance.equipment[0].assetId, asset.id);
+  assert.equal(job.results[0].state, 'Not tested');
+  const pack = await createJobPackage(null, job);
+  const restored = validateJobPackage(pack);
+  assert.equal(restored.job.fireMaintenance.equipment[0].assetId, asset.id);
+  assert.throws(() => createFireMaintenanceDraft(job, { ...job.assetRegister, id: 'another-job-register' }), /does not belong/);
 });
 
 test('partial saving preserves numeric zero and manual equipment without passing any device', () => {
