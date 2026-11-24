@@ -39,7 +39,7 @@ test('release verification accepts a complete local build and emits per-file has
   const manifest = await verifyRelease({ root, dist });
   assert.equal(manifest.version, '1.0.0');
   assert.equal(manifest.buildId, getBuildInfo(root).buildId);
-  assert.equal(manifest.files.length, 22);
+  assert.equal(manifest.files.length, 24);
   assert.ok(manifest.files.every(file => /^[a-f0-9]{64}$/.test(file.sha256) && file.bytes > 0));
   assert.ok(manifest.files.some(file => file.path === 'zonesketch-LICENSE.txt'));
   assert.ok(manifest.files.some(file => file.path === 'jobs-logo.webp'));
