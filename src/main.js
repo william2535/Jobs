@@ -751,6 +751,7 @@ function render() {
   if (appHeader) {
     const settings=document.createElement("details");settings.className="compact-appearance-settings";
     const summary=document.createElement("summary");summary.setAttribute("aria-label","Appearance settings");summary.textContent="⚙";settings.append(summary,createAppearanceControl({compact:false,toggle:false}));appHeader.append(settings);
+    settings.addEventListener("change",()=>{settings.open=false;});
   }
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
