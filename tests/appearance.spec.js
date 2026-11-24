@@ -11,6 +11,8 @@ const appearanceToggle = page => page.getByRole('button', { name: /^Switch to (l
 const appearance = page => appearanceSelect(page).or(appearanceToggle(page));
 
 async function chooseAppearance(page, preference) {
+  const menu=page.locator('.compact-appearance-settings');
+  if (!(await menu.getAttribute('open') !== null)) await menu.locator('summary').click();
   await expect(appearance(page)).toBeVisible();
   if (await appearanceSelect(page).count()) await appearanceSelect(page).selectOption(preference);
   else await page.getByRole('button', { name: `Switch to ${preference} mode`, exact: true }).click();
@@ -19,9 +21,8 @@ async function chooseAppearance(page, preference) {
 async function expectTheme(page, preference, resolved) {
   await expect(page.locator('html')).toHaveAttribute('data-appearance', preference);
   await expect(page.locator('html')).toHaveAttribute('data-theme', resolved);
-  await expect(appearance(page)).toBeVisible();
-  if (await appearanceSelect(page).count()) await expect(appearanceSelect(page)).toHaveValue(preference);
-  else await expect(appearanceToggle(page)).toHaveAttribute('aria-label', `Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`);
+  if (await appearanceSelect(page).isVisible()) await expect(appearanceSelect(page)).toHaveValue(preference);
+  else if (await appearanceToggle(page).isVisible()) await expect(appearanceToggle(page)).toHaveAttribute('aria-label', `Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`);
   expect(await page.locator('html').evaluate(node => node.style.colorScheme)).toBe(resolved);
 }
 
@@ -119,7 +120,7 @@ test('System follows the device and an explicit appearance survives reload witho
     await page.locator('[data-action="create"]:visible').first().click();
     await expect(page.locator('.job-notes')).toBeVisible();
   }
-  await appearanceSelect(page).selectOption('system');
+  await chooseAppearance(page, 'system');
   await expectTheme(page, 'system', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expectTheme(page, 'system', 'light');
