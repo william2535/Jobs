@@ -1,3 +1,4 @@
+import { validateProfilePhoto } from "./profile-photo.js";
 import { validateWorkflow } from "./job-workflow.js";
 import { validateSiteProfile } from "./site-profile.js";
 import { validateJobClassification } from "./job-options.js";
@@ -451,6 +452,8 @@ export function validateJobPackage(input) {
   if (standalone && wireVersion !== 3) fail("standalone jobs require package version 3.");
   if (!standalone) object(input.site, "site");
   const { site, job } = input;
+  validateProfilePhoto(job.profilePhoto);
+  validateProfilePhoto(site?.profilePhoto);
   const checklist = validateJobChecklist(job.checklist);
   const fireMaintenance = validateFireMaintenance(job.fireMaintenance);
   const certificates = validateJobCertificates(job.certificates);
