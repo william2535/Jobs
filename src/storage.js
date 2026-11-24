@@ -1,3 +1,4 @@
+import { exampleWorkspace } from "./example-workspace.js";
 import { validateQuickDefects } from "./quick-defects.js";
 import { validateTimesheetEntries } from "./timesheets.js";
 import { validateAssetTemplates } from "./asset-library.js";
@@ -74,7 +75,7 @@ export function openDB() {
 
 export async function loadState() {
   const db = await openDB();
-  return new Promise((resolve, reject) => {
+  const loaded = await new Promise((resolve, reject) => {
     const transaction = db.transaction(
       ["sites", "jobs", "metadata"],
       "readonly",
@@ -102,6 +103,12 @@ export async function loadState() {
     transaction.onabort = () =>
       reject(transaction.error || new Error("Local read was interrupted."));
   });
+  if (!(globalThis.location?.hostname === '127.0.0.1' && globalThis.localStorage?.getItem('jobs.test.empty') === '1') && lastSeenRevision === 0 && !loaded.sites.length && !loaded.jobs.length) {
+    const seeded = {...loaded,...exampleWorkspace()};
+    await saveState(seeded);
+    return seeded;
+  }
+  return loaded;
 }
 
 /** Replace the application snapshot atomically: a failed write keeps the previous snapshot. */
