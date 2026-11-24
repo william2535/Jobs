@@ -1390,7 +1390,10 @@ async function action(a, source) {
     if(!job)throw Error("Job no longer available.");
     const dialog=document.createElement("dialog");
     dialog.setAttribute("aria-label","Quick Transfer");
-    dialog.innerHTML='<h2>Quick Transfer</h2><p>Send an editable job pack to another engineer or the office.</p><div class="actions"><button type="button" class="primary" data-transfer="share">Nearby / share job pack</button><button type="button" data-transfer="receive">Receive job pack</button><button type="button" data-transfer="cancel">Cancel</button></div><p class="muted">Choose AirDrop, Quick Share, WhatsApp or email if available on your device. Job packs may contain confidential site information.</p>';
+    dialog.className="toolbox-chest transfer-chest";
+    dialog.innerHTML='<header class="toolbox-chest-lid"><div class="toolbox-chest-handle" aria-hidden="true"></div><div class="toolbox-chest-title-row"><span class="toolbox-chest-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 8h17m-5-5 5 5-5 5M21 16H4m5-5-5 5 5 5"/></svg></span><div><small>ENGINEER TO ENGINEER</small><h2>Quick Transfer</h2></div><button type="button" class="toolbox-chest-close" data-transfer="cancel" aria-label="Close transfer">×</button></div></header><div class="toolbox-chest-tray"><div class="transfer-grid"><button type="button" data-transfer="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V3m-4 4 4-4 4 4M7 10H4v11h16V10h-3"/></svg><strong>Nearby / share job pack</strong><small>AirDrop · Quick Share · Email</small></button><button type="button" data-transfer="receive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v13m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><strong>Receive job pack</strong><small>Open a received file</small></button></div><p class="muted">Job packs may contain confidential site information.</p></div>';
+    const anchor=source?.getBoundingClientRect?.();
+    if(anchor){dialog.style.setProperty("--chest-origin-x","90%");dialog.style.setProperty("--chest-origin-y","0px");}
     document.body.append(dialog);
     dialog.addEventListener("close",()=>dialog.remove(),{once:true});
     const send=dialog.querySelector('[data-transfer="share"]');
