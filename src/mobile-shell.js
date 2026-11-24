@@ -265,7 +265,11 @@ export function renderMobileWorkspace({
     settings.setAttribute("aria-label", `Settings for ${job.workflow?.details?.title || site?.name || "Untitled job"}`);
     settings.title = "Job settings";
     settings.append(icon("settings"));
-    shell.append(card, settings);
+    const transfer=control("",()=>onAction("transfer-job:"+job.id),"mw-job-settings mw-job-transfer");
+    transfer.setAttribute("aria-label","Transfer job pack");
+    transfer.title="Quick Transfer";
+    transfer.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></svg>';
+    shell.append(card, transfer, settings);
     row.append(time, shell);
     return row;
   }
