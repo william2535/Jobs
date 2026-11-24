@@ -137,3 +137,5 @@
   .toolbox-chest, .toolbox-chest .toolbox-chest-lid { animation: none; }
 }
 @media print { .toolbox-chest { display: none; } }
+
+.transfer-chest:not([open]){display:none}.toolbox-chest.transfer-chest{inset:0;margin:auto;width:min(440px,calc(100vw - 24px));height:max-content;max-height:85dvh;transform-origin:90% 0}.transfer-chest::backdrop{background:#07152545}.transfer-chest h2{margin:4px 0 0;color:white;font-size:19px}.transfer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.transfer-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-height:120px;padding:12px;text-align:left;border:1px solid #c3d4e8;border-radius:9px;background:#fff;color:#193455;white-space:normal}.transfer-grid button svg{width:30px;height:30px;color:#21518d}.transfer-grid button small{font-size:11px;color:#536d88}.transfer-grid button:disabled{opacity:.5}.transfer-chest .muted{font-size:12px;color:#536d88;margin:12px 0 0}
