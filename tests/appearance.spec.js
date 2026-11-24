@@ -170,7 +170,7 @@ test('dark tools, timesheets and plan results remain readable while drawings and
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await page.goto('/');
   await chooseAppearance(page, 'dark');
-  await readable(appearance(page), { dark: true });
+  await readable(page.getByLabel("Appearance settings", {exact:true}), { dark: true });
   await page.screenshot({ path: testInfo.outputPath('dark-overview.png'), fullPage: true });
   await page.getByRole('button', { name: 'Toolbox', exact: true }).click();
   const chest = page.locator('.toolbox-chest');
