@@ -21,12 +21,16 @@ export async function generateCertificatePdf(certificate) {
   // Rendering is synchronous and detached; a later job edit cannot change this export.
   const snapshot = structuredClone(certificate);
   const root = renderCertificate({ certificate: snapshot, includeEvidence: true });
+  return generateReportPdf(root, { title: snapshot.fields.title, subject: 'Certificate ' + snapshot.fields.number, author: snapshot.fields.companyName, heading: (snapshot.fields.companyName || 'Jobs') + ' · ' + snapshot.fields.number, footer: 'Issued ' + clean(snapshot.fields.issueDate), label: 'Certificate and captured visit evidence' });
+}
+
+export async function generateReportPdf(root, meta) {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true });
   pdf.addFileToVFS('OpenSans-Regular.ttf', regular);
   pdf.addFileToVFS('OpenSans-Semibold.ttf', semibold);
   pdf.addFont('OpenSans-Regular.ttf', 'OpenSans', 'normal');
   pdf.addFont('OpenSans-Semibold.ttf', 'OpenSans', 'bold');
-  pdf.setProperties({ title: clean(snapshot.fields.title), subject: `Certificate ${clean(snapshot.fields.number)}`, author: clean(snapshot.fields.companyName), creator: 'Jobs — offline certificate export' });
+  pdf.setProperties({ title: clean(meta.title), subject: clean(meta.subject), author: clean(meta.author), creator: 'Jobs — offline PDF export' });
   let y = TOP;
   function font(size = 10, bold = false, colour = INK) { pdf.setFont('OpenSans', bold ? 'bold' : 'normal'); pdf.setFontSize(size); pdf.setTextColor(...colour); }
   function page() { pdf.addPage(); y = TOP; }
@@ -150,10 +154,10 @@ export async function generateCertificatePdf(certificate) {
   const pages = pdf.getNumberOfPages();
   for (let index = 1; index <= pages; index++) {
     pdf.setPage(index); font(8, true, MUTED);
-    const heading = lines(`${snapshot.fields.companyName || 'Jobs'} · ${snapshot.fields.number}`, RIGHT - LEFT, 8, true)[0];
+    const heading = lines(clean(meta.heading), RIGHT - LEFT, 8, true)[0];
     pdf.text(heading, LEFT, 13); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
-    font(8, false, MUTED); pdf.text(`Issued ${clean(snapshot.fields.issueDate)} · ${index} / ${pages}`, RIGHT, 289, { align: 'right' });
-    pdf.text('Certificate and captured visit evidence', LEFT, 289);
+    font(8, false, MUTED); pdf.text(`${clean(meta.footer)} · ${index} / ${pages}`, RIGHT, 289, { align: 'right' });
+    pdf.text(clean(meta.label), LEFT, 289);
   }
   return new Blob([pdf.output('arraybuffer')], { type: MIME });
 }
