@@ -49,7 +49,7 @@
     grid-column: 1;
     grid-row: 1;
   }
-  .jobs-context-icon { display: block; width: 36px; height: 36px; flex: 0 0 36px; }
+  .jobs-context-icon { display: block; width: 36px; height: auto; flex: 0 0 36px; object-fit: contain; }
   body[data-page]:not([data-page="home"]) .workspace > header.jobs-context-header .eyebrow {
     color: #c9dbef;
     font-size: 10px;
