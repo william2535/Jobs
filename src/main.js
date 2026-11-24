@@ -1,3 +1,4 @@
+import { chooseJobFolder, saveToJobFolder, sortJobs, folderName } from "./job-folder.js";
 import { initializeAppearance, createAppearanceControl } from "./appearance.js";
 import { initializePageScroll, scrollPageToTop } from "./page-scroll.js";
 import "./style.css";
@@ -180,6 +181,8 @@ function reportNotice(text) {
   if (box) { box.className = "notice"; box.setAttribute("role", "status"); box.textContent = text; }
 }
 function updateReleaseStatus() {
+  const connection = $(".connection");
+  if(connection && (recoverySnapshot || !storageReady || saveLabel!=="Saved on this device" || !/ready offline/i.test(offlineLabel))) connection.style.removeProperty("display");
   $(".release-help")?.setStatus?.({ offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, updateAvailable });
   const recovery = $("#recovery-actions");
   if (recovery) recovery.hidden = !recoverySnapshot;
@@ -866,6 +869,8 @@ function render() {
   }
   if (page === "help" && $("#release-help-root")) {
     $("#release-help-root").append(renderReleaseHelp({ version: APP_VERSION, buildId: BUILD_ID, offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, onAction: value => runTask(() => action(value)) }));
+    const settings=document.createElement("section");settings.className="panel";settings.innerHTML='<h2>Settings</h2><h3>Job pack storage</h3><p>Choose an existing folder to load editable job packs. PDFs are ignored.</p>';
+    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);$("#release-help-root").append(settings);
     updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
@@ -1016,6 +1021,17 @@ function render() {
     record.profilePhoto=value;
     if(await persist(next,"Site photo saved.")){render();return true;}return false;
   }}));
+  const statusBar=$(".connection");
+  if(statusBar){
+    let start=null;
+    statusBar.style.touchAction="pan-y";
+    statusBar.addEventListener("pointerdown",event=>{start={x:event.clientX,y:event.clientY};statusBar.setPointerCapture?.(event.pointerId);});
+    statusBar.addEventListener("pointercancel",()=>{start=null;});
+    statusBar.addEventListener("pointerup",event=>{
+      if(start && Math.abs(event.clientX-start.x)>55 && Math.abs(event.clientX-start.x)>Math.abs(event.clientY-start.y)*1.5 && !recoverySnapshot && storageReady && saveLabel==="Saved on this device" && /ready offline/i.test(offlineLabel))statusBar.style.setProperty("display","none","important");
+      start=null;
+    });
+  }
   syncToolboxTrigger();
   if (changedRoute) scrollPageToTop();
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
@@ -1060,7 +1076,7 @@ function home() {
   if (window.matchMedia("(max-width: 700px)").matches)
     return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
-  return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${state.jobs.map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
+  return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${sortJobs(state.jobs,state.sites).map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
 function sites() {
   return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><h1>Sites</h1><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><div class="record-site-heading"><h2 id="create-site-title">Create site</h2><div id="new-site-photo"></div></div><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}">${photoMarkup(s.profilePhoto)}<strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
@@ -1076,7 +1092,7 @@ function jobCard(rawJob, siteFolder = false) {
 }
 function siteJobs(s) {
   const jobs = state.jobs.filter((j) => j.siteId === s.id);
-  return `<section class="panel site-job-folder"><div class="section-head"><h2>Jobs in this site <span class="count">${jobs.length}</span></h2></div>${jobs.length ? `<div class="job-list">${jobs.map((j) => jobCard(j, true)).join("")}</div>` : '<p class="muted">No jobs yet. Create a job to start writing.</p>'}</section>`;
+  return `<section class="panel site-job-folder"><div class="section-head"><h2>Jobs in this site <span class="count">${jobs.length}</span></h2></div>${jobs.length ? `<div class="job-list">${sortJobs(jobs,state.sites).map((j) => jobCard(j, true)).join("")}</div>` : '<p class="muted">No jobs yet. Create a job to start writing.</p>'}</section>`;
 }
 
 function siteView(s) {
@@ -1324,6 +1340,20 @@ async function action(a, source) {
     return;
   }
   if (!toolboxChest.close({ restoreFocus: false })) return;
+  if (a === "choose-job-folder") {
+    if (!storageReady || dirty || recoverySnapshot) throw Error("Save your current work before choosing a folder.");
+    const selected=await chooseJobFolder();
+    if(!selected)return;
+    let next=structuredClone(state), count=0, rejected=[];
+    for(const file of selected.files.sort((a,b)=>a.name.localeCompare(b.name))){
+      try { const result=await importJobPackage(next,await readText(file));next=result.state;count++; }
+      catch(cause){rejected.push(file.name+": "+cause.message);}
+    }
+    if(count && !(await persist(next)))return;
+    render();
+    reportNotice(selected.name+": "+count+" job packs processed. "+(selected.writable?"Editable exports use this folder during this session.":"Choose the save location when exporting.")+(rejected.length?" Rejected: "+rejected.join("; "):""));
+    return;
+  }
   if (a === "backup-workspace") return downloadWorkspace();
   if (a === "recovery-download") return downloadWorkspace(true);
   if (a === "offline-retry") return offlineController?.retry();
@@ -1803,6 +1833,7 @@ function dataURL(file) {
   });
 }
 async function download(data, name) {
+  if(await saveToJobFolder(data,name)){reportNotice("Job pack saved to "+folderName());return {status:"saved"};}
   const nativePlatform = getNativePlatform();
   if (nativePlatform) {
     const result = await nativePlatform.exportJson(data, name);
