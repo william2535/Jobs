@@ -748,7 +748,10 @@ function render() {
     }
   });
   const appHeader = document.querySelector(".workspace > header");
-  if (appHeader && page !== "home") { const settingsButton=document.createElement("button");settingsButton.type="button";settingsButton.className="compact-header-settings";settingsButton.dataset.action="help";settingsButton.setAttribute("aria-label","Settings and storage status");settingsButton.textContent="⚙";appHeader.append(settingsButton); }
+  if (appHeader) {
+    const settings=document.createElement("details");settings.className="compact-appearance-settings";
+    const summary=document.createElement("summary");summary.setAttribute("aria-label","Appearance settings");summary.textContent="⚙";settings.append(summary,createAppearanceControl({compact:false,toggle:false}));appHeader.append(settings);
+  }
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {
@@ -872,7 +875,7 @@ function render() {
   if (page === "help" && $("#release-help-root")) {
     $("#release-help-root").append(renderReleaseHelp({ version: APP_VERSION, buildId: BUILD_ID, offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, onAction: value => runTask(() => action(value)) }));
     const settings=document.createElement("section");settings.className="panel";settings.innerHTML='<h2>Settings</h2><h3>Job pack storage</h3><p>Choose an existing folder to load editable job packs. PDFs are ignored.</p>';
-    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);settings.append(createAppearanceControl({compact:false,toggle:false}));$("#release-help-root").append(settings);
+    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);$("#release-help-root").append(settings);
     updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
