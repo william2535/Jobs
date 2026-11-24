@@ -39,7 +39,11 @@ export async function openJobSection(page, section) {
   // Settings may render the same action as the workflow navigation.
   const settingsButton = page.locator('.job-settings').getByRole('button', { name: label, exact: true });
   if (await settingsButton.count()) await settingsButton.click();
-  else await primary.getByRole('button', { name: label, exact: true }).click();
+  else {
+    const workflowButton = primary.getByRole('button', { name: label, exact: true });
+    if (await workflowButton.count() && await workflowButton.isVisible()) await workflowButton.click();
+    else await page.getByRole('button', { name: label, exact: true }).click();
+  }
 }
 
 /** Configure a visit only where a test needs classification; quick creation itself has no required fields. */
