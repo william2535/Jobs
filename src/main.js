@@ -889,10 +889,11 @@ function render() {
       job: rawJob,
       site: s,
       photoHost: document.querySelector(".quick-job-top"),
-      onSave: (document, title, picture) => saveJob({
+      onSave: (document, title, picture, background) => saveJob({
         ...rawJob,
         notesDocument: validateNotesDocument(document),
         profilePhoto: picture,
+        engineerBackground: background,
         workflow: { ...rawJob.workflow, version: 1, details: { ...rawJob.workflow?.details, title } },
       }),
       onDirty: markDirty,
