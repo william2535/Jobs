@@ -66,6 +66,10 @@ import { renderServiceReport } from "./service-report.js";
 import { installReportPrinting, printServiceReport } from "./print-report.js";
 import "./fire-maintenance-ui.css";
 import "./service-report.css";
+import { renderCertificates } from "./certificates-ui.js";
+import { renderCertificate } from "./certificate-renderer.js";
+import { shareCertificatePdf } from "./certificate-pdf.js";
+import "./certificates-ui.css";
 import "./appearance.css";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
@@ -659,6 +663,7 @@ function render() {
   document.querySelector(".job-settings")?.dispose?.();
   document.querySelector(".device-remarks")?.dispose?.();
   document.querySelector(".fire-maintenance")?.dispose?.();
+  document.querySelector(".certificates-ui")?.dispose?.();
   document.querySelector(".timesheets-ui")?.dispose?.();
   document.querySelector(".mobile-workspace")?.dispose?.();
   document.querySelector(".release-help")?.dispose?.();
@@ -860,6 +865,22 @@ function render() {
       },
     }));
   }
+  if (page === "job" && rawJob && !draftJob && $("#certificates-root")) {
+    $("#certificates-root").append(renderCertificates({
+      job: rawJob, site: s || null, drawing: drawingOf(s, j) || null,
+      onDirty: markDirty,
+      onSave: updated => saveJob(updated),
+      onPrint: certificate => runTask(async () => {
+        const prepared = await printServiceReport(() => renderCertificate({certificate}));
+        reportNotice(getNativePlatform()
+          ? (prepared ? "Certificate print dialog closed. The issued copy is unchanged." : "Printing cancelled. The issued copy is unchanged.")
+          : "Certificate prepared. Use the print dialog to print or save as PDF.");
+        return prepared;
+      }),
+      onDownload: certificate => runTask(() => exportCertificatePdf(certificate, true)),
+      onShare: certificate => runTask(() => exportCertificatePdf(certificate, false)),
+    }));
+  }
   if (page === "job" && j && $("#job-report-root"))
     $("#job-report-root").append(jobReport(s, j));
   if (page === "job" && j && $("#fire-maintenance-root")) {
@@ -1030,7 +1051,7 @@ function jobView(j, s) {
   else if (tab === "Settings") content = `<div id="job-settings-root"></div>${jobTools(j, s)}`;
   else if (tab === "Finalisation") content = draftJob
     ? `<section class="panel"><h1>Finalisation</h1><p>Save your job to prepare its report.</p>${button("Return to notes", "tab:Notes", "primary")}</section>`
-    : `<section class="finalisation-actions"><div><span class="eyebrow">FINALISATION</span><h1>Job report</h1><p>Prepared from your saved notes, pictures and recorded work.</p></div><div class="actions">${isFireMaintenanceJob(j) || j.fireMaintenance ? button("Maintenance questions", "tab:Maintenance") : ""}${button("Print report", "print", "primary")}${button("Export job", "export")}</div></section><div id="job-report-root" class="job-report-preview panel"></div>`;
+    : `<section class="finalisation-actions"><div><span class="eyebrow">FINALISATION</span><h1>Job report</h1><p>Prepared from your saved notes, pictures and recorded work.</p></div><div class="actions">${isFireMaintenanceJob(j) || j.fireMaintenance ? button("Maintenance questions", "tab:Maintenance") : ""}${button("Print report", "print", "primary")}${button("Export job", "export")}</div></section><div id="certificates-root"></div><div id="job-report-root" class="job-report-preview panel"></div>`;
   else if (tab === "Maintenance" && !draftJob) content = `<div class="quick-section-title">${button("Back to report", "tab:Finalisation", "text-button")}</div><div id="fire-maintenance-root"></div>`;
   else if (["Job details", "Work", "Products", "POs", "Visit records"].includes(tab)) content = `<div class="quick-section-title"><h1>${esc(tab === "Job details" ? "Details" : tab)}</h1>${button("Settings & tools", "job-settings:" + j.id, "text-button")}</div><div id="workflow-root"></div>`;
   else if (tab === "Checklist" && s) content = '<div id="checklist-root"></div>';
@@ -1701,6 +1722,13 @@ async function download(data, name) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   return { status: "started" };
+}
+async function exportCertificatePdf(certificate, downloadOnly = false) {
+  const result = await shareCertificatePdf(certificate, {downloadOnly});
+  if (result.status === "cancelled") reportNotice("PDF sharing or saving cancelled. The issued certificate is unchanged.");
+  else if (result.status === "shared") reportNotice("PDF share sheet opened. Choose your email app to send it to the customer.");
+  else reportNotice("PDF download prepared. Attach the file to your customer email.");
+  return result;
 }
 function jobReport(site, job) {
   return renderServiceReport({ site: site || null, job, drawing: drawingOf(site, job) || null });

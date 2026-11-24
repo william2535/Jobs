@@ -1,6 +1,6 @@
 # Jobs for independent engineers
 
-Jobs is a browser-local field workspace for an independent engineer. You can keep permanent site records, import Zone Sketch plans, create visits, record notes and photographs, record device outcomes, print draft service reports, record time and export your work. An account, paid API or cloud AI service is not needed for the core workflow.
+Jobs is a browser-local field workspace for an independent engineer. You can keep permanent site records, import Zone Sketch plans, create visits, record notes and photographs, record device outcomes, issue reviewed visit certificates and customer PDFs, print draft service reports, record time and export your work. An account, paid API or cloud AI service is not needed for the core workflow.
 
 The public website is https://jobs-field-workspace.floodyyy21.chatgpt.site. Each browser profile has its own workspace. Sharing the website link does not share your saved jobs. Records do not synchronize automatically between browsers or devices.
 
@@ -20,7 +20,7 @@ Included plans, photographs, calculators, picture guides and FESS practice conte
 
 The save status reports whether the latest work reached local storage. A failed save leaves the editor available to retry and keeps the last saved copy. Do not close a tab containing unsaved work until you have saved it or otherwise preserved that work.
 
-Use **Help & data → Export workspace backup** to keep a recovery file independently of the browser. Save open jobs and timesheets first. Workspace backups contain saved sites, jobs, drawing data, attachments, timesheets and saved quick defects. Unsaved edits and separate Toolbox calculator inputs or practice progress are not included.
+Use **Help & data → Export workspace backup** to keep a recovery file independently of the browser. Save open jobs and timesheets first. Workspace backups contain saved sites, jobs, certificate drafts and issued snapshots, drawing data, attachments, timesheets and saved quick defects. Unsaved edits and separate Toolbox calculator inputs or practice progress are not included.
 
 Restore a workspace backup into an empty Jobs workspace. Existing records are not overwritten. For individual transfers into a workspace that already contains work, use **Finalisation → Export job**, then **Import job** on Home. Identical package imports reuse the existing job; conflicting imported versions retain existing work for review.
 
@@ -44,7 +44,7 @@ Exported job packages, workspace backups and recovery copies contain the include
 
 ## Release boundaries
 
-- Reports are **Draft service reports**, not validated compliance certificates. Checklists record engineer actions; completion never automatically passes equipment or certifies a system.
+- Service reports remain **Draft service reports**. Separate [visit certificates](certificates.md) support every discipline and visit with explicit review, retained issues/revisions and downloadable/shareable customer PDFs. Generic visit certificates do not claim a validated standards-specific form. Checklists never automatically pass equipment or issue a certificate.
 - Zone Sketch is a separate editor. Automatic loading and saving back require a compatible receiver and configuration. Editable drawing export and reviewed file reimport are available independently.
 - FINDR's included tools run locally. The Panel Pal export contract is available, but the actual Panel Pal job adapter remains future work. Calculator outputs and FESS practice scores are separate from engineer-confirmed results.
 - Timesheet submission creates a local snapshot and download. It does not send time to an office or approve payroll. Local purchase-order records do not place orders with a supplier.

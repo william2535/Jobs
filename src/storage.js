@@ -1,11 +1,33 @@
 import { validateQuickDefects } from "./quick-defects.js";
 import { validateTimesheetEntries } from "./timesheets.js";
 import { validateAssetTemplates } from "./asset-library.js";
+import { validateJobCertificates } from "./certificates.js";
 
 const DATABASE = "jobs-local";
 const VERSION = 2;
 let connection;
 let lastSeenRevision;
+
+const certificateIdentity = value => Array.isArray(value)
+  ? `[${value.map(certificateIdentity).join(",")}]`
+  : value && typeof value === "object"
+    ? `{${Object.keys(value).filter(key => value[key] !== undefined).sort().map(key => `${JSON.stringify(key)}:${certificateIdentity(value[key])}`).join(",")}}`
+    : JSON.stringify(value);
+
+function retainIssuedCertificates(previous, incoming) {
+  const byId = new Map(incoming.map(job => [job.id, job]));
+  for (const saved of previous) {
+    const current = byId.get(saved.id);
+    // Deleting a whole job remains an explicit workspace operation. Editing a
+    // retained job cannot silently rewrite or remove its issued documents.
+    if (!current) continue;
+    const issued = new Map((current.certificates?.issued || []).map(record => [record.id, record]));
+    for (const record of saved.certificates?.issued || []) {
+      if (!issued.has(record.id) || certificateIdentity(issued.get(record.id)) !== certificateIdentity(record))
+        throw new Error("Issued certificates cannot be changed or removed. Create a revised certificate instead.");
+    }
+  }
+}
 
 export function openDB() {
   if (connection) return connection;
@@ -68,6 +90,7 @@ export async function loadState() {
         const library = validateQuickDefects(quickDefects.result?.value);
         const sessions = validateTimesheetEntries(unassignedTimesheets.result?.value);
         const templates = validateAssetTemplates(assetTemplates.result?.value);
+        for (const job of jobs.result) validateJobCertificates(job.certificates);
         lastSeenRevision = revision.result?.value || 0;
         resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions, assetTemplates: templates });
       } catch (error) {
@@ -90,6 +113,7 @@ export async function saveState(state) {
   const quickDefects = state.quickDefects === undefined ? undefined : validateQuickDefects(state.quickDefects);
   const unassignedTimesheets = state.unassignedTimesheets === undefined ? undefined : validateTimesheetEntries(state.unassignedTimesheets);
   const assetTemplates = state.assetTemplates === undefined ? undefined : validateAssetTemplates(state.assetTemplates);
+  for (const job of state.jobs) validateJobCertificates(job?.certificates);
   for (const collection of [state.sites, state.jobs]) {
     if (
       collection.some(
@@ -128,6 +152,7 @@ export async function saveState(state) {
           transaction.error ||
           new Error("Local save failed. Your previous saved copy is intact."),
       );
+    const previousJobs = transaction.objectStore("jobs").getAll();
     const revision = transaction.objectStore("metadata").get("revision");
     revision.onsuccess = () => {
       if ((revision.result?.value || 0) !== expectedRevision) {
@@ -138,6 +163,7 @@ export async function saveState(state) {
         return;
       }
       try {
+        retainIssuedCertificates(previousJobs.result, state.jobs);
         for (const name of ["sites", "jobs"]) {
           const store = transaction.objectStore(name);
           store.clear();

@@ -509,7 +509,7 @@ export function renderMobileWorkspace({
       ),
       node(
         "p",
-        "Draft service reports are records of the visit. Validated certificates and the local FINDR adapter are future work.",
+        "Finalisation lets you create, review and issue a visit certificate, then download or share its PDF. Use a revision to correct an issued copy. Draft service reports remain available; the local FINDR adapter is future work.",
       ),
     );
     section.append(

@@ -34,4 +34,4 @@ Use **Print report** to open the browser's print / Save as PDF sheet. The app pr
 
 Browser-menu printing and Ctrl+P refresh the snapshot from the current saved job through `beforeprint`. That browser event is synchronous and cannot await image decoding, so use the app button when photographs need preparation. Native iPhone print/share behavior has not yet been verified on a physical device. Opening a print sheet does not confirm that a PDF was saved or a printer completed the job.
 
-The document remains a draft service report. It is not a compliant certificate, an issued scheme document or an authenticated signature record.
+This report remains a draft service report. For a customer certificate, use the separate **Finalisation → Create certificate** workflow, review the actual scope and declaration, then issue a retained snapshot. Its appendix preserves these maintenance answers and outstanding checks. See [visit certificates and PDFs](certificates.md). Generic visit certificates are not validated scheme forms or authenticated signature records.

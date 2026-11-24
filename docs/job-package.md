@@ -4,6 +4,8 @@
 
 Keep exports as backups: browser storage is local to an origin and browser profile and can be cleared by the OS or user.
 
+Optional `job.certificates` version 1 contains one editable draft and retained issued certificates with their captured supporting evidence. It travels in the existing package and image pool without changing package version 3; older jobs without certificates remain valid. Certificate provenance IDs are preserved when a conflicting import remaps the live job or drawing. See the [certificate record and correction workflow](certificates.md#backup-and-retained-records).
+
 ## Envelope and identities
 
 ```json

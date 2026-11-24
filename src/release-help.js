@@ -144,7 +144,7 @@ export function renderReleaseHelp({
     privacy.append(policy);
   }
   privacy.append(details('Reports, drawing editing and FINDR', [
-    'Reports are Draft service reports of your recorded work. They are not validated compliance certificates. Checklist completion and tool calculations do not automatically pass equipment.',
+    'Finalisation offers a certificate for every visit: edit its details, review, issue, then download or share the PDF. Issued copies keep their evidence; use a revision for corrections. Engineer names are typed declarations. Generic visit certificates do not claim a validated standards-specific form. Draft service reports remain available, and checklists never automatically pass equipment.',
     'Zone Sketch and the FINDR logo open separate applications. Their websites may require a connection and have their own storage. Automatic Zone Sketch loading and return require a compatible receiver and configuration; editable drawing export and reviewed file reimport remain available.',
     'The Panel Pal job-context export is available for a future FINDR adapter. No live Panel Pal job connection is supplied in this release. Included Toolbox calculators and FESS practice run locally and remain separate from engineer-confirmed job results.',
   ]));

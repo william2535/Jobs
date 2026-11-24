@@ -75,7 +75,8 @@ test('mobile dashboard navigation and schedule reflect the saved records', async
   await capture(page, testInfo.outputPath('mobile-timesheets.png'));
   await nav.getByRole('button', { name: 'About', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'About Jobs', exact: true })).toBeVisible();
-  await expect(page.locator('.mw-about-card')).toContainText('FINDR adapter are future work');
+  await expect(page.locator('.mw-about-card')).toContainText('issue a visit certificate');
+  await expect(page.locator('.mw-about-card')).toContainText('local FINDR adapter is future work');
   await capture(page, testInfo.outputPath('mobile-about.png'));
   await nav.getByRole('button', { name: 'Dashboard', exact: true }).click();
   await page.getByRole('button', { name: 'Calendar', exact: true }).click();
