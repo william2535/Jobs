@@ -4,18 +4,21 @@
   const app = document.getElementById('app');
   const skip = intro?.querySelector('[data-intro-skip]');
   if (!intro || !app || !skip) return;
+  const status = value => { intro.dataset.introStatus = value; };
+  status('controller-loaded');
 
   const sessionKey = 'jobs-intro-seen-v2';
   let reducedMotion;
   try {
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (sessionStorage.getItem(sessionKey) === '1') return;
-    if (getComputedStyle(document.documentElement).getPropertyValue('--jobs-intro-ready').trim() !== '1') return;
-  } catch {
+    if (sessionStorage.getItem(sessionKey) === '1') { status('already-seen'); return; }
+    if (getComputedStyle(document.documentElement).getPropertyValue('--jobs-intro-ready').trim() !== '1') { status('stylesheet-not-ready'); return; }
+  } catch (error) {
+    status('startup-error: ' + error.message);
     // With restricted storage or an unsupported browser, open the workspace.
     return;
   }
-  if (reducedMotion.matches) return;
+  if (reducedMotion.matches) { status('reduced-motion'); return; }
 
   const previousFocus = document.activeElement;
   const previousInert = app.inert;
@@ -50,6 +53,7 @@
   function finish() {
     if (state === 'done') return;
     state = 'done';
+    status('finished: ' + intro.dataset.introStatus);
     clearTimeout(autoTimer);
     clearTimeout(exitTimer);
     removers.splice(0).forEach(remove => remove());
@@ -90,6 +94,7 @@
     app.inert = true;
     app.setAttribute('aria-hidden', 'true');
     state = 'visible';
+    status('visible');
 
     listen(intro, 'click', event => {
       event.preventDefault();
@@ -152,7 +157,8 @@
       removers.push(() => reducedMotion.removeListener(motionChanged));
     }
     autoTimer = setTimeout(() => dismiss(), 3200);
-  } catch {
+  } catch (error) {
+    status('controller-error: ' + error.message);
     // The independent controller's failure path also restores the workspace.
     finish();
   }
