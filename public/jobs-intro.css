@@ -1,7 +1,7 @@
 /* Original Jobs branding. This scene is self-contained so app startup never
    depends on a video, a remote asset, or the main application bundle. */
+:root { --jobs-intro-ready: 1; }
 #jobs-startup {
-  --jobs-intro-ready: 1;
   position: fixed;
   inset: 0;
   z-index: 2147483647;
