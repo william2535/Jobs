@@ -1094,7 +1094,7 @@ function jobCard(rawJob, siteFolder = false) {
   const subtitle = siteFolder
     ? `${j.workflow?.details?.reference || j.id.slice(0, 8)} · Plan ${drawingOf(site, j)?.revision || "Unlabelled"}`
     : site ? [jobTypeLabel(j), j.engineer || "Unassigned"].filter(Boolean).join(" · ") : "No site";
-  return `<article class="job-card-shell"><button class="job-card" data-testid="${siteFolder ? "site-job-card" : "job-card"}" data-action="job:${esc(j.id)}">${photoMarkup(profilePhoto(rawJob, site)) || '<span class="job-mark">▤</span>'}<span><strong>${esc(title)}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${esc(subtitle)}</small></span><span class="job-meta">${badge(j.status)}<small>${esc(new Date(j.updatedAt).toLocaleDateString())}</small></span></button><button class="job-card-settings" data-testid="job-settings" data-action="job-settings:${esc(j.id)}" aria-label="Settings for ${esc(title)}" title="Job settings">${settingsIcon}</button></article>`;
+  return `<article class="job-card-shell"><button class="job-card" data-testid="${siteFolder ? "site-job-card" : "job-card"}" data-action="job:${esc(j.id)}">${photoMarkup(profilePhoto(rawJob, site)) || '<span class="job-mark">▤</span>'}<span><strong>${esc(title)}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${esc(subtitle)}</small></span><span class="job-meta">${badge(j.status)}<small>${esc(new Date(j.updatedAt).toLocaleDateString())}</small></span></button><button type="button" class="job-card-transfer" data-action="transfer-job:${esc(j.id)}" aria-label="Transfer job pack"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></svg></button><button class="job-card-settings" data-testid="job-settings" data-action="job-settings:${esc(j.id)}" aria-label="Settings for ${esc(title)}" title="Job settings">${settingsIcon}</button></article>`;
 }
 function siteJobs(s) {
   const jobs = state.jobs.filter((j) => j.siteId === s.id);
@@ -1346,6 +1346,43 @@ async function action(a, source) {
     return;
   }
   if (!toolboxChest.close({ restoreFocus: false })) return;
+  if (a.startsWith("transfer-job:")) {
+    if(!storageReady || dirty || recoverySnapshot) throw Error("Save your work before transferring a job.");
+    const job=state.jobs.find(item=>item.id===a.slice("transfer-job:".length));
+    if(!job)throw Error("Job no longer available.");
+    const dialog=document.createElement("dialog");
+    dialog.setAttribute("aria-label","Quick Transfer");
+    dialog.innerHTML='<h2>Quick Transfer</h2><p>Send an editable job pack to another engineer or the office.</p><div class="actions"><button type="button" class="primary" data-transfer="share">Nearby / share job pack</button><button type="button" data-transfer="receive">Receive job pack</button><button type="button" data-transfer="cancel">Cancel</button></div><p class="muted">Choose AirDrop, Quick Share, WhatsApp or email if available on your device. Job packs may contain confidential site information.</p>';
+    document.body.append(dialog);
+    dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+    const send=dialog.querySelector('[data-transfer="share"]');
+    send.disabled=true;
+    dialog.querySelector('[data-transfer="cancel"]').onclick=()=>dialog.close();
+    dialog.querySelector('[data-transfer="receive"]').onclick=()=>{dialog.close();$("#job-file").click();};
+    dialog.showModal();
+    try {
+      const pack=await createJobPackage(siteOf(job)||null,job);
+      const name="job-"+job.id+".jobs.json";
+      const blob=new Blob([JSON.stringify(pack)],{type:"application/json"});
+      if(!dialog.open)return;
+      send.disabled=false;
+      send.onclick=async()=>{
+        send.disabled=true;
+        try {
+          const native=getNativePlatform();
+          if(native){await native.exportBlob(blob,name,{share:true});dialog.close();return;}
+          const file=new File([blob],name,{type:"application/json"});
+          if(navigator.share && navigator.canShare?.({files:[file]})){
+            try{await navigator.share({files:[file],title:"Jobs pack"});dialog.close();return;}
+            catch(error){if(error.name==="AbortError")return;if(!["NotAllowedError","NotSupportedError","TypeError"].includes(error.name))throw error;}
+          }
+          const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+          dialog.close();reportNotice("Job pack downloaded. Share it from Files.");
+        }catch(error){reportError(error.message);dialog.close();}finally{send.disabled=false;}
+      };
+    }catch(error){dialog.close();throw error;}
+    return;
+  }
   if (a === "choose-job-folder") {
     if (!storageReady || dirty || recoverySnapshot) throw Error("Save your current work before choosing a folder.");
     const selected=await chooseJobFolder();

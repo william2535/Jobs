@@ -680,3 +680,5 @@
   outline:3px solid #5ce9ff;outline-offset:-4px
  }
 }
+
+@media(max-width:700px){.mobile-workspace .mw-job-transfer{right:49px}.mobile-workspace .mw-job-card .mw-card-head,.mobile-workspace .mw-job-card.has-record-photo .mw-card-head{padding-right:82px}}
