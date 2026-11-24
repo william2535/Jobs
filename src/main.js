@@ -1376,7 +1376,7 @@ async function action(a, source) {
     }
     if(!running || running.jobId!==job.id)throw Error("No active work session for this job.");
     const start=localClock(new Date(running.startedAt)),end=localClock(new Date());
-    const existing=job.timesheets?.some(entry=>entry.id===running.id);
+    const existing=job.workflow?.timesheets?.some(entry=>entry.id===running.id);
     if(!existing){
       const next=saveTimesheet(state,{id:running.id,date:start.date,start:start.time,endDate:end.date,end:end.time,sessionType:"Work",customType:"",hours:null,note:"",engineer:running.engineer},{jobId:job.id});
       if(!(await persist(next,"Work session saved.")))return;
