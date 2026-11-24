@@ -80,6 +80,7 @@ export async function clickExportJob(page, { restore = true } = {}) {
   await openJobSection(page, 'Finalisation');
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export job', exact: true }).click();
+  await page.getByRole('button', { name: 'Editable Jobs file (.json)', exact: true }).click();
   const download = await pending;
   if (restore && previous && previous !== 'Finalisation') await openJobSection(page, previous);
   return download;

@@ -68,7 +68,7 @@ import "./fire-maintenance-ui.css";
 import "./service-report.css";
 import { renderCertificates } from "./certificates-ui.js";
 import { renderCertificate } from "./certificate-renderer.js";
-import { shareCertificatePdf } from "./certificate-pdf.js";
+import { generateReportPdf, shareCertificatePdf } from "./certificate-pdf.js";
 import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
@@ -1610,7 +1610,7 @@ async function action(a, source) {
   const rawJob = currentJob(),
     s = rawJob && siteOf(rawJob),
     j = rawJob && effectiveJob(rawJob, s);
-  if (draftJob && ["export", "print", "panel-export", "source-export", "edited-source-export"].includes(a))
+  if (draftJob && ["export", "export-json", "export-pdf", "print", "panel-export", "source-export", "edited-source-export"].includes(a))
     throw Error("Save this job first.");
   if (a === "edited-source-export")
     return await download(
@@ -1619,8 +1619,39 @@ async function action(a, source) {
     );
   if (a === "source-export")
     return await download(drawingOf(s, j).source, "original.zonesketch.json");
-  if (a === "export")
+  if (a === "export") {
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("aria-label", "Export job pack");
+    dialog.innerHTML = '<h2>Export job pack</h2><p>Choose a file format.</p><div class="actions"><button type="button" class="primary" data-format="pdf">PDF job pack</button><button type="button" data-format="json">Editable Jobs file (.json)</button><button type="button" data-format="cancel">Cancel</button></div><p class="muted">PDF is for reading and sharing. The Jobs file can be imported again.</p>';
+    document.body.append(dialog);
+    dialog.addEventListener("close", () => dialog.remove(), {once:true});
+    dialog.querySelectorAll("[data-format]").forEach(control => control.onclick = () => {
+      const format = control.dataset.format;
+      dialog.close();
+      if (format !== "cancel") runTask(() => action(format === "pdf" ? "export-pdf" : "export-json"));
+    });
+    dialog.showModal();
+    return;
+  }
+  if (a === "export-json")
     return await download(await createJobPackage(s || null, rawJob), `job-${j.id}.jobs.json`);
+  if (a === "export-pdf") {
+    if (dirty || recoverySnapshot) throw Error("Save your changes before exporting a PDF.");
+    const title = j.workflow?.details?.title || s?.name || "Job pack";
+    const blob = await generateReportPdf(jobReport(s,j), {title, subject:"Job pack", heading:"Jobs · " + title, footer:"Job " + j.id.slice(0,8), label:"Job report and recorded evidence"});
+    const name = "Job-" + j.id + ".pdf";
+    const native = getNativePlatform();
+    if (native) return native.exportBlob(blob,name,{share:true});
+    const file = new File([blob],name,{type:"application/pdf"});
+    if (navigator.share && navigator.canShare?.({files:[file]})) {
+      try { await navigator.share({files:[file],title}); return; }
+      catch(error) { if(error.name==="AbortError") return; if(!["NotAllowedError","NotSupportedError","TypeError"].includes(error.name)) throw error; }
+    }
+    const url=URL.createObjectURL(blob), link=document.createElement("a");
+    link.href=url;link.download=name;document.body.append(link);
+    try {link.click();} finally {link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+    return;
+  }
   if (a === "panel-export")
     return await download(panelContext(s, j), `job-${j.id}.panel-context.json`);
   if (a === "print") {
