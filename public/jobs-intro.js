@@ -10,12 +10,12 @@
   try {
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (sessionStorage.getItem(sessionKey) === '1') return;
-    if (getComputedStyle(intro).getPropertyValue('--jobs-intro-ready').trim() !== '1') return;
+    if (getComputedStyle(document.documentElement).getPropertyValue('--jobs-intro-ready').trim() !== '1') return;
   } catch {
     // With restricted storage or an unsupported browser, open the workspace.
     return;
   }
-  if (reducedMotion.matches || document.hidden) return;
+  if (reducedMotion.matches) return;
 
   const previousFocus = document.activeElement;
   const previousInert = app.inert;
@@ -145,9 +145,12 @@
       if (document.hidden) dismiss({ immediate: true });
     });
     listen(window, 'pagehide', () => dismiss({ immediate: true }));
-    listen(reducedMotion, 'change', event => {
-      if (event.matches) dismiss({ immediate: true });
-    });
+    const motionChanged = event => { if (event.matches) dismiss({ immediate: true }); };
+    if (typeof reducedMotion.addEventListener === 'function') listen(reducedMotion, 'change', motionChanged);
+    else if (typeof reducedMotion.addListener === 'function') {
+      reducedMotion.addListener(motionChanged);
+      removers.push(() => reducedMotion.removeListener(motionChanged));
+    }
     autoTimer = setTimeout(() => dismiss(), 3200);
   } catch {
     // The independent controller's failure path also restores the workspace.
