@@ -453,6 +453,7 @@ export function validateJobPackage(input) {
   if (!standalone) object(input.site, "site");
   const { site, job } = input;
   validateProfilePhoto(job.profilePhoto);
+  validateProfilePhoto(job.engineerBackground);
   validateProfilePhoto(site?.profilePhoto);
   const checklist = validateJobChecklist(job.checklist);
   const fireMaintenance = validateFireMaintenance(job.fireMaintenance);
