@@ -1,4 +1,4 @@
-import { photoPicker, photoMarkup, profilePhoto } from "./profile-photo.js";
+import { photoPicker, photoMarkup, profilePhoto, validProfilePhoto } from "./profile-photo.js";
 /** Offline rich notes. Packages contain a bounded document tree, never executable HTML. */
 const BLOCK_TYPES = ['paragraph', 'heading1', 'heading2', 'heading3', 'blockquote', 'bulletList', 'orderedList', 'checklist'];
 const ALIGNMENTS = ['left', 'center', 'right', 'justify'];
@@ -302,12 +302,27 @@ export function renderJobNotes({ job, site, photoHost, onSave, onDirty = () => {
   const error = root.querySelector('.notes-error');
   const status = root.querySelector('.notes-status');
   let picture = job.profilePhoto ?? null;
+  let background = job.engineerBackground ?? null;
+  function paintBackground(){root.style.backgroundImage=validProfilePhoto(background)?`linear-gradient(#091725dc,#091725dc),url("${background}")`:"";root.classList.toggle("engineer-background",validProfilePhoto(background));}
+  paintBackground();
   const portrait = document.createElement('span');portrait.className='notes-record-portrait';
-  function paintPortrait(){portrait.innerHTML=photoMarkup(profilePhoto({...job,profilePhoto:picture},site));portrait.hidden=!portrait.firstChild;}
+  function paintPortrait(){portrait.innerHTML=photoMarkup(profilePhoto({...job,profilePhoto:picture},site));portrait.hidden=!site || !portrait.firstChild;}
   titleInput.parentElement.prepend(portrait);paintPortrait();
   if (!site && photoHost) {
     const picker=photoPicker({value:picture,onChange:value=>{picture=value;paintPortrait();dirty();},onError:report,onBusy:value=>{readingPhotos=value;lock(value);}});
-    picker.classList.add('job-photo-toolbar');photoHost.insertBefore(picker,photoHost.querySelector('.job-settings-icon'));
+    picker.classList.add('job-photo-overlay');
+    const add=picker.querySelector('.record-photo-add'),remove=picker.querySelector('.record-photo-remove');
+    const decorate=()=>{add.setAttribute('aria-label',picture?'Replace photo':'Add photo');add.title=add.getAttribute('aria-label');add.textContent='📷';remove.setAttribute('aria-label','Remove photo');remove.title='Remove photo';remove.textContent='×';};
+    const observer=new MutationObserver(()=>{if(add.textContent!=='📷'||remove.textContent!=='×')decorate();});observer.observe(add,{childList:true});observer.observe(remove,{childList:true});decorate();
+    portrait.after(picker);portrait.hidden=true;portrait.classList.add('photo-overlay-source');
+  }
+  if(photoHost){
+    const bg=photoPicker({value:background,onChange:value=>{background=value;paintBackground();dirty();},onError:report,onBusy:value=>{readingPhotos=value;lock(value);}});
+    bg.classList.add('job-background-picker');
+    const add=bg.querySelector('.record-photo-add'),remove=bg.querySelector('.record-photo-remove');
+    const decorate=()=>{add.textContent='Change background';remove.textContent='Reset';remove.setAttribute('aria-label','Reset background');};
+    const observer=new MutationObserver(()=>{if(add.textContent!=='Change background'||remove.textContent!=='Reset')decorate();});observer.observe(add,{childList:true});observer.observe(remove,{childList:true});decorate();
+    photoHost.insertBefore(bg,photoHost.querySelector('.job-settings-icon'));
   }
   titleInput.value = title;
   appendBlocks(editor, documentValue.blocks, { editable: true });
@@ -607,7 +622,7 @@ export function renderJobNotes({ job, site, photoHost, onSave, onDirty = () => {
       const nextTitle = titleInput.value.trim();
       if (nextTitle.length > 200) throw Error('Keep the job title to 200 characters.');
       saving = true; lock(true); status.textContent = 'Saving…';
-      const saved = await onSave(next, nextTitle, picture);
+      const saved = await onSave(next, nextTitle, picture, background);
       if (saved !== true) throw Error('Your notes could not be saved. They are still here; try Save again.');
       documentValue = next; form.dataset.dirty = 'false'; onDirty(false);
       if (!disposed) status.textContent = 'Notes saved on this device';
