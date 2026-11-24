@@ -13,6 +13,10 @@ The certificate PDF feature uses **jsPDF 4.2.1** (MIT), bundled locally with its
 PDF text embeds unmodified **Open Sans Regular and Semibold** TrueType fonts from opensans.com, with Google Corporation's original copyright and Apache-2.0 licence. The full licence is retained in [`src/vendor/OPEN-SANS-LICENSE.txt`](../src/vendor/OPEN-SANS-LICENSE.txt) and the public PDF runtime notice. The fonts render certificate text; they do not introduce third-party branding, certification marks or accreditation. PDF generation and sharing do not upload job records to the library authors or font provider.
 
 
+## Jobs header artwork
+
+The compact workspace and visit header uses `public/jobs-logo.webp`, copied unchanged from `assets/jobs-authentic.webp` in `william2535/FIRE-SECURITY-APP-PORTAL` at commit `638c1f0281de4ba638ad8576b7dd65f32dd1270d` ("Add supplied original Jobs logo asset"). This is the owner's supplied multicolour clipboard/check logo, rendered in its original proportions and cached with the app for offline use. SHA-256: `746967e111910732056aa3a435755290a34885ebf0934d9b7b69d45beae2cdba`. The artwork is not relicensed. Existing installation icons remain separate.
+
 ## FINDR launcher artwork
 
 The owner-requested mobile launcher uses `public/findr-logo.png`, copied unchanged from FINDR `public/app/icons/icon-192.png` at commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. SHA-256: `b42a020989445ecabf16bd74d431c866353c28da60b3cc6351a12214a6f23dbb`. This is the owner's FINDR branding, not a newly open-source-licensed component; no licence is changed or granted by its inclusion. It is cached with the Jobs shell for offline display. The shortcut opens the existing FINDR app at `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; it does not transfer job data or implement the future Panel Pal adapter. This launcher does not bundle the FINDR app. The separate toolbox components are documented below.
