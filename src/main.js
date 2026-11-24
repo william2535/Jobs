@@ -72,6 +72,8 @@ import { shareCertificatePdf } from "./certificate-pdf.js";
 import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
+import "./profile-photo.css";
+import { photoMarkup, photoPicker, profilePhoto } from "./profile-photo.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
 const $ = (s) => document.querySelector(s),
@@ -880,9 +882,12 @@ function render() {
   if (page === "job" && rawJob && $("#notes-root")) {
     $("#notes-root").append(renderJobNotes({
       job: rawJob,
-      onSave: (document, title) => saveJob({
+      site: s,
+      photoHost: document.querySelector(".quick-job-top"),
+      onSave: (document, title, picture) => saveJob({
         ...rawJob,
         notesDocument: validateNotesDocument(document),
+        profilePhoto: picture,
         workflow: { ...rawJob.workflow, version: 1, details: { ...rawJob.workflow?.details, title } },
       }),
       onDirty: markDirty,
@@ -999,6 +1004,18 @@ function render() {
         flash(e.message, true);
       }
     };
+  const createPhoto = $("#new-site-photo");
+  if (createPhoto) {
+    const form = document.querySelector('form[data-form="site"]');
+    createPhoto.append(photoPicker({onChange: value => {form.profilePhoto=value;form.dataset.dirty="true";markDirty();},onBusy: value => {form.querySelector('button.primary').disabled=value;}}));
+  }
+  const existingPhoto = $("#existing-site-photo");
+  if (existingPhoto && s) existingPhoto.append(photoPicker({value:s.profilePhoto,onChange:async value=>{
+    if(dirty || busy || operationPending) {alert("Save your unfinished changes first.");return false;}
+    const next=structuredClone(state);const record=next.sites.find(item=>item.id===s.id);if(!record)return false;
+    record.profilePhoto=value;
+    if(await persist(next,"Site photo saved.")){render();return true;}return false;
+  }}));
   syncToolboxTrigger();
   if (changedRoute) scrollPageToTop();
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
@@ -1046,7 +1063,7 @@ function home() {
   return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${state.jobs.map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
 function sites() {
-  return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><h1>Sites</h1><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><h2 id="create-site-title">Create site</h2><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}"><strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
+  return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><h1>Sites</h1><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><div class="record-site-heading"><h2 id="create-site-title">Create site</h2><div id="new-site-photo"></div></div><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}">${photoMarkup(s.profilePhoto)}<strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
 }
 
 function jobCard(rawJob, siteFolder = false) {
@@ -1055,7 +1072,7 @@ function jobCard(rawJob, siteFolder = false) {
   const subtitle = siteFolder
     ? `${j.workflow?.details?.reference || j.id.slice(0, 8)} · Plan ${drawingOf(site, j)?.revision || "Unlabelled"}`
     : site ? [jobTypeLabel(j), j.engineer || "Unassigned"].filter(Boolean).join(" · ") : "No site";
-  return `<article class="job-card-shell"><button class="job-card" data-testid="${siteFolder ? "site-job-card" : "job-card"}" data-action="job:${esc(j.id)}"><span class="job-mark">▤</span><span><strong>${esc(title)}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${esc(subtitle)}</small></span><span class="job-meta">${badge(j.status)}<small>${esc(new Date(j.updatedAt).toLocaleDateString())}</small></span></button><button class="job-card-settings" data-testid="job-settings" data-action="job-settings:${esc(j.id)}" aria-label="Settings for ${esc(title)}" title="Job settings">${settingsIcon}</button></article>`;
+  return `<article class="job-card-shell"><button class="job-card" data-testid="${siteFolder ? "site-job-card" : "job-card"}" data-action="job:${esc(j.id)}">${photoMarkup(profilePhoto(rawJob, site)) || '<span class="job-mark">▤</span>'}<span><strong>${esc(title)}</strong><small>${j.importConflict ? "Preserved conflict · " : ""}${esc(subtitle)}</small></span><span class="job-meta">${badge(j.status)}<small>${esc(new Date(j.updatedAt).toLocaleDateString())}</small></span></button><button class="job-card-settings" data-testid="job-settings" data-action="job-settings:${esc(j.id)}" aria-label="Settings for ${esc(title)}" title="Job settings">${settingsIcon}</button></article>`;
 }
 function siteJobs(s) {
   const jobs = state.jobs.filter((j) => j.siteId === s.id);
@@ -1065,7 +1082,7 @@ function siteJobs(s) {
 function siteView(s) {
   if (!s) return "";
   const d = s.drawings.at(-1);
-  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(siteLabel(s))}</h1><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div>${button("Create job", "create", "primary")}</section>${siteJobs(s)}<section class="panel site-plan-panel"><div class="section-head"><h2>Site plan</h2><div class="actions">${button("Import site plan", "import-site-plan")}${drawingConnection(d)}</div></div><div id="site-plan-root"></div></section><div class="two-column site-details-layout"><section class="panel site-settings-panel"><div id="site-profile-root"></div>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
+  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(siteLabel(s))}</h1><div id="existing-site-photo"></div><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div>${button("Create job", "create", "primary")}</section>${siteJobs(s)}<section class="panel site-plan-panel"><div class="section-head"><h2>Site plan</h2><div class="actions">${button("Import site plan", "import-site-plan")}${drawingConnection(d)}</div></div><div id="site-plan-root"></div></section><div class="two-column site-details-layout"><section class="panel site-settings-panel"><div id="site-profile-root"></div>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
     "Floor",
     "floorId",
     d.floors.map((f) => [f.id, f.name]),
@@ -1640,6 +1657,7 @@ async function submit(form) {
   }
   if (type === "site") {
     const s = newSite(v.name.trim(), v.address);
+    if (form.profilePhoto) s.profilePhoto = form.profilePhoto;
     if (!s.name) throw Error("Enter a site name.");
     next.sites.push(s);
     if (await persist(next, "Site saved.")) {

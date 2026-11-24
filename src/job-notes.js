@@ -1,3 +1,4 @@
+import { photoPicker, photoMarkup, profilePhoto } from "./profile-photo.js";
 /** Offline rich notes. Packages contain a bounded document tree, never executable HTML. */
 const BLOCK_TYPES = ['paragraph', 'heading1', 'heading2', 'heading3', 'blockquote', 'bulletList', 'orderedList', 'checklist'];
 const ALIGNMENTS = ['left', 'center', 'right', 'justify'];
@@ -285,7 +286,7 @@ function loadImage(file) {
   });
 }
 
-export function renderJobNotes({ job, onSave, onDirty = () => {}, onNavigate = () => {} }) {
+export function renderJobNotes({ job, site, photoHost, onSave, onDirty = () => {}, onNavigate = () => {} }) {
   const root = document.createElement('section');
   root.className = 'job-notes';
   let documentValue = validateNotesDocument(job.notesDocument) || legacyNotes(job);
@@ -300,6 +301,14 @@ export function renderJobNotes({ job, onSave, onDirty = () => {}, onNavigate = (
   const titleInput = root.querySelector('.notes-title');
   const error = root.querySelector('.notes-error');
   const status = root.querySelector('.notes-status');
+  let picture = job.profilePhoto ?? null;
+  const portrait = document.createElement('span');portrait.className='notes-record-portrait';
+  function paintPortrait(){portrait.innerHTML=photoMarkup(profilePhoto({...job,profilePhoto:picture},site));portrait.hidden=!portrait.firstChild;}
+  titleInput.parentElement.prepend(portrait);paintPortrait();
+  if (!site && photoHost) {
+    const picker=photoPicker({value:picture,onChange:value=>{picture=value;paintPortrait();dirty();},onError:report,onBusy:value=>{readingPhotos=value;lock(value);}});
+    picker.classList.add('job-photo-toolbar');photoHost.insertBefore(picker,photoHost.querySelector('.job-settings-icon'));
+  }
   titleInput.value = title;
   appendBlocks(editor, documentValue.blocks, { editable: true });
   function snapshot() {
@@ -598,7 +607,7 @@ export function renderJobNotes({ job, onSave, onDirty = () => {}, onNavigate = (
       const nextTitle = titleInput.value.trim();
       if (nextTitle.length > 200) throw Error('Keep the job title to 200 characters.');
       saving = true; lock(true); status.textContent = 'Saving…';
-      const saved = await onSave(next, nextTitle);
+      const saved = await onSave(next, nextTitle, picture);
       if (saved !== true) throw Error('Your notes could not be saved. They are still here; try Save again.');
       documentValue = next; form.dataset.dirty = 'false'; onDirty(false);
       if (!disposed) status.textContent = 'Notes saved on this device';
