@@ -1,3 +1,4 @@
+import { sortJobs, folderName } from "./job-folder.js";
 import { photoMarkup, profilePhoto } from "./profile-photo.js";
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
 const FREE_ZONE_SKETCH_URL = "https://william2535.github.io/ZoneSketch-Unstable/";
@@ -368,7 +369,7 @@ export function renderMobileWorkspace({
           `${bb?.date || "9999"}${bb?.start || "99:99"}`,
         );
       });
-      for (const job of filtered)
+      for (const job of (dateFilter ? filtered : sortJobs(filtered,state.sites)))
         cards.append(jobCard(job, scheduleEntry(job)));
       if (!filtered.length)
         cards.append(
@@ -517,6 +518,9 @@ export function renderMobileWorkspace({
     );
     section.append(
       card,
+      node("h3", "Settings"),
+      control("Choose folder"+(folderName()?" · "+folderName():""), () => onAction("choose-job-folder"), "mw-blue-button"),
+      node("p", "Job pack storage · loads editable job packs, not PDFs."),
       control("Help & data", () => onAction("help"), "mw-blue-button"),
       shortcuts(),
       control(
