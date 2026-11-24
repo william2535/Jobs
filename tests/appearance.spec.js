@@ -220,7 +220,7 @@ test('dark tools, timesheets and plan results remain readable while drawings and
   expect(await pass.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe(await fail.evaluate(node => getComputedStyle(node).backgroundColor));
   if (testInfo.project.use.isMobile) await page.setViewportSize({ width: 320, height: 844 });
   await assertNoOverflow(page);
-  await appearance(page).scrollIntoViewIfNeeded();
+  await page.getByLabel("Appearance settings", {exact:true}).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('dark-plan.png'), fullPage: true });
 
   await openJobSection(page, 'Finalisation');
