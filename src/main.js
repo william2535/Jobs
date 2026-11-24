@@ -874,6 +874,7 @@ function render() {
     updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
+    $("#timesheets-root").insertAdjacentHTML("beforeend",button("Jobs Tap · office sticker","jobs-tap"));
     $("#timesheets-root").append(renderTimesheets({
       state: workspaceSnapshot(),
       initialDate: timesheetDate || undefined,
@@ -1105,7 +1106,7 @@ function siteJobs(s) {
 function siteView(s) {
   if (!s) return "";
   const d = s.drawings.at(-1);
-  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(siteLabel(s))}</h1><div id="existing-site-photo"></div><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div>${button("Create job", "create", "primary")}</section>${siteJobs(s)}<section class="panel site-plan-panel"><div class="section-head"><h2>Site plan</h2><div class="actions">${button("Import site plan", "import-site-plan")}${drawingConnection(d)}</div></div><div id="site-plan-root"></div></section><div class="two-column site-details-layout"><section class="panel site-settings-panel"><div id="site-profile-root"></div>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
+  return `<section class="page-title"><div><span class="eyebrow">SITE / ${esc(s.id.slice(0, 8))}</span><h1>${esc(siteLabel(s))}</h1><div id="existing-site-photo"></div><p>${esc(s.address || "Address not recorded")} · ${d.assets.length} devices</p></div><div class="actions">${button("Jobs Tap", "tap-site:"+s.id)}${button("Create job", "create", "primary")}</div></section>${siteJobs(s)}<section class="panel site-plan-panel"><div class="section-head"><h2>Site plan</h2><div class="actions">${button("Import site plan", "import-site-plan")}${drawingConnection(d)}</div></div><div id="site-plan-root"></div></section><div class="two-column site-details-layout"><section class="panel site-settings-panel"><div id="site-profile-root"></div>${s.importedMetadata?.length ? `<details><summary>Preserved imported site details (${s.importedMetadata.length})</summary>${s.importedMetadata.map((m) => `<p><strong>${esc(m.site.name)}</strong><br>${esc(m.site.address || "No address supplied")}<br><small>Import ${esc(m.fingerprint.slice(0, 12))}</small></p>`).join("")}<p class="muted">Current site details above were retained. Review these imported versions before editing.</p></details>` : ""}<h3>Drawings</h3>${s.drawings.map((d) => `<p>${esc(d.revision || "Unlabelled revision")} · ${d.floors.length} floors · ${d.assets.length} devices</p>`).join("")}<p class="muted">Earlier visits stay linked to their original drawing.</p></section><section class="panel"><h2>Add equipment manually</h2><form data-form="asset">${field("Device reference", "reference", "", "text", true)}${field("Device type", "type", "", "text", true)}${select(
     "Floor",
     "floorId",
     d.floors.map((f) => [f.id, f.name]),
@@ -1383,6 +1384,20 @@ async function action(a, source) {
       if(!(await persist(next,"Work session saved.")))return;
     }
     localStorage.removeItem(WORK_TIMER_KEY);render();return;
+  }
+  if(a==="jobs-tap" || a.startsWith("tap-site:")){
+    const site=a.startsWith("tap-site:")?state.sites.find(s=>s.id===a.slice(9)):null;
+    const url=new URL("https://william2535.github.io/Jobs/");
+    url.searchParams.set("tap",site?"site":"office");if(site)url.searchParams.set("id",site.id);
+    const dialog=document.createElement("dialog");dialog.className="toolbox-chest transfer-chest";dialog.setAttribute("aria-label","Jobs Tap");
+    dialog.innerHTML='<header class="toolbox-chest-lid"><div class="toolbox-chest-handle"></div><div class="toolbox-chest-title-row"><div><small>NFC CHECK-IN</small><h2>Jobs Tap</h2></div><button class="toolbox-chest-close" aria-label="Close">×</button></div></header><div class="toolbox-chest-tray"><p>Write this link to an NFC sticker. Tapping it opens '+(site?'this saved site':'Timesheets for office handover')+'. No hours are submitted automatically.</p><input aria-label="NFC link" readonly style="width:100%"><div class="actions"><button data-copy>Copy NFC link</button><button data-write>Write NFC sticker</button></div><p data-status role="status"></p></div>';
+    dialog.querySelector("input").value=url.href;const status=dialog.querySelector("[data-status]");
+    dialog.querySelector(".toolbox-chest-close").onclick=()=>dialog.close();
+    dialog.querySelector("[data-copy]").onclick=async()=>{try{await navigator.clipboard.writeText(url.href);status.textContent="Link copied. Use an NFC tag writing app if needed.";}catch{dialog.querySelector("input").select();status.textContent="Copy the selected link manually.";}};
+    const write=dialog.querySelector("[data-write]");const controller=new AbortController();
+    if(!("NDEFReader" in window)){write.disabled=true;status.textContent="Use an NFC writing app on this device.";}
+    write.onclick=async()=>{try{write.disabled=true;status.textContent="Hold your phone against a writable NFC sticker.";await new window.NDEFReader().write({records:[{recordType:"url",data:url.href}]},{signal:controller.signal});status.textContent="Sticker written.";}catch(e){status.textContent=e.message;}finally{write.disabled=false;}};
+    dialog.addEventListener("close",()=>{controller.abort();dialog.remove();},{once:true});document.body.append(dialog);dialog.showModal();return;
   }
   if (a.startsWith("transfer-job:")) {
     if(!storageReady || dirty || recoverySnapshot) throw Error("Save your work before transferring a job.");
@@ -2016,6 +2031,10 @@ async function openRecords() {
 }
 async function init() {
   await openRecords();
+  const tap=new URLSearchParams(location.search);
+  if(storageReady && tap.get("tap")==="office"){page="timesheets";}
+  else if(storageReady && tap.get("tap")==="site"){const site=state.sites.find(s=>s.id===tap.get("id"));if(site){page="site";activeSite=site.id;}else{message="This site is not saved on this device. Import its job pack first.";}}
+  if(tap.has("tap")){const clean=new URL(location.href);clean.searchParams.delete("tap");clean.searchParams.delete("id");history.replaceState(null,"",clean.href);}
   render();
   if (import.meta.env.PROD) offlineController = startOffline({
     onStatus: value => { offlineLabel = value; updateReleaseStatus(); },
