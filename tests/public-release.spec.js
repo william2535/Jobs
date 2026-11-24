@@ -23,7 +23,13 @@ async function stored(page, storeName) {
 async function home(page) {
   const control = page.locator('[data-action="home"]:visible').first();
   if (await control.count()) await control.click();
-  else await page.getByRole('navigation', { name: 'Mobile workspace', exact: true }).getByRole('button', { name: 'Dashboard', exact: true }).click();
+  else {
+    const navigation = page.getByRole('navigation', { name: 'Workspace navigation', exact: true });
+    if (await navigation.isVisible()) {
+      await navigation.getByText('Menu', { exact: true }).click();
+      await navigation.getByRole('button', { name: 'Home', exact: true }).click();
+    } else await page.getByRole('navigation', { name: 'Mobile workspace', exact: true }).getByRole('button', { name: 'Dashboard', exact: true }).click();
+  }
 }
 
 async function help(page) {
