@@ -27,7 +27,8 @@
     "Explicit lifecycle cleanup for app/document/window listeners, paper timer, generated audio and search yields.",
     "Pending writes and failed changes guard leaving; explicit discard preserves the last saved record.",
     "Unsubmitted resistor field drafts survive repaint, selection changes and invalid submission.",
-    "CSS selectors scoped to .toolbox-extra; palette adapted to Jobs light/deep-blue theme; touch targets and inputs adjusted."
+    "CSS selectors scoped to .toolbox-extra; palette adapted to Jobs light/deep-blue theme; touch targets and inputs adjusted.",
+    "Embedded exit links say Toolbox to match their actual Jobs destination."
   ],
   "storage": {
     "database": "jobs-toolbox-extras",
@@ -51,7 +52,7 @@
       "file": "resistor-lab.mjs",
       "sourcePath": "public/app/resistor-lab.mjs",
       "sourceSha256": "8a709e301353d467fcaedbe6547b66742771c1b65ed4b4c47bed42cbc2cf5823",
-      "includedSha256": "7991c3baba25373ac519d19ad06184247569c2b50a3e30cad104a049f504de68",
+      "includedSha256": "879b3c617be396b5529c12b64f52159486525e80351c22c106d47c1a6b559829",
       "unchanged": false
     },
     {
@@ -93,7 +94,7 @@
       "file": "fess-mocks.mjs",
       "sourcePath": "public/app/fess-mocks.mjs",
       "sourceSha256": "b909f57c4f3613c891bd0543d24946a4626536b30760cc9aa2936b974476bbab",
-      "includedSha256": "5543734c4c6218523455e192bbdd43d9474dc78711483cdf673c9c4ecc77dd68",
+      "includedSha256": "09e2168efc52ebc6a8acc7b606c819ee1f3de682fd72fce319c6b65826a3c75c",
       "unchanged": false
     },
     {

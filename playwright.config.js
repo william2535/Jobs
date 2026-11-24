@@ -21,7 +21,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js", "**/job-notes.spec.js", "**/assets-workspace.spec.js", "**/certificates.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit" } },
+    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js", "**/theme-navigation.spec.js", "**/job-notes.spec.js", "**/assets-workspace.spec.js", "**/certificates.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit" } },
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"], launchOptions: chromiumLaunchOptions } },
   ],
