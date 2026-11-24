@@ -74,6 +74,7 @@ import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
+import "./compact-header.css";
 import { photoMarkup, photoPicker, profilePhoto } from "./profile-photo.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
@@ -189,7 +190,8 @@ function updateReleaseStatus() {
   const update = $("#release-update");
   if (update) update.hidden = !updateAvailable;
   const offline = $("#offline-status");
-  if (offline) offline.textContent = offlineLabel;
+  if (offline) { offline.textContent = offlineLabel; offline.title=offlineLabel; }
+  const indicator=$(".compact-header-settings");if(indicator){indicator.dataset.warning=String(!/^Ready offline/i.test(offlineLabel)||saveLabel!=="Saved on this device");indicator.title=saveLabel+" · "+offlineLabel;}
 }
 function flash(text, isError = false) {
   message = isError ? "" : text;
@@ -746,7 +748,7 @@ function render() {
     }
   });
   const appHeader = document.querySelector(".workspace > header");
-  if (appHeader) appHeader.append(createAppearanceControl({ compact: true, toggle: mobileHome }));
+  if (appHeader && page !== "home") { const settingsButton=document.createElement("button");settingsButton.type="button";settingsButton.className="compact-header-settings";settingsButton.dataset.action="help";settingsButton.setAttribute("aria-label","Settings and storage status");settingsButton.textContent="⚙";appHeader.append(settingsButton); }
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {
@@ -870,7 +872,7 @@ function render() {
   if (page === "help" && $("#release-help-root")) {
     $("#release-help-root").append(renderReleaseHelp({ version: APP_VERSION, buildId: BUILD_ID, offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, onAction: value => runTask(() => action(value)) }));
     const settings=document.createElement("section");settings.className="panel";settings.innerHTML='<h2>Settings</h2><h3>Job pack storage</h3><p>Choose an existing folder to load editable job packs. PDFs are ignored.</p>';
-    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);$("#release-help-root").append(settings);
+    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);settings.append(createAppearanceControl({compact:false,toggle:false}));$("#release-help-root").append(settings);
     updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
