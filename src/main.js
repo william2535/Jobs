@@ -2013,7 +2013,14 @@ async function openRecords() {
 }
 async function init() {
   await openRecords();
+  const app = document.querySelector('#app');
+  const restoreStartupFocus = app?.contains(document.activeElement);
   render();
+  if (restoreStartupFocus && !app.contains(document.activeElement) && !app.inert) {
+    const target = [...app.querySelectorAll('[data-action="create"]')].find(node => node.getClientRects().length && !node.disabled);
+    if (target) target.focus({preventScroll:true});
+    else { app.tabIndex = -1; app.focus({preventScroll:true}); }
+  }
   if (import.meta.env.PROD) offlineController = startOffline({
     onStatus: value => { offlineLabel = value; updateReleaseStatus(); },
     onUpdate: value => { updateAvailable = value.available; if (value.blocked && value.message) reportNotice(value.message); updateReleaseStatus(); },
