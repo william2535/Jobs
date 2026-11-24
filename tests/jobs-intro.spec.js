@@ -5,7 +5,7 @@ const skip = page => page.getByRole('button', { name: 'Skip intro', exact: false
 
 async function openIntro(page) {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(intro(page)).toBeVisible();
+  await expect(intro(page), JSON.stringify(await page.evaluate(() => ({ status: document.querySelector('#jobs-startup')?.dataset.introStatus, scripts: [...document.scripts].map(s => s.src), css: getComputedStyle(document.documentElement).getPropertyValue('--jobs-intro-ready'), hidden: document.hidden, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches })))).toBeVisible();
   await expect(page.locator('#app')).toHaveJSProperty('inert', true);
   await expect(page.locator('#app')).toHaveAttribute('aria-hidden', 'true');
 }
