@@ -1,5 +1,6 @@
 /* A short, local brand introduction. This must never gate opening saved work. */
 (() => {
+  function start() {
   const intro = document.getElementById('jobs-startup');
   const app = document.getElementById('app');
   const skip = intro?.querySelector('[data-intro-skip]');
@@ -162,4 +163,8 @@
     // The independent controller's failure path also restores the workspace.
     finish();
   }
+  }
+  // Wait for the document's stylesheets to finish loading before checking readiness.
+  if (document.readyState === 'complete') start();
+  else window.addEventListener('load', start, { once: true });
 })();
