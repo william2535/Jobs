@@ -1,3 +1,4 @@
+import { photoMarkup, profilePhoto } from "./profile-photo.js";
 /** Mobile workspace over actual local records. No remote schedule, stock service or notifications. */
 const FREE_ZONE_SKETCH_URL = "https://william2535.github.io/ZoneSketch-Unstable/";
 import { jobTypeLabel } from "./job-options.js";
@@ -254,6 +255,8 @@ export function renderMobileWorkspace({
       icon("calendar"),
     );
     card.append(footer);
+    const picture=photoMarkup(profilePhoto(job,site));
+    if(picture){const holder=node("span",undefined,"mw-record-photo");holder.innerHTML=picture;card.prepend(holder);card.classList.add("has-record-photo");}
     const shell = node("div", undefined, "mw-job-card-shell");
     const settings = control("", () => onAction(`job-settings:${job.id}`), "mw-job-settings");
     settings.dataset.action = `job-settings:${job.id}`;
