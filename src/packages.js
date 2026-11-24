@@ -6,6 +6,7 @@ import { validateNotesDocument } from "./job-notes.js";
 import { validateJobSettings } from "./job-settings.js";
 import { validateDeviceRemarks } from "./device-remarks.js";
 import { validateFireMaintenance } from "./fire-maintenance.js";
+import { validateJobCertificates } from "./certificates.js";
 import { pngDimensions } from "./plan-preview.js";
 const hasClassification = (job) =>
   (typeof job.workType === "string" && job.workType.trim() === "Custom") ||
@@ -452,6 +453,7 @@ export function validateJobPackage(input) {
   const { site, job } = input;
   const checklist = validateJobChecklist(job.checklist);
   const fireMaintenance = validateFireMaintenance(job.fireMaintenance);
+  const certificates = validateJobCertificates(job.certificates);
   const notesDocument = validateNotesDocument(job.notesDocument);
   const settings = validateJobSettings(job.settings);
   const classification = hasClassification(job) ? validateJobClassification(job) : null;
@@ -624,6 +626,7 @@ export function validateJobPackage(input) {
   const normalized = clone(input);
   if (checklist !== undefined) normalized.job.checklist = checklist;
   if (fireMaintenance !== undefined) normalized.job.fireMaintenance = fireMaintenance;
+  if (certificates !== undefined) normalized.job.certificates = certificates;
   if (notesDocument !== undefined) normalized.job.notesDocument = notesDocument;
   if (settings !== undefined) normalized.job.settings = settings;
   if (classification) Object.assign(normalized.job, classification);
@@ -687,6 +690,7 @@ function cleanJob(job) {
   if (value.settings !== undefined) value.settings = validateJobSettings(value.settings);
   if (value.checklist !== undefined) value.checklist = validateJobChecklist(value.checklist);
   if (value.fireMaintenance !== undefined) value.fireMaintenance = validateFireMaintenance(value.fireMaintenance);
+  if (value.certificates !== undefined) value.certificates = validateJobCertificates(value.certificates);
   if (hasClassification(value)) Object.assign(value, validateJobClassification(value));
   if (value.workflow !== undefined) value.workflow = validateWorkflow(value.workflow);
   normalizeDeviceRemarks(value);
@@ -922,6 +926,9 @@ export async function importJobPackage(state, input) {
         record.drawingId = drawingMap.get(record.drawingId);
     }
   }
+  // Issued certificate evidence is a self-contained historical snapshot. Its job,
+  // drawing and result IDs describe the issued document, not this imported copy.
+  // Leave it unchanged when conflicting live records receive new local IDs.
   for (const entry of job.archivedResults || []) {
     if (drawingMap.has(entry.drawingId)) {
       entry.sourceDrawingId ??= entry.drawingId;

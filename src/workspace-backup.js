@@ -106,6 +106,8 @@ function validationVisit(site) {
   };
 }
 function drawingsForJob(site, job) {
+  // Certificates carry their own frozen evidence. Historical certificate IDs
+  // do not add live drawing dependencies to a recovered/imported job.
   const needed = new Set([job.drawingId]);
   for (const record of [job.checklist, ...(job.checklist?.history || []), job.fireMaintenance, ...(job.fireMaintenance?.history || [])])
     if (record?.drawingId != null) needed.add(record.drawingId);

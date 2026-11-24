@@ -92,6 +92,27 @@ test('native write failures clean up without converting failure into success', a
   assert.deepEqual(f.requests.map(request => request.type), ['exportStart', 'exportChunk', 'exportCancel']);
 });
 
+test('binary PDFs survive native chunks with their MIME and use the share action only when requested', async t => {
+  const bytes = new Uint8Array(EXPORT_CHUNK_BYTES * 2 + 137);
+  bytes.set(new TextEncoder().encode('%PDF-1.4\n'));
+  for (let i = 20; i < bytes.length; i++) bytes[i] = i % 256;
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  for (const [share, response] of [[true, 'shared'], [true, 'saved'], [true, 'cancelled'], [false, 'saved'], [false, 'cancelled']]) {
+    const chunks = []; let written = 0;
+    const f = fixture((request, respond) => {
+      if (request.type === 'exportStart') respond(request, { token: 'pdf-export' });
+      else if (request.type === 'exportChunk') { const chunk = Buffer.from(request.data, 'base64'); chunks.push(chunk); written += chunk.length; respond(request, { bytesWritten: written }); }
+      else if (['exportShare', 'exportFinish'].includes(request.type)) respond(request, { status: response });
+    });
+    const client = createNativePlatform({ host: f.host }); t.after(() => client.dispose());
+    assert.equal((await client.exportBlob(blob, 'Certificate.pdf', { share })).status, response);
+    assert.equal(f.requests[0].mime, 'application/pdf'); assert.equal(f.requests[0].bytes, bytes.length);
+    assert.deepEqual(Buffer.concat(chunks), Buffer.from(bytes));
+    assert.equal(f.requests.at(-1).type, share ? 'exportShare' : 'exportFinish');
+    assert.equal(f.requests.filter(request => ['exportShare', 'exportFinish'].includes(request.type)).length, 1, 'Cancel/share fallback must not export twice');
+  }
+});
+
 test('picker cancellation is distinct from success and interactive actions do not use request timeouts', async t => {
   const f = fixture((request, respond) => {
     if (request.type === 'exportStart') respond(request, { token: 'cancelled-save' });

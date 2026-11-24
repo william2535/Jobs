@@ -56,15 +56,20 @@ export function createNativePlatform({ host = globalThis, requestTimeoutMs = 300
   }
 
   async function exportJson(data, name) {
-    if (activeExport) throw Error('A file is already being exported. Finish or cancel that save first.');
-    if (typeof name !== 'string' || !name || /[\x00-\x1f/\\]/.test(name)) throw Error('The export file name is invalid.');
     const json = JSON.stringify(data);
     if (typeof json !== 'string') throw Error('The export contains no JSON data.');
-    const blob = new Blob([json], { type: 'application/json' });
+    return exportBlob(new Blob([json], { type: 'application/json' }), name);
+  }
+
+  async function exportBlob(blob, name, { share = false } = {}) {
+    if (activeExport) throw Error('A file is already being exported. Finish or cancel that save first.');
+    if (typeof name !== 'string' || !name || /[\x00-\x1f/\\]/.test(name)) throw Error('The export file name is invalid.');
+    if (!blob || !Number.isSafeInteger(blob.size) || typeof blob.slice !== 'function'
+        || !['application/json', 'application/pdf'].includes(blob.type)) throw Error('The export file type is unsupported.');
     let token = null;
     activeExport = true;
     try {
-      const start = await request('exportStart', { name, mime: 'application/json', bytes: blob.size });
+      const start = await request('exportStart', { name, mime: blob.type, bytes: blob.size });
       if (!start || typeof start.token !== 'string' || !start.token) throw Error('Android could not prepare the export.');
       token = start.token;
       for (let offset = 0; offset < blob.size; offset += EXPORT_CHUNK_BYTES) {
@@ -77,8 +82,8 @@ export function createNativePlatform({ host = globalThis, requestTimeoutMs = 300
       }
       // A user may spend time choosing a document provider/folder. Only Android's
       // actual picker/write result can finish this action; do not time it out.
-      const result = await request('exportFinish', { token }, 0);
-      if (!['saved', 'cancelled'].includes(result?.status)) throw Error('Android did not confirm whether the file was saved. Check the selected folder before retrying.');
+      const result = await request(share ? 'exportShare' : 'exportFinish', { token }, 0);
+      if (!(share ? ['shared', 'saved', 'cancelled'] : ['saved', 'cancelled']).includes(result?.status)) throw Error('Android did not confirm whether the file was exported. Check the selected destination before retrying.');
       token = null;
       return result;
     } finally {
@@ -102,7 +107,7 @@ export function createNativePlatform({ host = globalThis, requestTimeoutMs = 300
   }
 
   return {
-    info, exportJson, print, openUpdates,
+    info, exportJson, exportBlob, print, openUpdates,
     get isBusy() { return activeExport || pending.size > 0; },
     dispose() {
       disposed = true;

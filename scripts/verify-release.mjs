@@ -9,9 +9,13 @@ const PUBLIC_FILES = new Set([
   'icon-192.png', 'icon-512.png', 'icon.svg', 'manifest.webmanifest', 'appearance-init.js',
   'findr-logo.png', 'zone-sketch-logo.png', 'jobs-share-banner.png', 'demo.zonesketch.json',
   'findr-tools-NOTICE.txt', 'zonesketch-LICENSE.txt', 'zonesketch-NOTICE.txt',
+  'pdf-runtime-NOTICE.txt',
 ]);
 const GENERATED_FILES = new Set(['index.html', 'sw.js', 'offline-manifest.json']);
 const OPTIONAL_APPROVED_FILES = new Set(['jobs-dashboard-banner.png', 'jobs-tasks-banner.png', 'jobs-timesheets-banner.png', 'jobs-about-banner.png']);
+// jsPDF's bundled optional HTML dependencies use dotted ESM chunk names.
+// Keep these names explicit; customer files and other dotted assets remain denied.
+const PDF_VENDOR_CHUNK = /^assets\/(?:html2canvas\.esm|purify\.es|index\.es)-[A-Za-z\d_-]{6,}\.js$/;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const fail = message => { throw Error(`Release verification failed: ${message}`); };
 const check = (condition, message) => { if (!condition) fail(message); };
@@ -44,7 +48,7 @@ export async function verifyRelease({ root = PROJECT_ROOT, dist = join(root, 'di
   const indexed = new Map(files.map(file => [file.path, file]));
   check(files.length > 0, 'the production directory is empty.');
   for (const file of files) {
-    check(PUBLIC_FILES.has(file.path) || GENERATED_FILES.has(file.path) || OPTIONAL_APPROVED_FILES.has(file.path) || /^assets\/[A-Za-z\d_-]+-[A-Za-z\d_-]{6,}\.(?:js|css|png|webp|svg|woff2)$/.test(file.path), `unexpected distributable file: ${file.path}. Review it explicitly before adding it to the allowlist.`);
+    check(PUBLIC_FILES.has(file.path) || GENERATED_FILES.has(file.path) || OPTIONAL_APPROVED_FILES.has(file.path) || PDF_VENDOR_CHUNK.test(file.path) || /^assets\/[A-Za-z\d_-]+-[A-Za-z\d_-]{6,}\.(?:js|css|png|webp|svg|woff2)$/.test(file.path), `unexpected distributable file: ${file.path}. Review it explicitly before adding it to the allowlist.`);
     check(file.bytes > 0, `empty build file: ${file.path}.`);
   }
   for (const name of [...PUBLIC_FILES, ...GENERATED_FILES]) check(indexed.has(name), `missing required file: ${name}.`);

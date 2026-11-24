@@ -27,6 +27,7 @@ final class ExportStore {
     private final File directory;
     private final File recoveryDirectory;
     private final File recoveryMetadata;
+    private final File shareDirectory;
     private final Map<String, Session> sessions = new HashMap<>();
 
     static final class ExportException extends Exception {
@@ -69,6 +70,7 @@ final class ExportStore {
         directory = new File(cacheDirectory, "jobs-exports");
         recoveryDirectory = new File(filesDirectory, "pending-exports");
         recoveryMetadata = new File(recoveryDirectory, "pending.json");
+        shareDirectory = new File(cacheDirectory, "jobs-shares");
     }
 
     Recovery restore() {
@@ -212,6 +214,40 @@ final class ExportStore {
     Session preparedSession() {
         for (Session session : sessions.values()) if (session.prepared) return session;
         return null;
+    }
+
+    /** Keep shared files long enough for the receiving app to finish reading them. */
+    File shareFile(Session session) throws ExportException {
+        if (!session.prepared || !sessions.containsKey(session.token)
+                || session.file.length() != session.expectedBytes) {
+            throw new ExportException("The prepared PDF is unavailable. Export the certificate again.");
+        }
+        File folder = new File(shareDirectory, session.token);
+        try {
+            if (!folder.isDirectory() && !folder.mkdirs()) throw new IOException("Cannot create share directory");
+            File[] earlier = shareDirectory.listFiles();
+            long cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
+            if (earlier != null) for (File old : earlier) {
+                if (old.isDirectory() && old.lastModified() < cutoff) {
+                    File[] files = old.listFiles();
+                    if (files != null) for (File file : files) if (file.isFile()) file.delete();
+                    old.delete();
+                }
+            }
+            requireFreeSpace(session.expectedBytes + FREE_SPACE_MARGIN);
+            File target = new File(folder, session.name);
+            try (FileInputStream input = new FileInputStream(session.file);
+                 FileOutputStream output = new FileOutputStream(target)) {
+                byte[] buffer = new byte[128 * 1024];
+                int length;
+                while ((length = input.read(buffer)) != -1) output.write(buffer, 0, length);
+                output.getFD().sync();
+            }
+            if (target.length() != session.expectedBytes) throw new IOException("Incomplete share copy");
+            return target;
+        } catch (IOException | SecurityException error) {
+            throw new ExportException("The PDF could not be prepared for sharing. Try saving it to a folder instead.");
+        }
     }
 
     void discard(String token) {

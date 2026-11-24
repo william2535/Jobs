@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { getBuildInfo } from '../scripts/build-info.mjs';
 import { verifyRelease, PROJECT_ROOT } from '../scripts/verify-release.mjs';
 
-async function fixture(t) {
+async function fixture(t, extraChunks = []) {
   const root = await mkdtemp(join(tmpdir(), 'jobs-release-verifier-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   await cp(join(PROJECT_ROOT, 'public'), join(root, 'public'), { recursive: true });
@@ -20,7 +20,8 @@ async function fixture(t) {
   await mkdir(join(dist, 'assets'));
   await cp(join(root, 'index.html'), join(dist, 'index.html'));
   await writeFile(join(dist, 'assets/index-TEST1234.js'), 'const synthetic = true;\n');
-  const paths = ['index.html', 'assets/index-TEST1234.js', ...await readdir(join(root, 'public'))].sort();
+  for (const path of extraChunks) await writeFile(join(dist, path), 'const bundledVendor = true;\n');
+  const paths = ['index.html', 'assets/index-TEST1234.js', ...extraChunks, ...await readdir(join(root, 'public'))].sort();
   const files = [];
   for (const path of paths) {
     const bytes = await readFile(join(dist, path));
@@ -38,7 +39,7 @@ test('release verification accepts a complete local build and emits per-file has
   const manifest = await verifyRelease({ root, dist });
   assert.equal(manifest.version, '1.0.0');
   assert.equal(manifest.buildId, getBuildInfo(root).buildId);
-  assert.equal(manifest.files.length, 20);
+  assert.equal(manifest.files.length, 21);
   assert.ok(manifest.files.every(file => /^[a-f0-9]{64}$/.test(file.sha256) && file.bytes > 0));
   assert.ok(manifest.files.some(file => file.path === 'zonesketch-LICENSE.txt'));
 });
@@ -46,6 +47,13 @@ test('release verification accepts a complete local build and emits per-file has
 test('release verification refuses unexpected customer-like saves in the distribution', async t => {
   const { root, dist } = await fixture(t);
   await writeFile(join(dist, 'synthetic-customer-backup.jobs.json'), '{"synthetic":true}');
+  await assert.rejects(verifyRelease({ root, dist }), /unexpected distributable file/);
+});
+
+test('reviewed PDF vendor chunks are allowed without admitting arbitrary dotted files', async t => {
+  const { root, dist } = await fixture(t, ['assets/html2canvas.esm-TEST1234.js', 'assets/purify.es-TEST1234.js', 'assets/index.es-TEST1234.js']);
+  await verifyRelease({ root, dist });
+  await writeFile(join(dist, 'assets/customer.backup-TEST1234.js'), 'private record');
   await assert.rejects(verifyRelease({ root, dist }), /unexpected distributable file/);
 });
 

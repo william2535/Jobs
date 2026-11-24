@@ -2,9 +2,15 @@
 
 Jobs' importer and read-only renderer are independent implementations of the observed data contract. The full Zone Sketch application and proprietary symbol artwork are not included. At the owner's explicit request, eight original geometry routines are reused from the common engine under the unchanged proprietary licence in `vendor/zonesketch/LICENSE`; they are not relicensed by Jobs. Commit/line provenance and exact-source integrity tests are provided in that directory. The production build includes `zonesketch-LICENSE.txt` and `zonesketch-NOTICE.txt`. Reference commit and exact schema sources are documented in `zone-sketch.md`. FINDR implementation and instructions were read at the commit documented in `panel-pal-context.md`. The separately requested Toolbox reuse includes selected calculator modules, quantity parser, original guide pack, Resistor Lab and FESS learning components, with adapted interfaces documented below. The complete FINDR application is not included.
 
-Production application modules have no npm runtime dependencies. Build/test dependencies are Vite (MIT), Playwright (Apache-2.0), fake-indexeddb (Apache-2.0), and Happy DOM (MIT), plus their locked transitive dependencies. Their original licences and notices remain in installed packages; no licence files were modified. The committed icon is an original simple geometric clipboard/check drawing. No remote fonts or assets are required.
+Certificate PDFs use the bundled jsPDF runtime and embedded Open Sans fonts described below. Build/test dependencies are Vite (MIT), Playwright (Apache-2.0), fake-indexeddb (Apache-2.0), and Happy DOM (MIT), plus their locked transitive dependencies. Their original licences and notices remain in installed packages; no licence files were modified. The committed icon is an original simple geometric clipboard/check drawing. No remote fonts or assets are required.
 
 The repository owner's pre-existing files and instructions are retained. The supplied real customer drawing is not included in the generated static build or automated fixtures. Do not add customer saves, manuals or photographs to `public/` or test fixtures.
+
+## Certificate PDF runtime and fonts
+
+The certificate PDF feature uses **jsPDF 4.2.1** (MIT), bundled locally with its locked runtime dependencies. Included optional build paths use html2canvas (MIT), canvg (MIT) and DOMPurify (Apache-2.0 or MPL-2.0). Dependency licences, original copyright notices and jsPDF's bundled-component notices are distributed in [`pdf-runtime-NOTICE.txt`](../public/pdf-runtime-NOTICE.txt), including conservative notices for optional dependencies even when a build removes unused paths. The same file is included in the public release and offline cache; no npm install or CDN access is required on an engineer's device.
+
+PDF text embeds unmodified **Open Sans Regular and Semibold** TrueType fonts from opensans.com, with Google Corporation's original copyright and Apache-2.0 licence. The full licence is retained in [`src/vendor/OPEN-SANS-LICENSE.txt`](../src/vendor/OPEN-SANS-LICENSE.txt) and the public PDF runtime notice. The fonts render certificate text; they do not introduce third-party branding, certification marks or accreditation. PDF generation and sharing do not upload job records to the library authors or font provider.
 
 
 ## FINDR launcher artwork

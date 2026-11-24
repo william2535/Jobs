@@ -34,18 +34,18 @@ The separate [fire maintenance form](fire-maintenance.md) derives 21 prompt type
 
 The example's three-year battery check is not treated as a universal replacement limit. Jobs asks whether service life was checked against the actual manufacturer's criteria, and records the engineer's answer and readings. It does not infer acceptable voltage ranges, capacity or service life. The sample's customer information, logos, accreditation marks and terms are not copied into application fixtures or report templates.
 
-## Why generated documents remain drafts
+## Generic visit certificates and standards-specific forms
 
 These public catalogues and explanations establish identifiers and broad scope. They do not provide a complete, rights-cleared certificate template or the complete normative field, test, declaration and exception rules. No licensed full standard or specialist-reviewed certificate template was validated during this research. No proprietary standards text or third-party branded certificate was copied into Jobs.
 
-Before enabling reviewed certificate issuance, the applicable template needs:
+Jobs now offers [generic visit certificates](certificates.md) with explicit review, numbering, immutable snapshots and retained revisions. This does not validate a standards-specific declaration or grant scheme approval. Before offering a certificate as a validated standards-specific form, its template needs:
 
 - An explicit jurisdiction, premises/system scope, standard and edition, including relevant amendments and certification-scheme requirements.
 - A rights-cleared template, versioned field mapping, required tests and evidence, declarations and handling of variations, defects, omissions and limited access, reviewed against the complete applicable requirements by a competent specialist.
 - Recorded issuer and engineer responsibilities. A client acknowledgement must remain distinct from an engineer's technical declaration; software cannot grant scheme membership, competence or authority to issue branded certificates.
 - An immutable document record linked to the supporting job and drawing revisions, with document numbering and retained revision/correction history.
 
-Until that work is complete, discipline-specific outputs should remain explicitly labelled **Draft service report** or another clear draft report title. Do not label a completed checklist or generated PDF a compliant certificate. The existing [build brief](BUILD_BRIEF.md#certificate-generation) records this same validation boundary.
+The existing service reports remain explicitly labelled **Draft service report**. The separate issued visit certificate is limited to the engineer's entered scope and declaration; neither a completed checklist nor a generated PDF establishes whole-system compliance. The existing [build brief](BUILD_BRIEF.md#certificate-generation) records the validation boundary for standards-specific compliance documents.
 
 ## Retrieval boundaries
 

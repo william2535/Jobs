@@ -34,6 +34,7 @@ import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -49,6 +50,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -318,6 +320,25 @@ public final class MainActivity extends Activity {
                     });
                     break;
                 }
+                case "exportShare": {
+                    String token = request.getString("token");
+                    if (pendingSave != null || fileCallback != null || printActive) {
+                        reply.failure("Finish the current Android dialog before sharing another file.");
+                        break;
+                    }
+                    io.execute(() -> {
+                        try {
+                            ExportStore.Session session = exports.prepare(token);
+                            if (!"application/pdf".equals(session.mime)) {
+                                reply.failure("Only certificate PDF files can be shared through this action.");
+                                return;
+                            }
+                            File file = exports.shareFile(session);
+                            runOnUiThread(() -> sharePdf(session, file, reply));
+                        } catch (ExportStore.ExportException error) { reply.failure(error.getMessage()); }
+                    });
+                    break;
+                }
                 case "exportCancel": {
                     String token = request.getString("token");
                     if (pendingSave != null && pendingSave.session.token.equals(token)) {
@@ -365,6 +386,38 @@ public final class MainActivity extends Activity {
                 recoveryDismissed = true;
                 showNotice("Export kept", explanation + " Your prepared export remains on this device. Reopen Jobs to try again.");
             }
+        }
+    }
+
+    private void sharePdf(ExportStore.Session session, File file, Reply reply) {
+        if (destroyed) return; // Durable prepared export is recoverable after recreation.
+        try {
+            Uri uri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".files", file);
+            Intent send = new Intent(Intent.ACTION_SEND)
+                    .setType("application/pdf")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .putExtra(Intent.EXTRA_SUBJECT, session.name)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            send.setClipData(ClipData.newRawUri(session.name, uri));
+            if (send.resolveActivity(getPackageManager()) == null) {
+                showSavePicker(session, reply);
+                return;
+            }
+            Intent chooser = Intent.createChooser(send, "Share certificate PDF")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
+            io.execute(() -> {
+                exports.discard(session.token);
+                // The share sheet opened. This does not claim delivery; cancelling it
+                // never starts another download or another sharing operation.
+                reply.success(json("status", "shared", "name", session.name, "bytes", session.expectedBytes));
+            });
+        } catch (ActivityNotFoundException | SecurityException error) {
+            // No share handler: offer Android's ordinary save picker using the same
+            // complete staged PDF, without transferring or generating it a second time.
+            showSavePicker(session, reply);
+        } catch (IllegalArgumentException error) {
+            reply.failure("Android could not open this PDF for sharing. Save it to a folder instead.");
         }
     }
 
