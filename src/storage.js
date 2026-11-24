@@ -103,7 +103,7 @@ export async function loadState() {
     transaction.onabort = () =>
       reject(transaction.error || new Error("Local read was interrupted."));
   });
-  if (lastSeenRevision === 0 && !loaded.sites.length && !loaded.jobs.length) {
+  if (!(globalThis.location?.hostname === '127.0.0.1' && globalThis.localStorage?.getItem('jobs.test.empty') === '1') && lastSeenRevision === 0 && !loaded.sites.length && !loaded.jobs.length) {
     const seeded = {...loaded,...exampleWorkspace()};
     await saveState(seeded);
     return seeded;
