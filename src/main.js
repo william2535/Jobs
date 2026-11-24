@@ -1024,11 +1024,17 @@ function render() {
   const statusBar=$(".connection");
   if(statusBar){
     let start=null;
-    statusBar.style.touchAction="pan-y";
-    statusBar.addEventListener("pointerdown",event=>{start={x:event.clientX,y:event.clientY};statusBar.setPointerCapture?.(event.pointerId);});
-    statusBar.addEventListener("pointercancel",()=>{start=null;});
+    statusBar.style.touchAction="none";
+    statusBar.style.pointerEvents="auto";
+    const dismiss=()=>{if(!recoverySnapshot && storageReady && !busy && !dirty && saveLabel==="Saved on this device" && /^Ready offline/i.test(offlineLabel))statusBar.style.setProperty("display","none","important");};
+    statusBar.addEventListener("touchstart",event=>{const t=event.changedTouches[0];start={x:t.clientX,y:t.clientY};},{passive:true});
+    statusBar.addEventListener("touchend",event=>{const t=event.changedTouches[0];if(start && Math.abs(t.clientX-start.x)>25 && Math.abs(t.clientX-start.x)>Math.abs(t.clientY-start.y))dismiss();start=null;},{passive:true});
+    statusBar.addEventListener("touchcancel",()=>{start=null;});
+    statusBar.addEventListener("pointerdown",event=>{start={x:event.clientX,y:event.clientY};if(event.pointerType==="mouse")statusBar.setPointerCapture?.(event.pointerId);});
+    statusBar.addEventListener("pointercancel",event=>{if(event.pointerType!=="touch")start=null;});
     statusBar.addEventListener("pointerup",event=>{
-      if(start && Math.abs(event.clientX-start.x)>55 && Math.abs(event.clientX-start.x)>Math.abs(event.clientY-start.y)*1.5 && !recoverySnapshot && storageReady && saveLabel==="Saved on this device" && /ready offline/i.test(offlineLabel))statusBar.style.setProperty("display","none","important");
+      if(event.pointerType==="touch")return;
+      if(start && Math.abs(event.clientX-start.x)>25 && Math.abs(event.clientX-start.x)>Math.abs(event.clientY-start.y))dismiss();
       start=null;
     });
   }
