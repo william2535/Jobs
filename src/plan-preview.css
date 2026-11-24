@@ -63,7 +63,7 @@
 }
 .plan-device-hit:hover,
 .plan-device-hit:focus-visible {
-  background: #86664c22;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
   border-color: var(--accent, #86664c);
 }
 .plan-preview-actions {

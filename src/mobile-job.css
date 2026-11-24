@@ -1,17 +1,7 @@
 /* Mobile visit screens. Desktop grids and navigation stay in style.css. */
 @media (max-width: 700px) {
   body:has(.job-main-nav) {
-    --canvas: #f2f4f7;
-    --surface: #ffffff;
-    --subtle: #eaf0f7;
-    --ink: #202b39;
-    --ink-soft: #465469;
-    --muted: #687587;
-    --line: #dce2e9;
-    --soft-line: #e8edf2;
-    --accent: #214f80;
-    --accent-dark: #173d68;
-    --focus: #4c87c7;
+    /* Inherit the shared light/dark tokens; visits use the same app palette. */
     background: var(--canvas);
   }
 

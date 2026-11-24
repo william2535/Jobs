@@ -41,7 +41,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await expect(page.locator('#match-site')).not.toHaveValue('');
   await page.getByRole('button', { name: 'Save site', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Site plan', exact: true })).toBeVisible();
-  await page.locator('[data-action="sites"]').first().click();
+  await page.locator('[data-action="sites"]:visible').first().click();
   await expect(page.locator('.site-card')).toHaveCount(1);
   await expect(page.locator('.site-card')).toContainText('1 drawing revisions');
   await page.locator('.site-card').click();
@@ -58,7 +58,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.getByRole('button', { name: 'Open FAP-01', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Result', exact: true })).toHaveValue('Not tested');
   await page.locator('.device-context > summary').click();
-  await expect(page.locator('img').first()).toBeVisible();
+  await expect(page.locator('.device-context img').first()).toBeVisible();
   await page.getByRole('combobox', { name: 'Result', exact: true }).selectOption('Unsatisfactory');
   await page.getByRole('textbox', { name: 'Observations', exact: true }).fill('Battery voltage below expected value.');
   await page.getByRole('textbox', { name: 'Defects', exact: true }).fill('Battery needs investigation.');
@@ -79,7 +79,7 @@ test('drawing → visit → offline recording → package → fresh import prese
   await page.getByRole('button', { name: /FAP-01/ }).first().click();
   await expect(page.getByRole('textbox', { name: 'Observations', exact: true })).toHaveValue('Battery voltage below expected value.');
   await page.locator('.device-context > summary').click();
-  const photo = page.locator('img').first();
+  const photo = page.locator('.device-context img').first();
   await expect.poll(() => photo.evaluate(image => image.complete && image.naturalWidth > 0)).toBeTruthy();
   await page.getByRole('textbox', { name: 'Notes', exact: true }).fill('Recorded while offline.');
   await page.getByRole('button', { name: 'Save device result', exact: true }).click();

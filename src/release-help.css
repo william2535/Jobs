@@ -3,7 +3,7 @@
 .release-help-heading { margin-bottom:20px; }
 .release-help-eyebrow { color:#536b89; font-size:10px; letter-spacing:1.3px; font-weight:700; }
 .release-help h1 { margin:7px 0 8px; color:#123357; font-size:30px; }
-.release-help-version { display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin:0; color:#617188; font-size:12px; }
+.release-help-version { display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; margin:0; color:var(--muted); font-size:12px; }
 .release-help-version code { overflow-wrap:anywhere; font-size:11px; }
 .release-help-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
 .release-help-card { min-width:0; background:#fff; border:1px solid var(--help-line); border-radius:12px; padding:22px; }

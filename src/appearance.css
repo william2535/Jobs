@@ -64,6 +64,7 @@
   :root[data-theme="dark"] :is(.job-main-nav button,.job-tools.tabs button) { background:transparent; color:var(--muted); }
   :root[data-theme="dark"] :is(.job-main-nav button.active,.job-main-nav button[aria-current="page"],.job-main-nav button:hover,.job-tools.tabs button.active) { background:var(--appearance-selected); color:var(--accent-light); border-color:var(--accent); }
   :root[data-theme="dark"] :is(.notice.error,.badge.bad) { color:var(--appearance-danger); background:var(--appearance-danger-bg); border-color:var(--appearance-danger-line); }
+  :root[data-theme="dark"] .certificate-required { color:var(--appearance-danger); }
 
   /* Mobile dashboard and newly branded Tasks / Timesheets / About headers. */
   :root[data-theme="dark"] .mobile-workspace {
@@ -183,7 +184,7 @@
 
   /* Reports deliberately remain an accurate light-paper preview, as in print. */
   :root[data-theme="dark"] .job-report-preview,
-  :root[data-theme="dark"] .service-report { --ink:#25354d; --ink-soft:#465971; --muted:#59677a; --line:#c5cfdb; --soft-line:#e1e7ef; --subtle:#edf3fb; --surface:#fff; --accent:#173d68; color:#25354d; background:#fff; color-scheme:light; }
+  :root[data-theme="dark"] .service-report { --ink:#25354d; --ink-soft:#465971; --muted:#59677a; --line:#c5cfdb; --soft-line:#e1e7ef; --subtle:#edf3fb; --surface:#fff; --accent:#173d68; --appearance-danger:#9a4c35; --appearance-danger-bg:#fff0e8; --appearance-danger-line:#dfaa93; color:#25354d; background:#fff; color-scheme:light; }
 }
 @media print {
   html { color-scheme:light !important; }
