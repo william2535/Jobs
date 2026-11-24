@@ -1127,6 +1127,20 @@ function jobTools(j, s) {
   const tools = [...(s ? [["Job details", "Details"], ["Checklist", "Quick checklist"]] : []), ...(drawingOf(s, j) ? [["Assets", "Assets"], ["Results", "Results"]] : []), ["Maintenance", "Fire maintenance questions"], ["Work", "Work"], ["Products", "Products"], ["POs", "POs"], ["Visit records", "Visit records"]];
   return `<details class="quick-job-tools"><summary>More job tools</summary><div class="quick-tool-grid">${tools.map(([key, label]) => button(label, "tab:" + key)).join("")}${s ? button("Site settings", "site:" + s.id) : ""}</div>${s ? `<div class="integration-note"><span>FINDR adapter: future work.</span>${button("Export Panel Pal context", "panel-export")}</div>` : ""}</details>`;
 }
+const WORK_TIMER_KEY = "jobs.active-work.v1";
+function activeWork() {
+  try { const value=JSON.parse(localStorage.getItem(WORK_TIMER_KEY)||"null");return value && typeof value.jobId==="string" && typeof value.id==="string" && typeof value.engineer==="string" && Number.isFinite(Date.parse(value.startedAt)) ? value : null; } catch {return null;}
+}
+function localClock(date) {
+  const pad=n=>String(n).padStart(2,"0");
+  return {date:date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate()),time:pad(date.getHours())+":"+pad(date.getMinutes())};
+}
+function workControl(job) {
+  if(draftJob)return "";
+  const running=activeWork();
+  if(running && running.jobId!==job.id)return '<div class="notice">Work is running on another job. '+button("Open active job","job:"+running.jobId)+'</div>';
+  return '<div class="actions quick-work-control">'+(running?'<span>Work started '+esc(new Date(running.startedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}))+' · '+esc(running.engineer)+'</span>'+button("Finish work","finish-work","primary"):button("Start work","start-work","primary"))+'</div>';
+}
 function jobView(j, s) {
   if (!j) return "";
   const d = drawingOf(s, j);
@@ -1147,7 +1161,7 @@ function jobView(j, s) {
   else if (tab === "Devices" && d) content = devices(j, d);
   else if (tab === "Results" && d) content = results(j, d);
   else content = `<section class="panel empty-job-plan"><h1>No plan added</h1><p>You can create assets without a plan. To use a site drawing, choose its site in job settings.</p><div class="actions">${button("Back to assets", "tab:Assets")}${button("Choose site", "job-settings:" + j.id, "primary")}</div></section>`;
-  return `${top}${primary}${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
+  return `${top}${primary}${workControl(j)}${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 
 const devicePageSize = () => window.matchMedia("(max-width: 700px)").matches ? 4 : 8;
@@ -1346,6 +1360,29 @@ async function action(a, source) {
     return;
   }
   if (!toolboxChest.close({ restoreFocus: false })) return;
+  if(a==="start-work" || a==="finish-work"){
+    if(!storageReady || dirty || recoverySnapshot || draftJob)throw Error("Save your job before recording work.");
+    const job=state.jobs.find(item=>item.id===activeJob);
+    if(!job)throw Error("Open a saved job first.");
+    const running=activeWork();
+    if(a==="start-work"){
+      if(running)throw Error("Finish your current work session first.");
+      const engineer=window.prompt("Your name for this timesheet",localStorage.getItem("jobs.work-engineer")||"")?.trim();
+      if(!engineer)return;
+      if(engineer.length>200)throw Error("Use a shorter engineer name.");
+      localStorage.setItem("jobs.work-engineer",engineer);
+      localStorage.setItem(WORK_TIMER_KEY,JSON.stringify({jobId:job.id,id:crypto.randomUUID(),engineer,startedAt:new Date().toISOString()}));
+      render();reportNotice("Work started. Your timer is stored on this device.");return;
+    }
+    if(!running || running.jobId!==job.id)throw Error("No active work session for this job.");
+    const start=localClock(new Date(running.startedAt)),end=localClock(new Date());
+    const existing=job.timesheets?.some(entry=>entry.id===running.id);
+    if(!existing){
+      const next=saveTimesheet(state,{id:running.id,date:start.date,start:start.time,endDate:end.date,end:end.time,sessionType:"Work",customType:"",hours:null,note:"",engineer:running.engineer},{jobId:job.id});
+      if(!(await persist(next,"Work session saved.")))return;
+    }
+    localStorage.removeItem(WORK_TIMER_KEY);render();return;
+  }
   if (a.startsWith("transfer-job:")) {
     if(!storageReady || dirty || recoverySnapshot) throw Error("Save your work before transferring a job.");
     const job=state.jobs.find(item=>item.id===a.slice("transfer-job:".length));
