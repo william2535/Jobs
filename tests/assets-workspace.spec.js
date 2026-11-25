@@ -112,9 +112,9 @@ test('standalone assets duplicate with fresh results and favourites can be reuse
     await page.setViewportSize({ width: 375, height: 812 });
     for (const theme of ['light', 'dark']) {
       const appearance = page.getByRole('combobox', { name: 'Appearance', exact: true });
-      if (await appearance.count()) await appearance.selectOption(theme);
-      else if (await page.locator('html').getAttribute('data-theme') !== theme)
-        await page.getByRole('button', { name: `Switch to ${theme} mode`, exact: true }).click();
+      await page.getByLabel('Appearance settings', {exact:true}).click();
+      await expect(appearance).toBeVisible();
+      await appearance.selectOption(theme);
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
       await page.evaluate(() => window.scrollTo(0, 0));
