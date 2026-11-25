@@ -56,6 +56,7 @@ export async function verifyRelease({ root = PROJECT_ROOT, dist = join(root, 'di
     check(digest(await readFile(join(root, 'public', name))) === indexed.get(name).sha256, `public source and build differ: ${name}.`);
   }
   const html = await readFile(join(dist, 'index.html'), 'utf8');
+  check(!/cloudflareinsights\.com/i.test(html), 'external analytics must not enter the offline app shell.');
   check(/<title>Jobs\b/i.test(html), 'the page does not identify Jobs.');
   check(/type="module"/.test(html), 'the production entry module is missing.');
   check(!/\/src\/|localhost:|127\.0\.0\.1:|@vite\/client/.test(html), 'development references remain in the entry page.');
