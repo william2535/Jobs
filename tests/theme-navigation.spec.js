@@ -60,7 +60,10 @@ async function readableSurface(locator, theme) {
 async function sharedShell(page, { mobile, theme, route }) {
   await expect(page.locator('body')).toHaveAttribute('data-page', route);
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+  await expect(page.getByLabel('Appearance settings', {exact:true})).toBeVisible();
+  await page.getByLabel('Appearance settings', {exact:true}).click();
   await expect(appearance(page)).toBeVisible();
+  await page.getByLabel('Appearance settings', {exact:true}).click();
   await expect(page.getByTestId('save-status')).toBeVisible();
   const header = page.locator('.workspace > header');
   await expect(header).toBeVisible();
@@ -166,6 +169,7 @@ test('mobile Menu and contextual Back preserve unfinished site forms until disca
   const form = page.locator('[data-form="site"]');
   await form.getByRole('textbox', { name: 'Site name', exact: true }).fill('Synthetic guarded site');
   await form.getByRole('textbox', { name: 'Address', exact: true }).fill('Unfinished synthetic address');
+  await page.getByLabel('Appearance settings', {exact:true}).click();
   await appearance(page).selectOption('dark');
   await expect(form.getByRole('textbox', { name: 'Site name', exact: true })).toHaveValue('Synthetic guarded site');
   await expect(page.getByTestId('save-status')).toContainText('Unsaved');
@@ -211,6 +215,7 @@ test('backup review uses the shared theme and navigation without restoring until
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await sharedShell(page, { mobile, theme: 'dark', route: 'help' });
   expect(await storedSites(page)).toHaveLength(0);
+  await page.getByLabel('Appearance settings', {exact:true}).click();
   await appearance(page).selectOption('light');
   await page.locator('#workspace-file').setInputFiles(file);
   await sharedShell(page, { mobile, theme: 'light', route: 'backup-review' });

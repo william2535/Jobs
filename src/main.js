@@ -74,6 +74,7 @@ import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
+import "./compact-header.css";
 import { photoMarkup, photoPicker, profilePhoto } from "./profile-photo.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
@@ -189,7 +190,8 @@ function updateReleaseStatus() {
   const update = $("#release-update");
   if (update) update.hidden = !updateAvailable;
   const offline = $("#offline-status");
-  if (offline) offline.textContent = offlineLabel;
+  if (offline) { offline.textContent = offlineLabel; offline.title=offlineLabel; }
+  const indicator=$(".compact-header-settings");if(indicator){indicator.dataset.warning=String(!/^Ready offline/i.test(offlineLabel)||saveLabel!=="Saved on this device");indicator.title=saveLabel+" · "+offlineLabel;}
 }
 function flash(text, isError = false) {
   message = isError ? "" : text;
@@ -746,7 +748,11 @@ function render() {
     }
   });
   const appHeader = document.querySelector(".workspace > header");
-  if (appHeader) appHeader.append(createAppearanceControl({ compact: true, toggle: mobileHome }));
+  if (appHeader) {
+    const settings=document.createElement("details");settings.className="compact-appearance-settings";
+    const summary=document.createElement("summary");summary.setAttribute("aria-label","Appearance settings");summary.textContent="⚙";settings.append(summary,createAppearanceControl({compact:false,toggle:false}));appHeader.append(settings);
+    settings.addEventListener("change",()=>{settings.open=false;});
+  }
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {
