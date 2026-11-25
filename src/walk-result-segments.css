@@ -7,3 +7,6 @@
 :root :is(.device-card-results,.device-result-choices) button[data-pending="true"]{box-shadow:inset 0 0 0 2px #ffffff99}
 .plan-asset-work-row .plan-inline-results{padding:0;gap:2px}
 @media(prefers-reduced-motion:reduce){:root :is(.device-card-results,.device-result-choices) button{transition:none}}
+
+/* Keep the desktop device grid compact without reducing touch target height. */
+@media(min-width:701px){.device-browser-grid article.device-row{padding-block:10px}.device-browser-grid .device-card-results{margin-top:8px;padding-block:0}}
