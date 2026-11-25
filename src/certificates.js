@@ -27,9 +27,92 @@ export const CERTIFICATE_FIELDS = [
   ['limitations', 'Limitations / exclusions', 'textarea', true, 'Work and findings'],
   ['outcome', 'Outcome / condition left', 'textarea', true, 'Work and findings'],
   ['standard', 'Applicable standard / edition (if relevant)', 'text', false, 'Work and findings'],
+  ["certificateKind","Fire certificate type (installation / commissioning / acceptance / modification)","text",false,"Fire certification"],
+  ["specificationRef","Specification reference and revision","text",false,"Fire certification"],
+  ["systemCategory","System category","text",false,"Fire certification"],
+  ["variations","Agreed variations, reasons, alternatives and agreement references","textarea",false,"Fire certification"],
+  ["wiringTests","Wiring test results and recipient","textarea",false,"Fire certification"],
+  ["drawingRefs","As-fitted drawing and zone plan references","textarea",false,"Fire certification"],
+  ["functionalTests","Functional tests, cause and effect and signalling results","textarea",false,"Fire certification"],
+  ["handover","Documents, keys and user training provided","textarea",false,"Fire certification"],
+  ["soundReadings","Sound readings: point, location, ambient dB(A), alarm dB(A), result","textarea",false,"Fire certification"],
+  ["batteryEvidence","Standby capacity calculation and PSU references","textarea",false,"Fire certification"],
+  ["soakTest","Soak test period or reason not applicable","textarea",false,"Fire certification"],
+  ["followUp","Incomplete works, false alarm risks and return visit","textarea",false,"Fire certification"],
+  ["acceptance","Customer acceptance, name, position, date and limitations","textarea",false,"Fire certification"],
   ['declaration', 'Engineer declaration', 'textarea', true, 'Declaration'],
 ].map(([key, label, type, required, section]) => ({ key, label, type, required, section }));
 
+export const FIRE_CHECKLISTS = {
+  "installation": [
+    "Cable type, size and fire resistance suit the design",
+    "Mechanical protection where required",
+    "Suitable cable supports, containment and fixings",
+    "Wiring segregation",
+    "Fire-stopped penetrations",
+    "Insulation and continuity / loop resistance recorded and satisfactory",
+    "Loop wiring and fault isolation match design",
+    "Wiring and zone coverage match design",
+    "Secure joints and terminations without strain",
+    "Junction boxes labelled and shown on drawings",
+    "Termination and accessory boxes securely fixed"
+  ],
+  "commissioning": [
+    "System matches approved specification and design",
+    "Building layout changes recorded",
+    "Design changes referred for approval",
+    "Installation matches system category",
+    "Variations documented and agreed",
+    "Cable fire resistance matches design",
+    "Visible cables segregated and supported",
+    "Mechanical protection where required",
+    "Visible junction boxes labelled and shown on drawings",
+    "Insulation and continuity resistance results recorded",
+    "Visible penetrations protected and fire-stopped",
+    "Mains supply protection, isolation and labelling satisfactory",
+    "Supply identified at distribution boards",
+    "Standby capacity verified for all PSUs",
+    "Batteries identified and dated",
+    "Field wiring labelled and terminated correctly",
+    "Detectors, call points, warning and ancillary devices tested and recorded",
+    "Isolators fitted, tested and shown on drawings",
+    "Cause and effect tested and recorded",
+    "Warning circuits and fault resilience match design",
+    "Sound levels and visual alarm operation recorded",
+    "Detector types and spacing match design",
+    "Call point siting and travel distances suitable",
+    "Remote signalling tested where applicable",
+    "Zone plans fitted at required locations",
+    "As-fitted drawings reflect installation, cable sizes and routes",
+    "Logbook and operating instructions issued",
+    "Responsible person trained",
+    "Site tidy and surplus materials removed"
+  ]
+};
+export function checklistMissing(fields) {
+  const checks = FIRE_CHECKLISTS[fields.certificateKind];
+  if (!Array.isArray(checks)) return [];
+  const missing = [];
+  checks.forEach((label,i) => {
+    const value = fields['fireCheck'+i] || '';
+    const match = /^(Yes|No|N\/A)\n([\s\S]*)$/.exec(value);
+    if (!match || (match[1] !== 'Yes' && !match[2].trim())) missing.push(label + ' (result and exception evidence)');
+  });
+  return missing;
+}
+export const FIRE_CERTIFICATE_TEMPLATES = Object.freeze({
+  installation: {title:'Fire alarm installation certificate', fields:['specificationRef','systemCategory','variations','wiringTests','drawingRefs']},
+  commissioning: {title:'Fire alarm commissioning certificate', fields:['specificationRef','systemCategory','variations','functionalTests','handover','soundReadings','batteryEvidence','soakTest','followUp']},
+  acceptance: {title:'Fire alarm acceptance certificate', fields:['variations','functionalTests','drawingRefs','handover','acceptance','followUp']},
+  modification: {title:'Fire alarm modification certificate', fields:['variations','functionalTests','followUp']}
+});
+export function applyFireCertificateTemplate(draft, kind) {
+  const template = Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES, kind) ? FIRE_CERTIFICATE_TEMPLATES[kind] : null;
+  if (!template) return {...draft, fields:{...draft.fields, certificateKind:''}, review:null};
+  return {...draft, fields:{...draft.fields, certificateKind:kind, title:template.title, standard:kind === 'modification' ? '' : 'BS 5839-1:2025', declaration:'I confirm the recorded work and evidence within the stated scope, subject to the recorded variations and limitations. No unrecorded test or approval is implied.'}, review:null};
+}
+
+for (let i=0;i<29;i++) CERTIFICATE_FIELDS.push({key:'fireCheck'+i,label:'Checklist item '+(i+1),type:'textarea',required:false,section:'Fire checklist'});
 const FIELD_KEYS = CERTIFICATE_FIELDS.map(field => field.key);
 const MAX_ISSUES = 100;
 const MAX_BYTES = 96 * 1024 * 1024;
@@ -190,7 +273,9 @@ export function saveCertificateDraft(job, draft) {
 }
 export function certificateReadiness(job, draft, site = null, drawing = null) {
   const checked = draftRecord(draft), saved = collection(job), evidence = captureEvidence(job, site, drawing);
-  const missing = requiredFields(checked.fields);
+  const missing = [...requiredFields(checked.fields), ...checklistMissing(checked.fields)];
+  const template = Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES, checked.fields.certificateKind) ? FIRE_CERTIFICATE_TEMPLATES[checked.fields.certificateKind] : null;
+  if (template) for (const key of [...template.fields, 'standard']) if (!checked.fields[key]?.trim()) missing.push(CERTIFICATE_FIELDS.find(field => field.key === key).label);
   if (saved.issued.some(record => record.fields.number.toLocaleLowerCase() === checked.fields.number.toLocaleLowerCase())) missing.push('A new, unique certificate number');
   const warnings = [];
   const results = job.results || [];

@@ -16,21 +16,21 @@ export function certificatePdfFilename(certificate) {
 }
 
 /** Text remains searchable. Embedded fonts, pictures and pagination need no network. */
-export async function generateCertificatePdf(certificate) {
-  if (!certificate?.issuedAt || certificate.draft || !certificate.evidence?.job) throw Error('Issue and save this certificate before exporting its PDF.');
+export async function generateCertificatePdf(certificate) { return generateCertificatePackPdf([certificate]); }
+export async function generateCertificatePackPdf(certificates) {
+  if (!Array.isArray(certificates) || !certificates.length || certificates.some(certificate => !certificate?.issuedAt || certificate.draft || !certificate.evidence?.job)) throw Error('Issue and save this certificate before exporting its PDF.');
   // Rendering is synchronous and detached; a later job edit cannot change this export.
-  const snapshot = structuredClone(certificate);
-  const root = renderCertificate({ certificate: snapshot, includeEvidence: true });
-  return generateReportPdf(root, { title: snapshot.fields.title, subject: 'Certificate ' + snapshot.fields.number, author: snapshot.fields.companyName, heading: (snapshot.fields.companyName || 'Jobs') + ' · ' + snapshot.fields.number, footer: 'Issued ' + clean(snapshot.fields.issueDate), label: 'Certificate and captured visit evidence' });
+  const snapshots = structuredClone(certificates);
+  const snapshot = snapshots[0];
+  return generateReportPdf(null,{title:snapshot.fields.title,subject:'Certificate '+snapshot.fields.number,author:snapshot.fields.companyName},snapshots);
 }
-
-export async function generateReportPdf(root, meta) {
+export async function generateReportPdf(root,meta,snapshots=[]) {
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true });
   pdf.addFileToVFS('OpenSans-Regular.ttf', regular);
   pdf.addFileToVFS('OpenSans-Semibold.ttf', semibold);
   pdf.addFont('OpenSans-Regular.ttf', 'OpenSans', 'normal');
   pdf.addFont('OpenSans-Semibold.ttf', 'OpenSans', 'bold');
-  pdf.setProperties({ title: clean(meta.title), subject: clean(meta.subject), author: clean(meta.author), creator: 'Jobs — offline PDF export' });
+  pdf.setProperties({ title: clean(meta.title), subject: clean(meta.subject), author: clean(meta.author), creator: 'Jobs — offline certificate export' });
   let y = TOP;
   function font(size = 10, bold = false, colour = INK) { pdf.setFont('OpenSans', bold ? 'bold' : 'normal'); pdf.setFontSize(size); pdf.setTextColor(...colour); }
   function page() { pdf.addPage(); y = TOP; }
@@ -69,8 +69,8 @@ export async function generateReportPdf(root, meta) {
     const headers = [...node.querySelectorAll('thead th')].map(cell => cell.textContent);
     const rows = [...node.querySelectorAll('tbody tr')].map(row => [...row.children].map(cell => cell.textContent));
     if (!headers.length) { for (const row of rows) paragraph(row.join(' · ')); return; }
-    const first = headers.length <= 3 ? .44 : .27;
-    const widths = headers.map((_, i) => (RIGHT - LEFT) * (headers.length === 1 ? 1 : i === 0 ? first : (1 - first) / (headers.length - 1)));
+    const first = headers[0] === 'Record' ? .12 : headers.length <= 3 ? .44 : .27;
+    const widths = headers.map((_, i) => (RIGHT - LEFT) * (headers.join('|') === 'Check|Result|Notes / evidence' ? [.49,.15,.36][i] : headers.length === 1 ? 1 : i === 0 ? first : (1 - first) / (headers.length - 1)));
     const wrap = (row, bold = false) => headers.map((_, i) => lines(row[i] || '', widths[i] - 4, 8.5, bold));
     const heading = wrap(headers, true), headingHeight = Math.max(...heading.map(cell => cell.length)) * 4.3 + 4;
     function draw(cells, offset, count, header = false) {
@@ -150,14 +150,22 @@ export async function generateReportPdf(root, meta) {
     }
     for (const child of node.childNodes) await walk(child);
   }
-  await walk(root);
+  const ranges = [];
+  if (!snapshots.length) await walk(root);
+  for (const item of snapshots) {
+    if (ranges.length) page();
+    const start = pdf.getNumberOfPages();
+    await walk(renderCertificate({certificate:item,includeEvidence:true}));
+    ranges.push({start,end:pdf.getNumberOfPages(),item});
+  }
   const pages = pdf.getNumberOfPages();
   for (let index = 1; index <= pages; index++) {
+    const snapshot = ranges.find(range=>index>=range.start && index<=range.end)?.item;
     pdf.setPage(index); font(8, true, MUTED);
-    const heading = lines(clean(meta.heading), RIGHT - LEFT, 8, true)[0];
-    pdf.text(heading, LEFT, 13); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
-    font(8, false, MUTED); pdf.text(`${clean(meta.footer)} · ${index} / ${pages}`, RIGHT, 289, { align: 'right' });
-    pdf.text(clean(meta.label), LEFT, 289);
+    const heading = lines(snapshot ? `${snapshot.fields.companyName || 'Jobs'} · ${snapshot.fields.number}` : clean(meta.heading), RIGHT - LEFT, 8, true)[0];
+    pdf.setFillColor(...INK); pdf.rect(LEFT, 7, RIGHT - LEFT, 10, 'F'); font(8, true, [255,255,255]); pdf.text(heading, LEFT + 3, 13.5); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
+    font(8, false, MUTED); pdf.text(`${snapshot ? 'Issued '+clean(snapshot.fields.issueDate) : clean(meta.footer)} · ${index} / ${pages}`, RIGHT, 289, { align: 'right' });
+    pdf.text(snapshot ? 'Certificate and captured visit evidence' : clean(meta.label), LEFT, 289);
   }
   return new Blob([pdf.output('arraybuffer')], { type: MIME });
 }
@@ -174,6 +182,13 @@ async function download(file, host) {
 /** Opens a share sheet; never sends an email automatically. Cancel never downloads. */
 export async function shareCertificatePdf(certificate, { host = globalThis, downloadOnly = false } = {}) {
   const blob = await generateCertificatePdf(certificate), fileName = certificatePdfFilename(certificate);
+  return exportCertificateBlob(blob,fileName,clean(certificate.fields.title),{host,downloadOnly});
+}
+export async function shareCertificatePackPdf(certificates, {host=globalThis,downloadOnly=false}={}) {
+  const blob=await generateCertificatePackPdf(certificates);
+  return exportCertificateBlob(blob,'Commissioning-pack.pdf','Commissioning pack',{host,downloadOnly});
+}
+async function exportCertificateBlob(blob,fileName,title,{host,downloadOnly}) {
   const native = getNativePlatform(host);
   if (native) {
     const result = await native.exportBlob(blob, fileName, { share: !downloadOnly });
@@ -184,7 +199,7 @@ export async function shareCertificatePdf(certificate, { host = globalThis, down
   const file = new FileType([blob], fileName, { type: MIME });
   if (!downloadOnly && typeof host.navigator?.share === 'function' && host.navigator.canShare?.({ files: [file] })) {
     try {
-      await host.navigator.share({ files: [file], title: clean(certificate.fields.title) });
+      await host.navigator.share({ files: [file], title });
       return { status: 'shared', fileName };
     } catch (error) {
       if (error?.name === 'AbortError') return { status: 'cancelled', fileName };

@@ -1,4 +1,5 @@
 /** Render only the supplied frozen snapshot; never read current application state. */
+import { FIRE_CHECKLISTS, FIRE_CERTIFICATE_TEMPLATES, CERTIFICATE_FIELDS } from './certificates.js';
 import { renderServiceReport } from './service-report.js';
 
 const el = (tag, className = '', text) => { const node = document.createElement(tag); node.className = className; if (text !== undefined) node.textContent = String(text ?? ''); return node; };
@@ -10,6 +11,29 @@ function metadata(parent, pairs) {
 function section(parent, title, value) {
   if (!String(value || '').trim()) return;
   const block = el('section', 'service-report-section'); block.append(el('h2', '', title), el('p', '', value)); parent.append(block);
+}
+function recordTable(parent,title,headers,rows) {
+  if (!rows.length) return;
+  const block=el('section','service-report-section'), table=el('table','service-report-table');
+  const head=el('thead'), hr=el('tr'); headers.forEach(label=>hr.append(el('th','',label))); head.append(hr);
+  const body=el('tbody'); rows.forEach(row=>{const tr=el('tr');row.forEach(value=>tr.append(el('td','',value)));body.append(tr);});
+  table.append(head,body);block.append(el('h2','',title),table);parent.append(block);
+}
+function fireEvidence(parent,f) {
+  const kind=f.certificateKind;
+  if (!Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES,kind)) return;
+  const checks=FIRE_CHECKLISTS[kind];
+  if(Array.isArray(checks)) recordTable(parent,kind==='installation'?'Installation checklist (OF11)':'Commissioning checklist (OF16)',['Check','Result','Notes / evidence'],checks.map((label,i)=>{
+    const [result,...notes]=(f['fireCheck'+i]||'').split('\n');return [label,result||'Not recorded',notes.join('\n')];
+  }));
+  for(const key of FIRE_CERTIFICATE_TEMPLATES[kind].fields) {
+    const label=CERTIFICATE_FIELDS.find(field=>field.key===key)?.label||key;
+    if(!String(f[key]||'').trim())continue;
+    if(['soundReadings','variations','batteryEvidence','functionalTests'].includes(key)) {
+      const rows=f[key].split('\n').filter(line=>line.trim()).map((line,i)=>[String(i+1),line]);
+      recordTable(parent,label,['Record','Details / evidence'],rows);
+    } else section(parent,label,f[key]);
+  }
 }
 export function renderCertificate({ certificate, includeEvidence = true }) {
   if (!certificate?.fields || !certificate?.evidence?.job) throw Error('Choose a saved certificate snapshot.');
@@ -24,6 +48,7 @@ export function renderCertificate({ certificate, includeEvidence = true }) {
   const issuer = el('section', 'service-report-section'); issuer.append(el('h2', '', 'Issuing organisation'));
   metadata(issuer, [['Company', f.companyName], ['Address', f.companyAddress], ['Contact details', f.companyContact], ['Declaring engineer', f.engineerName]]); cover.append(issuer); root.append(cover);
   for (const [key, label] of [['scope', 'Agreed scope / work boundary'], ['workDescription', 'Work actually carried out'], ['findings', 'Findings / outstanding defects'], ['limitations', 'Limitations / exclusions'], ['outcome', 'Outcome / condition left'], ['standard', 'Recorded standard / edition']]) section(root, label, f[key]);
+  fireEvidence(root,f);
   const declaration = el('section', 'service-report-section certificate-declaration'); declaration.append(el('h2', '', 'Engineer declaration'), el('p', '', f.declaration));
   metadata(declaration, [['Declared by', f.engineerName], ['Review recorded', certificate.reviewedAt], ['Issued', certificate.issuedAt]]);
   declaration.append(el('p', 'service-report-caption', 'The engineer name is a typed declaration record, not a cryptographic digital signature. This visit certificate applies only to the stated work and limitations. It is not a claim of third-party accreditation or a validated statutory / standards-specific form.'));

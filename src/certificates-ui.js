@@ -1,10 +1,11 @@
 /** Certificate drafts stay editable; issued snapshots are reviewed records of this visit. */
 import {
-  CERTIFICATE_FIELDS, createCertificateDraft, saveCertificateDraft,
+  CERTIFICATE_FIELDS, FIRE_CHECKLISTS, FIRE_CERTIFICATE_TEMPLATES, applyFireCertificateTemplate, createCertificateDraft, saveCertificateDraft,
   certificateReadiness, snapshotCertificatePreview, reviewCertificateDraft,
   issueCertificate, reviseCertificate,
 } from './certificates.js';
 import { renderCertificate } from './certificate-renderer.js';
+import { shareCertificatePackPdf } from './certificate-pdf.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const copy = value => structuredClone(value);
@@ -69,15 +70,35 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
     const value = draft.fields?.[field.key] || '';
     const name = `certificate-${field.key}`;
     const label = `${esc(field.label)}${field.required ? ' <span class="certificate-required" aria-hidden="true">*</span>' : ''}`;
-    const control = field.type === 'textarea'
+    const control = field.key === 'certificateKind' ? `<select id="${name}" name="certificateKind"><option value="">General visit certificate</option>${Object.entries(FIRE_CERTIFICATE_TEMPLATES).map(([key, template]) => `<option value="${key}"${value === key ? ' selected' : ''}>${esc(template.title)}</option>`).join('')}</select>` : field.type === 'textarea'
       ? `<textarea id="${name}" name="${esc(field.key)}" rows="3" maxlength="10000" aria-required="${field.required ? 'true' : 'false'}">${esc(value)}</textarea>`
       : `<input id="${name}" name="${esc(field.key)}" type="${field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}" maxlength="10000" aria-required="${field.required ? 'true' : 'false'}" value="${esc(value)}">`;
     return `<label class="${field.type === 'textarea' ? 'certificate-wide' : ''}" for="${name}"><span>${label}</span>${control}</label>`;
   };
+  const checklistMarkup = () => {
+    const checks = FIRE_CHECKLISTS[draft.fields.certificateKind];
+    if (!Array.isArray(checks)) return '';
+    return '<fieldset><legend>Fire alarm checklist</legend>'+checks.map((label,i)=>{
+      const key='fireCheck'+i;
+      const [result,...notes]=(draft.fields[key]||'').split('\n');
+      return '<div class="certificate-wide"><p><strong>'+esc(label)+'</strong></p><label>Result<select data-fire-check="'+key+'" data-part="result"><option value="">Not recorded</option>'+['Yes','No','N/A'].map(v=>'<option'+(v===result?' selected':'')+'>'+v+'</option>').join('')+'</select></label><label>Notes / evidence<textarea data-fire-check="'+key+'" data-part="notes" maxlength="9900">'+esc(notes.join('\n'))+'</textarea></label></div>';
+    }).join('')+'</fieldset>';
+  };
+  const batteryMarkup = () => draft.fields.certificateKind !== 'commissioning' ? '' : `<fieldset><legend>Battery capacity calculator</legend><p>Enter measured currents in amps. Calculate each PSU separately.</p><div class="certificate-fields">${[['hours','Standby hours'],['standby','Standby current (A)'],['minutes','Alarm duration (minutes)'],['alarm','Alarm current (A)'],['fitted','Fitted capacity (Ah)']].map(([key,label])=>'<label>'+label+'<input type="number" min="0" step="any" data-battery="'+key+'"></label>').join('')}<label>PSU reference<input data-battery="reference"></label></div><p data-battery-result role="status"></p><button type="button" data-battery-add>Calculate and add to evidence</button></fieldset>`;
+  const soundMarkup = () => draft.fields.certificateKind !== 'commissioning' ? '' : `<fieldset><legend>Sound pressure level record (OF13)</legend><p>Record exact measurement points on the plan. Assess against the applicable design requirement and Clause 15.</p><div class="certificate-fields">${[['plan','As-fitted / zone plan reference'],['meter','Sound level meter / ID'],['point','Point reference'],['location','Location'],['ambient','Ambient dB(A)'],['alarm','Alarm dB(A)'],['requirement','Applicable design requirement'],['conditions','Test conditions / exceptions'],['notes','Notes / evidence']].map(([key,label])=>'<label>'+label+'<input data-sound="'+key+'" '+(['ambient','alarm'].includes(key)?'type="number" step="any"':'type="text"')+'></label>').join('')}<label>Result<select data-sound="result"><option value="">Not recorded</option><option>Satisfactory</option><option>Unsatisfactory</option></select></label></div><p data-sound-status role="status"></p><button type="button" data-sound-add>Add measurement to record</button></fieldset>`;
+  const variationMarkup = () => !['installation','commissioning','acceptance','modification'].includes(draft.fields.certificateKind) ? '' : `<fieldset><legend>Agreed variations record (OF17)</legend><p>Record the applicable recommendation, reason, alternative and agreement evidence. Entry does not itself establish approval.</p><div class="certificate-fields">${[['clause','Clause / recommendation'],['area','Affected area'],['reason','Reason for variation'],['alternative','Agreed alternative'],['evidence','Evidence / agreement reference'],['parties','Other interested parties'],['representative','Company representative'],['customer','Customer authorising representative'],['position','Customer position'],['date','Agreement date'],['authorisation','Authorisation / signed agreement reference']].map(([key,label])=>'<label>'+label+'<input data-variation="'+key+'" type="'+(key==='date'?'date':'text')+'" maxlength="1000"></label>').join('')}<label>Agreement status<select data-variation="status"><option value="">Not recorded</option><option>Pending agreement</option><option>Agreed — evidence retained</option><option>Rejected</option></select></label></div><p data-variation-message role="status"></p><button type="button" data-variation-add>Add variation to record</button></fieldset>`;
+  const appendixGroups = {
+    'Panel and power supply':['Panel / PSU reference','Earth connected','Mains input voltage (V AC)','Auxiliary DC load (A)','Battery voltage (V DC)','Battery charge voltage (V DC)','Battery load normal Lq (A)','Battery load in alarm La (A)','Standby period','Maximum time building left','Battery size (Ah)','Standby calculation reference'],
+    'Zone / loop cable test':['Zone / loop reference','Loop continuity resistance (ohms)','Insulation resistance (Mohms)','Screen to each core','Screen to panel earth','EOL type / size or complete loop','Highest reading / test conditions','Detector cable type'],
+    'Conventional sounder circuit':['Circuit reference','Positives','Negatives','Screens','Induced AC voltage','Insulation resistance (Mohms)','EOL type / size','Sounder cable type'],
+    'Ancillary outputs':['Panel reference','Detector / sounder earth','Strobes','Panel indicators','Remote signal','Relays','Sounders / bells','Door closers / holds','Other connected equipment','Mains cable type'],
+    'L2 non-prescriptive areas':['Room / area','Detection type','Risk / design reference']
+  };
+  const appendixMarkup = () => draft.fields.certificateKind !== 'commissioning' ? '' : '<fieldset><legend>Commissioning appendix</legend><p>Record measured values with units and test conditions. Use the applicable design and standard edition.</p><label>Record type<select data-appendix-kind>'+Object.keys(appendixGroups).map(key=>'<option>'+esc(key)+'</option>').join('')+'</select></label><div data-appendix-fields class="certificate-fields"></div><label>Notes / limitations<textarea data-appendix-notes></textarea></label><label>Engineer initials<input data-appendix-initials></label><label>Test date<input type="date" data-appendix-date></label><p data-appendix-status role="status"></p><button type="button" data-appendix-add>Add appendix record</button></fieldset>';
   const editorMarkup = () => {
     if (!draft) return '';
-    const sections = [...new Set(CERTIFICATE_FIELDS.map(field => field.section || 'Certificate details'))];
-    return `<div class="certificate-draft"><div class="certificate-draft-heading"><div><h3>Certificate draft</h3><p>${draft.revisionOf ? 'Revision of an issued certificate. The earlier issue remains in history.' : 'Details start from the saved job and site. Check and edit them for this certificate.'}</p></div><span class="certificate-status-badge">DRAFT</span></div><p class="certificate-help">Fields marked * are needed before issue. You can save an incomplete draft.</p><form class="certificate-form" novalidate>${sections.map(section => `<fieldset><legend>${esc(section)}</legend><div class="certificate-fields">${CERTIFICATE_FIELDS.filter(field => (field.section || 'Certificate details') === section).map(fieldMarkup).join('')}</div></fieldset>`).join('')}<div class="certificate-save-bar"><span class="certificate-save-state" role="status">Saved draft</span><div class="certificate-actions"><button type="submit">Save draft</button><button type="button" class="primary" data-certificate-review>Review certificate</button></div></div></form><section class="certificate-review" hidden aria-labelledby="certificate-review-heading"><div class="certificate-review-heading"><h3 id="certificate-review-heading" tabindex="-1">Review before issue</h3><button type="button" data-certificate-edit>Back to editing</button></div><div class="certificate-readiness"></div><div class="certificate-review-preview"></div><div class="certificate-confirmation"><label><input type="checkbox" data-certificate-confirm><span>I have checked the certificate details and recorded work for this visit, including any limitations and outstanding actions.</span></label><p>The engineer name is a typed declaration of this review. Jobs does not add a handwritten signature or independent approval.</p><button type="button" class="primary" data-certificate-issue disabled>Issue certificate</button></div></section><button type="button" class="text-button certificate-discard" data-certificate-discard>Discard this draft</button></div>`;
+    const sections = [...new Set(CERTIFICATE_FIELDS.map(field => field.section || 'Certificate details'))].filter(section => section !== 'Fire checklist');
+    return `<div class="certificate-draft"><div class="certificate-draft-heading"><div><h3>Certificate draft</h3><p>${draft.revisionOf ? 'Revision of an issued certificate. The earlier issue remains in history.' : 'Details start from the saved job and site. Check and edit them for this certificate.'}</p></div><span class="certificate-status-badge">DRAFT</span></div><p class="certificate-help">Fields marked * are needed before issue. You can save an incomplete draft.</p><form class="certificate-form" novalidate>${sections.map(section => `<fieldset><legend>${esc(section)}</legend><div class="certificate-fields">${CERTIFICATE_FIELDS.filter(field => (field.section || 'Certificate details') === section && (section !== 'Fire certification' || field.key === 'certificateKind' || FIRE_CERTIFICATE_TEMPLATES[draft.fields.certificateKind]?.fields.includes(field.key))).map(fieldMarkup).join('')}</div></fieldset>`).join('')}${checklistMarkup()}${batteryMarkup()}${soundMarkup()}${variationMarkup()}${appendixMarkup()}<div class="certificate-save-bar"><span class="certificate-save-state" role="status">Saved draft</span><div class="certificate-actions"><button type="submit">Save draft</button><button type="button" class="primary" data-certificate-review>Review certificate</button></div></div></form><section class="certificate-review" hidden aria-labelledby="certificate-review-heading"><div class="certificate-review-heading"><h3 id="certificate-review-heading" tabindex="-1">Review before issue</h3><button type="button" data-certificate-edit>Back to editing</button></div><div class="certificate-readiness"></div><div class="certificate-review-preview"></div><div class="certificate-confirmation"><label><input type="checkbox" data-certificate-confirm><span>I have checked the certificate details and recorded work for this visit, including any limitations and outstanding actions.</span></label><p>The engineer name is a typed declaration of this review. Jobs does not add a handwritten signature or independent approval.</p><button type="button" class="primary" data-certificate-issue disabled>Issue certificate</button></div></section><button type="button" class="text-button certificate-discard" data-certificate-discard>Discard this draft</button></div>`;
   };
   function updateIssueButton() {
     const button = root.querySelector('[data-certificate-issue]');
@@ -110,13 +131,104 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
     const contact = root.querySelector('.certificate-customer-email');
     if (contact) { contact.textContent = email ? `Customer email: ${email}` : ''; contact.hidden = !email; }
   }
+  function packMarkup() {
+    if (!issued.length) return '';
+    return '<details class="certificate-history"><summary>Commissioning pack</summary><p>Select issued certificates for one PDF. Drafts are excluded.</p>'+issued.map(item=>'<label><input type="checkbox" data-pack-id="'+esc(item.id)+'"> '+esc(item.fields.title)+' · '+esc(item.fields.number)+'</label>').join('')+'<div class="certificate-actions"><button type="button" data-pack-download>Download pack PDF</button><button type="button" data-pack-share>Share pack PDF</button></div></details>';
+  }
   function render() {
     root.innerHTML = `<div class="certificate-heading"><div><span class="eyebrow">CUSTOMER DOCUMENT</span><h2 id="certificate-heading">Certificate</h2><p>Create a certificate for this visit, review its details, then save an issued copy for the customer.</p></div>${!draft ? '<button type="button" class="primary" data-certificate-create>Create certificate</button>' : ''}</div><div class="certificate-error notice error" role="alert" hidden></div>${editorMarkup()}${issued.length ? `<section class="certificate-history" aria-labelledby="certificate-history-heading"><div class="certificate-history-heading"><h3 id="certificate-history-heading">Issued certificates</h3><span>${issued.length} saved issue${issued.length === 1 ? '' : 's'}</span></div><label class="certificate-issue-picker">Choose an issue<select aria-label="Issued certificate">${[...issued].reverse().map(certificate => `<option value="${esc(certificate.id)}"${certificate.id === selectedIssue ? ' selected' : ''}>${esc(certificate.fields?.number || certificate.number || 'Certificate')} · ${esc(dateLabel(certificate.issuedAt || certificate.fields?.issueDate))}</option>`).join('')}</select></label><p class="certificate-help">Each issued copy keeps the details and evidence recorded at issue. Use a revision to make changes.</p><div class="certificate-actions"><button type="button" data-certificate-print>Print certificate</button><button type="button" class="primary" data-certificate-download>Download PDF</button><button type="button" data-certificate-share>Share PDF</button><button type="button" data-certificate-revise${draft ? ' disabled' : ''}>Revise certificate</button></div><p class="certificate-help">Choose your email app from Share PDF, or download the PDF and attach it to your customer email.</p><p class="certificate-customer-email" hidden></p>${draft ? '<p class="certificate-help">Finish or discard the current draft before starting another revision.</p>' : ''}<details class="certificate-issued-view" open><summary>View issued certificate</summary><div class="certificate-issued-preview"></div></details></section>` : '<p class="certificate-empty">No certificate has been issued for this visit yet. Your draft job report remains available below.</p>'}`;
+    root.insertAdjacentHTML('beforeend',packMarkup());
+    for (const [selector,downloadOnly] of [['download',true],['share',false]]) root.querySelector('[data-pack-'+selector+']')?.addEventListener('click',()=>perform(async()=>{
+      if(localDirty)throw Error('Save the draft before exporting a pack.');
+      const ids=new Set([...root.querySelectorAll('[data-pack-id]:checked')].map(el=>el.dataset.packId));
+      const selected=issued.filter(item=>ids.has(item.id));
+      if(!selected.length)throw Error('Select at least one issued certificate.');
+      return shareCertificatePackPdf(copy(selected),{downloadOnly});
+    }));
     root.querySelector('[data-certificate-create]')?.addEventListener('click', () => perform(() => save(saveCertificateDraft(job, createCertificateDraft(job, site, drawing)))));
     root.querySelector('.certificate-form')?.addEventListener('input', event => {
-      if (!event.target.name || pending) return;
+      if (pending) return;
+      if (event.target.dataset.fireCheck) {
+        const key = event.target.dataset.fireCheck;
+        const result = root.querySelector('[data-fire-check="'+key+'"][data-part="result"]').value;
+        const notes = root.querySelector('[data-fire-check="'+key+'"][data-part="notes"]').value;
+        draft.fields[key] = result+'\n'+notes; markChanged(); return;
+      }
+      if (!event.target.name) return;
+      if (event.target.name === 'certificateKind') {
+        draft = applyFireCertificateTemplate(draft, event.target.value);
+        render(); markChanged(); return;
+      }
       draft.fields[event.target.name] = event.target.value;
       markChanged();
+    });
+    root.querySelector('[data-battery-add]')?.addEventListener('click', () => {
+      const get = key => root.querySelector('[data-battery="'+key+'"]').value.trim();
+      const raw = ['hours','standby','minutes','alarm','fitted'].map(get);
+      const [hours,standby,minutes,alarm,fitted] = raw.map(Number);
+      const reference = get('reference');
+      const output = root.querySelector('[data-battery-result]');
+      if (!reference || raw.some(v=>!v || !Number.isFinite(Number(v)) || Number(v)<=0)) { output.textContent='Enter a PSU reference and positive values for all five inputs.'; return; }
+      const required = 1.25*(hours*standby+1.75*(minutes/60)*alarm);
+      if (!Number.isFinite(required)) { output.textContent='Calculation exceeds numeric range.'; return; }
+      const line = reference+': '+hours+' h standby at '+standby+' A; '+minutes+' min alarm at '+alarm+' A; minimum '+(Math.ceil(required*100)/100).toFixed(2)+' Ah; fitted '+fitted+' Ah; '+(fitted>=required?'meets calculated capacity':'below calculated capacity')+'. Capacity only; verify PSU compatibility and battery condition separately.';
+      const field = root.querySelector('[name="batteryEvidence"]');
+      const next = [draft.fields.batteryEvidence,line].filter(Boolean).join('\n');
+      if(next.length>10000){output.textContent='Evidence field is full.';return;}
+      draft.fields.batteryEvidence=next;
+      if(field) field.value=next;
+      output.textContent=line; markChanged();
+    });
+    root.querySelector('[data-sound-add]')?.addEventListener('click', () => {
+      const get = key => root.querySelector('[data-sound="'+key+'"]').value.trim();
+      const keys = ['plan','meter','point','location','ambient','alarm','requirement','result'];
+      const status = root.querySelector('[data-sound-status]');
+      if (keys.some(key=>!get(key)) || ['ambient','alarm'].some(key=>!Number.isFinite(Number(get(key))))) { status.textContent='Complete the measurement, meter, plan, requirement and result fields.'; return; }
+      if (get('result')==='Unsatisfactory' && !get('notes')) {status.textContent='Record evidence or an explanation for the unsatisfactory result.';return;}
+      const line = 'Point '+get('point')+' | '+get('location')+' | Ambient '+get('ambient')+' dB(A) | Alarm '+get('alarm')+' dB(A) | Requirement: '+get('requirement')+' | '+get('result')+' | Plan: '+get('plan')+' | Meter: '+get('meter')+' | Conditions: '+(get('conditions')||'Not recorded')+' | Notes: '+(get('notes')||'None recorded');
+      const next = [draft.fields.soundReadings,line].filter(Boolean).join('\n');
+      if(next.length>10000){status.textContent='Evidence field is full. Retain additional readings in a referenced continuation record.';return;}
+      draft.fields.soundReadings=next;
+      const field=root.querySelector('[name="soundReadings"]');
+      if(field)field.value=next;
+      for(const key of ['point','location','ambient','alarm','result','notes'])root.querySelector('[data-sound="'+key+'"]').value='';
+      status.textContent='Measurement added. Save the certificate draft to retain it.';markChanged();
+    });
+    root.querySelector('[data-variation-add]')?.addEventListener('click', () => {
+      const get = key => root.querySelector('[data-variation="'+key+'"]').value.trim();
+      const message = root.querySelector('[data-variation-message]');
+      if (['clause','area','reason','alternative','status'].some(key=>!get(key))) {message.textContent='Record the clause, area, reason, alternative and agreement status.';return;}
+      if (get('status')==='Agreed — evidence retained' && ['evidence','representative','customer','position','date','authorisation'].some(key=>!get(key))) {message.textContent='Agreed variations require the agreement evidence, representatives, customer position, date and authorisation reference.';return;}
+      const line = [['Clause','clause'],['Area','area'],['Reason','reason'],['Alternative','alternative'],['Status','status'],['Evidence','evidence'],['Other parties','parties'],['Company representative','representative'],['Customer representative','customer'],['Position','position'],['Date','date'],['Authorisation reference','authorisation']].map(([label,key])=>label+': '+(get(key)||'Not recorded')).join(' | ');
+      const next = [draft.fields.variations,line].filter(Boolean).join('\n');
+      if(next.length>10000){message.textContent='Evidence field is full. Use a referenced continuation record.';return;}
+      draft.fields.variations=next;
+      const field=root.querySelector('[name="variations"]');
+      if(field)field.value=next;
+      for(const key of ['clause','area','reason','alternative','evidence','status'])root.querySelector('[data-variation="'+key+'"]').value='';
+      message.textContent='Variation recorded. Save the certificate draft to retain it.';markChanged();
+    });
+    const appendixKind = root.querySelector('[data-appendix-kind]');
+    const renderAppendix = () => {
+      if (!appendixKind) return;
+      root.querySelector('[data-appendix-fields]').innerHTML=appendixGroups[appendixKind.value].map((label,i)=>'<label>'+esc(label)+'<input data-appendix-value="'+i+'" maxlength="1000"></label>').join('');
+    };
+    appendixKind?.addEventListener('change',renderAppendix);
+    renderAppendix();
+    root.querySelector('[data-appendix-add]')?.addEventListener('click',()=>{
+      const status=root.querySelector('[data-appendix-status]');
+      const labels=appendixGroups[appendixKind.value];
+      const values=[...root.querySelectorAll('[data-appendix-value]')].map(el=>el.value.trim());
+      const initials=root.querySelector('[data-appendix-initials]').value.trim();
+      const date=root.querySelector('[data-appendix-date]').value;
+      const notes=root.querySelector('[data-appendix-notes]').value.trim();
+      if(!values[0]||!values.slice(1).some(Boolean)||!initials||!date){status.textContent='Enter a reference, test details, initials and date.';return;}
+      const line='Appendix — '+appendixKind.value+' | '+labels.map((label,i)=>label+': '+(values[i]||'Not recorded')).join(' | ')+' | Notes: '+(notes||'None recorded')+' | Initials: '+initials+' | Date: '+date;
+      const next=[draft.fields.functionalTests,line].filter(Boolean).join('\n');
+      if(next.length>10000){status.textContent='Evidence field is full. Use a referenced continuation record.';return;}
+      draft.fields.functionalTests=next;
+      const field=root.querySelector('[name="functionalTests"]');if(field)field.value=next;
+      renderAppendix();status.textContent='Appendix record added. Save the draft to retain it.';markChanged();
     });
     root.querySelector('.certificate-form')?.addEventListener('submit', event => {
       event.preventDefault();
