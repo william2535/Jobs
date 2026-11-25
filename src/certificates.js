@@ -43,6 +43,18 @@ export const CERTIFICATE_FIELDS = [
   ['declaration', 'Engineer declaration', 'textarea', true, 'Declaration'],
 ].map(([key, label, type, required, section]) => ({ key, label, type, required, section }));
 
+export const FIRE_CERTIFICATE_TEMPLATES = Object.freeze({
+  installation: {title:'Fire alarm installation certificate', fields:['specificationRef','systemCategory','variations','wiringTests','drawingRefs']},
+  commissioning: {title:'Fire alarm commissioning certificate', fields:['specificationRef','systemCategory','variations','functionalTests','handover','soundReadings','batteryEvidence','soakTest','followUp']},
+  acceptance: {title:'Fire alarm acceptance certificate', fields:['variations','functionalTests','drawingRefs','handover','acceptance','followUp']},
+  modification: {title:'Fire alarm modification certificate', fields:['variations','functionalTests','followUp']}
+});
+export function applyFireCertificateTemplate(draft, kind) {
+  const template = Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES, kind) ? FIRE_CERTIFICATE_TEMPLATES[kind] : null;
+  if (!template) return {...draft, fields:{...draft.fields, certificateKind:''}, review:null};
+  return {...draft, fields:{...draft.fields, certificateKind:kind, title:template.title, standard:kind === 'modification' ? '' : 'BS 5839-1:2025', declaration:'I confirm the recorded work and evidence within the stated scope, subject to the recorded variations and limitations. No unrecorded test or approval is implied.'}, review:null};
+}
+
 const FIELD_KEYS = CERTIFICATE_FIELDS.map(field => field.key);
 const MAX_ISSUES = 100;
 const MAX_BYTES = 96 * 1024 * 1024;
@@ -204,6 +216,8 @@ export function saveCertificateDraft(job, draft) {
 export function certificateReadiness(job, draft, site = null, drawing = null) {
   const checked = draftRecord(draft), saved = collection(job), evidence = captureEvidence(job, site, drawing);
   const missing = requiredFields(checked.fields);
+  const template = Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES, checked.fields.certificateKind) ? FIRE_CERTIFICATE_TEMPLATES[checked.fields.certificateKind] : null;
+  if (template) for (const key of [...template.fields, 'standard']) if (!checked.fields[key]?.trim()) missing.push(CERTIFICATE_FIELDS.find(field => field.key === key).label);
   if (saved.issued.some(record => record.fields.number.toLocaleLowerCase() === checked.fields.number.toLocaleLowerCase())) missing.push('A new, unique certificate number');
   const warnings = [];
   const results = job.results || [];
