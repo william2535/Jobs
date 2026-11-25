@@ -16,11 +16,12 @@ export function certificatePdfFilename(certificate) {
 }
 
 /** Text remains searchable. Embedded fonts, pictures and pagination need no network. */
-export async function generateCertificatePdf(certificate) {
-  if (!certificate?.issuedAt || certificate.draft || !certificate.evidence?.job) throw Error('Issue and save this certificate before exporting its PDF.');
+export async function generateCertificatePdf(certificate) { return generateCertificatePackPdf([certificate]); }
+export async function generateCertificatePackPdf(certificates) {
+  if (!Array.isArray(certificates) || !certificates.length || certificates.some(certificate => !certificate?.issuedAt || certificate.draft || !certificate.evidence?.job)) throw Error('Issue and save this certificate before exporting its PDF.');
   // Rendering is synchronous and detached; a later job edit cannot change this export.
-  const snapshot = structuredClone(certificate);
-  const root = renderCertificate({ certificate: snapshot, includeEvidence: true });
+  const snapshots = structuredClone(certificates);
+  const snapshot = snapshots[0];
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true });
   pdf.addFileToVFS('OpenSans-Regular.ttf', regular);
   pdf.addFileToVFS('OpenSans-Semibold.ttf', semibold);
@@ -146,9 +147,16 @@ export async function generateCertificatePdf(certificate) {
     }
     for (const child of node.childNodes) await walk(child);
   }
-  await walk(root);
+  const ranges = [];
+  for (const item of snapshots) {
+    if (ranges.length) page();
+    const start = pdf.getNumberOfPages();
+    await walk(renderCertificate({certificate:item,includeEvidence:true}));
+    ranges.push({start,end:pdf.getNumberOfPages(),item});
+  }
   const pages = pdf.getNumberOfPages();
   for (let index = 1; index <= pages; index++) {
+    const snapshot = ranges.find(range=>index>=range.start && index<=range.end).item;
     pdf.setPage(index); font(8, true, MUTED);
     const heading = lines(`${snapshot.fields.companyName || 'Jobs'} · ${snapshot.fields.number}`, RIGHT - LEFT, 8, true)[0];
     pdf.setFillColor(...INK); pdf.rect(LEFT, 7, RIGHT - LEFT, 10, 'F'); font(8, true, [255,255,255]); pdf.text(heading, LEFT + 3, 13.5); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
@@ -170,6 +178,13 @@ async function download(file, host) {
 /** Opens a share sheet; never sends an email automatically. Cancel never downloads. */
 export async function shareCertificatePdf(certificate, { host = globalThis, downloadOnly = false } = {}) {
   const blob = await generateCertificatePdf(certificate), fileName = certificatePdfFilename(certificate);
+  return exportCertificateBlob(blob,fileName,clean(certificate.fields.title),{host,downloadOnly});
+}
+export async function shareCertificatePackPdf(certificates, {host=globalThis,downloadOnly=false}={}) {
+  const blob=await generateCertificatePackPdf(certificates);
+  return exportCertificateBlob(blob,'Commissioning-pack.pdf','Commissioning pack',{host,downloadOnly});
+}
+async function exportCertificateBlob(blob,fileName,title,{host,downloadOnly}) {
   const native = getNativePlatform(host);
   if (native) {
     const result = await native.exportBlob(blob, fileName, { share: !downloadOnly });
@@ -180,7 +195,7 @@ export async function shareCertificatePdf(certificate, { host = globalThis, down
   const file = new FileType([blob], fileName, { type: MIME });
   if (!downloadOnly && typeof host.navigator?.share === 'function' && host.navigator.canShare?.({ files: [file] })) {
     try {
-      await host.navigator.share({ files: [file], title: clean(certificate.fields.title) });
+      await host.navigator.share({ files: [file], title });
       return { status: 'shared', fileName };
     } catch (error) {
       if (error?.name === 'AbortError') return { status: 'cancelled', fileName };
