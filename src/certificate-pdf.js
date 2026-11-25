@@ -65,8 +65,8 @@ export async function generateCertificatePdf(certificate) {
     const headers = [...node.querySelectorAll('thead th')].map(cell => cell.textContent);
     const rows = [...node.querySelectorAll('tbody tr')].map(row => [...row.children].map(cell => cell.textContent));
     if (!headers.length) { for (const row of rows) paragraph(row.join(' · ')); return; }
-    const first = headers.length <= 3 ? .44 : .27;
-    const widths = headers.map((_, i) => (RIGHT - LEFT) * (headers.length === 1 ? 1 : i === 0 ? first : (1 - first) / (headers.length - 1)));
+    const first = headers[0] === 'Record' ? .12 : headers.length <= 3 ? .44 : .27;
+    const widths = headers.map((_, i) => (RIGHT - LEFT) * (headers.join('|') === 'Check|Result|Notes / evidence' ? [.49,.15,.36][i] : headers.length === 1 ? 1 : i === 0 ? first : (1 - first) / (headers.length - 1)));
     const wrap = (row, bold = false) => headers.map((_, i) => lines(row[i] || '', widths[i] - 4, 8.5, bold));
     const heading = wrap(headers, true), headingHeight = Math.max(...heading.map(cell => cell.length)) * 4.3 + 4;
     function draw(cells, offset, count, header = false) {
@@ -151,7 +151,7 @@ export async function generateCertificatePdf(certificate) {
   for (let index = 1; index <= pages; index++) {
     pdf.setPage(index); font(8, true, MUTED);
     const heading = lines(`${snapshot.fields.companyName || 'Jobs'} · ${snapshot.fields.number}`, RIGHT - LEFT, 8, true)[0];
-    pdf.text(heading, LEFT, 13); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
+    pdf.setFillColor(...INK); pdf.rect(LEFT, 7, RIGHT - LEFT, 10, 'F'); font(8, true, [255,255,255]); pdf.text(heading, LEFT + 3, 13.5); pdf.setDrawColor(...RULE); pdf.line(LEFT, 17, RIGHT, 17);
     font(8, false, MUTED); pdf.text(`Issued ${clean(snapshot.fields.issueDate)} · ${index} / ${pages}`, RIGHT, 289, { align: 'right' });
     pdf.text('Certificate and captured visit evidence', LEFT, 289);
   }
