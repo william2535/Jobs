@@ -1,6 +1,6 @@
 /** Certificate drafts stay editable; issued snapshots are reviewed records of this visit. */
 import {
-  CERTIFICATE_FIELDS, createCertificateDraft, saveCertificateDraft,
+  CERTIFICATE_FIELDS, FIRE_CERTIFICATE_TEMPLATES, applyFireCertificateTemplate, createCertificateDraft, saveCertificateDraft,
   certificateReadiness, snapshotCertificatePreview, reviewCertificateDraft,
   issueCertificate, reviseCertificate,
 } from './certificates.js';
@@ -69,7 +69,7 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
     const value = draft.fields?.[field.key] || '';
     const name = `certificate-${field.key}`;
     const label = `${esc(field.label)}${field.required ? ' <span class="certificate-required" aria-hidden="true">*</span>' : ''}`;
-    const control = field.type === 'textarea'
+    const control = field.key === 'certificateKind' ? `<select id="${name}" name="certificateKind"><option value="">General visit certificate</option>${Object.entries(FIRE_CERTIFICATE_TEMPLATES).map(([key, template]) => `<option value="${key}"${value === key ? ' selected' : ''}>${esc(template.title)}</option>`).join('')}</select>` : field.type === 'textarea'
       ? `<textarea id="${name}" name="${esc(field.key)}" rows="3" maxlength="10000" aria-required="${field.required ? 'true' : 'false'}">${esc(value)}</textarea>`
       : `<input id="${name}" name="${esc(field.key)}" type="${field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}" maxlength="10000" aria-required="${field.required ? 'true' : 'false'}" value="${esc(value)}">`;
     return `<label class="${field.type === 'textarea' ? 'certificate-wide' : ''}" for="${name}"><span>${label}</span>${control}</label>`;
@@ -77,7 +77,7 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
   const editorMarkup = () => {
     if (!draft) return '';
     const sections = [...new Set(CERTIFICATE_FIELDS.map(field => field.section || 'Certificate details'))];
-    return `<div class="certificate-draft"><div class="certificate-draft-heading"><div><h3>Certificate draft</h3><p>${draft.revisionOf ? 'Revision of an issued certificate. The earlier issue remains in history.' : 'Details start from the saved job and site. Check and edit them for this certificate.'}</p></div><span class="certificate-status-badge">DRAFT</span></div><p class="certificate-help">Fields marked * are needed before issue. You can save an incomplete draft.</p><form class="certificate-form" novalidate>${sections.map(section => `<fieldset><legend>${esc(section)}</legend><div class="certificate-fields">${CERTIFICATE_FIELDS.filter(field => (field.section || 'Certificate details') === section).map(fieldMarkup).join('')}</div></fieldset>`).join('')}<div class="certificate-save-bar"><span class="certificate-save-state" role="status">Saved draft</span><div class="certificate-actions"><button type="submit">Save draft</button><button type="button" class="primary" data-certificate-review>Review certificate</button></div></div></form><section class="certificate-review" hidden aria-labelledby="certificate-review-heading"><div class="certificate-review-heading"><h3 id="certificate-review-heading" tabindex="-1">Review before issue</h3><button type="button" data-certificate-edit>Back to editing</button></div><div class="certificate-readiness"></div><div class="certificate-review-preview"></div><div class="certificate-confirmation"><label><input type="checkbox" data-certificate-confirm><span>I have checked the certificate details and recorded work for this visit, including any limitations and outstanding actions.</span></label><p>The engineer name is a typed declaration of this review. Jobs does not add a handwritten signature or independent approval.</p><button type="button" class="primary" data-certificate-issue disabled>Issue certificate</button></div></section><button type="button" class="text-button certificate-discard" data-certificate-discard>Discard this draft</button></div>`;
+    return `<div class="certificate-draft"><div class="certificate-draft-heading"><div><h3>Certificate draft</h3><p>${draft.revisionOf ? 'Revision of an issued certificate. The earlier issue remains in history.' : 'Details start from the saved job and site. Check and edit them for this certificate.'}</p></div><span class="certificate-status-badge">DRAFT</span></div><p class="certificate-help">Fields marked * are needed before issue. You can save an incomplete draft.</p><form class="certificate-form" novalidate>${sections.map(section => `<fieldset><legend>${esc(section)}</legend><div class="certificate-fields">${CERTIFICATE_FIELDS.filter(field => (field.section || 'Certificate details') === section && (section !== 'Fire certification' || field.key === 'certificateKind' || FIRE_CERTIFICATE_TEMPLATES[draft.fields.certificateKind]?.fields.includes(field.key))).map(fieldMarkup).join('')}</div></fieldset>`).join('')}<div class="certificate-save-bar"><span class="certificate-save-state" role="status">Saved draft</span><div class="certificate-actions"><button type="submit">Save draft</button><button type="button" class="primary" data-certificate-review>Review certificate</button></div></div></form><section class="certificate-review" hidden aria-labelledby="certificate-review-heading"><div class="certificate-review-heading"><h3 id="certificate-review-heading" tabindex="-1">Review before issue</h3><button type="button" data-certificate-edit>Back to editing</button></div><div class="certificate-readiness"></div><div class="certificate-review-preview"></div><div class="certificate-confirmation"><label><input type="checkbox" data-certificate-confirm><span>I have checked the certificate details and recorded work for this visit, including any limitations and outstanding actions.</span></label><p>The engineer name is a typed declaration of this review. Jobs does not add a handwritten signature or independent approval.</p><button type="button" class="primary" data-certificate-issue disabled>Issue certificate</button></div></section><button type="button" class="text-button certificate-discard" data-certificate-discard>Discard this draft</button></div>`;
   };
   function updateIssueButton() {
     const button = root.querySelector('[data-certificate-issue]');
@@ -115,6 +115,10 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
     root.querySelector('[data-certificate-create]')?.addEventListener('click', () => perform(() => save(saveCertificateDraft(job, createCertificateDraft(job, site, drawing)))));
     root.querySelector('.certificate-form')?.addEventListener('input', event => {
       if (!event.target.name || pending) return;
+      if (event.target.name === 'certificateKind') {
+        draft = applyFireCertificateTemplate(draft, event.target.value);
+        render(); markChanged(); return;
+      }
       draft.fields[event.target.name] = event.target.value;
       markChanged();
     });
