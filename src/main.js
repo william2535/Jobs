@@ -74,6 +74,7 @@ import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
+import "./walk-result-segments.css";
 import { photoMarkup, photoPicker, profilePhoto } from "./profile-photo.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
@@ -1204,7 +1205,9 @@ function deviceHistoryLabel(asset, job) {
 }
 const pencilIcon = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 15z"/></svg>';
 function resultButtons(asset, result, extraClass = "") {
-  return `<div class="device-card-results ${extraClass}" role="group" aria-label="Today's result for ${esc(asset.reference || asset.type)}" title="Current result: ${esc(result?.state || "Not tested")}">${[["pass", "Pass", "Satisfactory"], ["fail", "Fail", "Unsatisfactory"], ["na", "N/A", "Not applicable"]].map(([key, label, value]) => `<button data-action="card-result:${key}:${esc(asset.id)}" data-card-result="${value}" aria-pressed="${result?.state === value}">${label}</button>`).join("")}</div>`;
+  const pending = pendingCardResult?.assetId === asset.id ? pendingCardResult : null;
+  const selected = pending?.state || result?.state;
+  return `<div class="device-card-results ${extraClass}" role="group" aria-label="Today's result for ${esc(asset.reference || asset.type)}" title="${pending ? "Unsaved selection: " : "Current result: "}${esc(selected || "Not tested")}">${[["pass", "Pass", "Satisfactory"], ["fail", "Fail", "Unsatisfactory"], ["na", "N/A", "Not applicable"]].map(([key, label, value]) => `<button data-action="card-result:${key}:${esc(asset.id)}" data-card-result="${value}" aria-pressed="${selected === value}"${pending && selected === value ? ' data-pending="true"' : ""}>${label}</button>`).join("")}</div>`;
 }
 function resultReason(assetId) {
   const pending = pendingCardResult?.assetId === assetId ? pendingCardResult : null;
