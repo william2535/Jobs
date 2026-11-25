@@ -2043,3 +2043,12 @@ window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
   }
 });
 init();
+
+// Website analytics only; never required for local or native operation.
+if (location.origin === "https://william2535.github.io" && location.pathname.startsWith("/Jobs/") && navigator.onLine && window.top === window.self) {
+  const beacon = document.createElement("script");
+  beacon.src = "https://static.cloudflareinsights.com/beacon.min.js";
+  beacon.defer = true;
+  beacon.setAttribute("data-cf-beacon", JSON.stringify({token:"b9340aeb4e734b459d645c9e1629cafa"}));
+  document.head.append(beacon);
+}
