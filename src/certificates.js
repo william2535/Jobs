@@ -27,7 +27,14 @@ export const CERTIFICATE_FIELDS = [
   ['limitations', 'Limitations / exclusions', 'textarea', true, 'Work and findings'],
   ['outcome', 'Outcome / condition left', 'textarea', true, 'Work and findings'],
   ['standard', 'Applicable standard / edition (if relevant)', 'text', false, 'Work and findings'],
-  ["certificateKind","Fire certificate type (installation / commissioning / acceptance / modification)","text",false,"Fire certification"],
+  ["signatoryPosition","Signatory position / capacity","textarea",false,"Fire certification"],
+  ["protectedAreas","Areas protected (or not applicable with reason)","textarea",false,"Fire certification"],
+  ["falseAlarmDetails","False alarm measures, delays and outputs affected","textarea",false,"Fire certification"],
+  ["verificationDecision","Independent verification on completion (Clause 41)","textarea",false,"Fire certification"],
+  ["modificationClause","Applicable modification clause","textarea",false,"Fire certification"],
+  ["modificationConfirmation","Additional variations confirmation / limitations","textarea",false,"Fire certification"],
+  ["confirmationCapacity","Confirming person name, capacity and signed record reference","textarea",false,"Fire certification"],
+  ["certificateKind","Fire certificate type (design / installation / commissioning / acceptance / modification)","text",false,"Fire certification"],
   ["specificationRef","Specification reference and revision","text",false,"Fire certification"],
   ["systemCategory","System category","text",false,"Fire certification"],
   ["variations","Agreed variations, reasons, alternatives and agreement references","textarea",false,"Fire certification"],
@@ -44,6 +51,20 @@ export const CERTIFICATE_FIELDS = [
 ].map(([key, label, type, required, section]) => ({ key, label, type, required, section }));
 
 export const FIRE_CHECKLISTS = {
+  design: [
+    "Manual call point type and siting account for Section 3",
+    "Automatic detector selection and siting consider foreseeable unwanted alarms",
+    "Appropriate analogue system specified",
+    "Appropriate multi-sensor system specified",
+    "Time-related system specified",
+    "Staff alarm delays general alarm and/or ARC transmission",
+    "User given guidance on limiting false alarms",
+    "Other false alarm measures (describe in details)"
+  ],
+  modification: [
+    "Post-modification testing completed under Clause 45.3 or 46.1.5 and 46.1.6 as applicable",
+    "As-fitted drawings and other system records updated as appropriate"
+  ],
   "installation": [
     "Cable type, size and fire resistance suit the design",
     "Mechanical protection where required",
@@ -95,8 +116,8 @@ export function checklistMissing(fields) {
   const missing = [];
   checks.forEach((label,i) => {
     const value = fields['fireCheck'+i] || '';
-    const match = /^(Yes|No|N\/A)\n([\s\S]*)$/.exec(value);
-    if (!match || (match[1] !== 'Yes' && !match[2].trim())) missing.push(label + ' (result and exception evidence)');
+    const match = /^(Yes|No|N\/A)(?:\n([\s\S]*))?$/.exec(value);
+    if (!match || (match[1] !== 'Yes' && !(match[2] || '').trim())) missing.push(label + ' (result and exception evidence)');
   });
   return missing;
 }
@@ -104,12 +125,15 @@ export const FIRE_CERTIFICATE_TEMPLATES = Object.freeze({
   installation: {title:'Fire alarm installation certificate', fields:['specificationRef','systemCategory','variations','wiringTests','drawingRefs']},
   commissioning: {title:'Fire alarm commissioning certificate', fields:['specificationRef','systemCategory','variations','functionalTests','handover','soundReadings','batteryEvidence','soakTest','followUp']},
   acceptance: {title:'Fire alarm acceptance certificate', fields:['variations','functionalTests','drawingRefs','handover','acceptance','followUp']},
-  modification: {title:'Fire alarm modification certificate', fields:['variations','functionalTests','followUp']}
+  design: {title:'Fire alarm design certificate', fields:['signatoryPosition','systemCategory','variations','protectedAreas','falseAlarmDetails','soakTest','verificationDecision']},
+  modification: {title:'Fire alarm modification certificate', fields:['signatoryPosition','modificationClause','variations','functionalTests','drawingRefs','followUp','modificationConfirmation','confirmationCapacity']}
 });
 export function applyFireCertificateTemplate(draft, kind) {
   const template = Object.hasOwn(FIRE_CERTIFICATE_TEMPLATES, kind) ? FIRE_CERTIFICATE_TEMPLATES[kind] : null;
-  if (!template) return {...draft, fields:{...draft.fields, certificateKind:''}, review:null};
-  return {...draft, fields:{...draft.fields, certificateKind:kind, title:template.title, standard:kind === 'modification' ? '' : 'BS 5839-1:2025', declaration:'I confirm the recorded work and evidence within the stated scope, subject to the recorded variations and limitations. No unrecorded test or approval is implied.'}, review:null};
+  const fields = {...draft.fields};
+  if (fields.certificateKind !== kind) for (let i=0;i<29;i++) fields['fireCheck'+i]='';
+  if (!template) return {...draft, fields:{...fields, certificateKind:''}, review:null};
+  return {...draft, fields:{...fields, certificateKind:kind, title:template.title, standard:'BS 5839-1:2025', declaration:'I confirm the recorded work and evidence within the stated scope, subject to the recorded variations and limitations. No unrecorded test or approval is implied.'}, review:null};
 }
 
 for (let i=0;i<29;i++) CERTIFICATE_FIELDS.push({key:'fireCheck'+i,label:'Checklist item '+(i+1),type:'textarea',required:false,section:'Fire checklist'});
