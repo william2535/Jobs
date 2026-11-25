@@ -5,6 +5,7 @@ import {
   issueCertificate, reviseCertificate,
 } from './certificates.js';
 import { renderCertificate } from './certificate-renderer.js';
+import { shareCertificatePackPdf } from './certificate-pdf.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const copy = value => structuredClone(value);
@@ -130,8 +131,20 @@ export function renderCertificates({ job, site = null, drawing = null, onSave, o
     const contact = root.querySelector('.certificate-customer-email');
     if (contact) { contact.textContent = email ? `Customer email: ${email}` : ''; contact.hidden = !email; }
   }
+  function packMarkup() {
+    if (!issued.length) return '';
+    return '<details class="certificate-history"><summary>Commissioning pack</summary><p>Select issued certificates for one PDF. Drafts are excluded.</p>'+issued.map(item=>'<label><input type="checkbox" data-pack-id="'+esc(item.id)+'"> '+esc(item.fields.title)+' · '+esc(item.fields.number)+'</label>').join('')+'<div class="certificate-actions"><button type="button" data-pack-download>Download pack PDF</button><button type="button" data-pack-share>Share pack PDF</button></div></details>';
+  }
   function render() {
     root.innerHTML = `<div class="certificate-heading"><div><span class="eyebrow">CUSTOMER DOCUMENT</span><h2 id="certificate-heading">Certificate</h2><p>Create a certificate for this visit, review its details, then save an issued copy for the customer.</p></div>${!draft ? '<button type="button" class="primary" data-certificate-create>Create certificate</button>' : ''}</div><div class="certificate-error notice error" role="alert" hidden></div>${editorMarkup()}${issued.length ? `<section class="certificate-history" aria-labelledby="certificate-history-heading"><div class="certificate-history-heading"><h3 id="certificate-history-heading">Issued certificates</h3><span>${issued.length} saved issue${issued.length === 1 ? '' : 's'}</span></div><label class="certificate-issue-picker">Choose an issue<select aria-label="Issued certificate">${[...issued].reverse().map(certificate => `<option value="${esc(certificate.id)}"${certificate.id === selectedIssue ? ' selected' : ''}>${esc(certificate.fields?.number || certificate.number || 'Certificate')} · ${esc(dateLabel(certificate.issuedAt || certificate.fields?.issueDate))}</option>`).join('')}</select></label><p class="certificate-help">Each issued copy keeps the details and evidence recorded at issue. Use a revision to make changes.</p><div class="certificate-actions"><button type="button" data-certificate-print>Print certificate</button><button type="button" class="primary" data-certificate-download>Download PDF</button><button type="button" data-certificate-share>Share PDF</button><button type="button" data-certificate-revise${draft ? ' disabled' : ''}>Revise certificate</button></div><p class="certificate-help">Choose your email app from Share PDF, or download the PDF and attach it to your customer email.</p><p class="certificate-customer-email" hidden></p>${draft ? '<p class="certificate-help">Finish or discard the current draft before starting another revision.</p>' : ''}<details class="certificate-issued-view" open><summary>View issued certificate</summary><div class="certificate-issued-preview"></div></details></section>` : '<p class="certificate-empty">No certificate has been issued for this visit yet. Your draft job report remains available below.</p>'}`;
+    root.insertAdjacentHTML('beforeend',packMarkup());
+    for (const [selector,downloadOnly] of [['download',true],['share',false]]) root.querySelector('[data-pack-'+selector+']')?.addEventListener('click',()=>perform(async()=>{
+      if(localDirty)throw Error('Save the draft before exporting a pack.');
+      const ids=new Set([...root.querySelectorAll('[data-pack-id]:checked')].map(el=>el.dataset.packId));
+      const selected=issued.filter(item=>ids.has(item.id));
+      if(!selected.length)throw Error('Select at least one issued certificate.');
+      return shareCertificatePackPdf(copy(selected),{downloadOnly});
+    }));
     root.querySelector('[data-certificate-create]')?.addEventListener('click', () => perform(() => save(saveCertificateDraft(job, createCertificateDraft(job, site, drawing)))));
     root.querySelector('.certificate-form')?.addEventListener('input', event => {
       if (pending) return;
