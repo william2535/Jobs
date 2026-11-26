@@ -26,11 +26,11 @@
 @media screen {
   :root[data-theme="dark"],
   :root[data-theme="dark"] body {
-    --canvas:#071421; --surface:#102438; --subtle:#18324a;
+    --canvas:#000; --surface:#000; --subtle:#000;
     --ink:#eff6ff; --ink-soft:#cfdeee; --muted:#a9bdd1;
     --line:#3a566f; --soft-line:#2a4158;
     --accent:#67d7fa; --accent-dark:#17639b; --accent-light:#a3e5ff; --focus:#79dcff;
-    --rail:#06111e; --on-rail:#eff6ff; --rail-muted:#b4c8dc;
+    --rail:#000; --on-rail:#eff6ff; --rail-muted:#b4c8dc;
     --rail-active:#183b5e; --rail-line:#3a566f;
     --appearance-selected:#214e73; --appearance-danger:#ffb6be;
     --appearance-danger-bg:#422431; --appearance-danger-line:#a86677;
@@ -38,6 +38,13 @@
   }
   :root[data-theme="dark"] .workspace,
   :root[data-theme="dark"] main { background:var(--canvas); color:var(--ink); }
+  /* True black app surfaces. Borders and explicit states provide separation. */
+  :root[data-theme="dark"] :is(dialog,.toolbox-chest,.toolbox-chest-tray,.mw-bottom-nav,.job-main-nav) { background:var(--surface); -webkit-backdrop-filter:none; backdrop-filter:none; }
+  :root[data-theme="dark"] dialog::backdrop { background:#000; -webkit-backdrop-filter:none; backdrop-filter:none; }
+  :root[data-theme="dark"] .job-toolbar { background:var(--surface); color:var(--ink); border-color:var(--line); }
+  :root[data-theme="dark"] .job-toolbar button { background:var(--surface); color:var(--ink); border-color:var(--line); }
+  :root[data-theme="dark"] .job-toolbar button:hover { background:var(--appearance-selected); border-color:var(--accent); }
+  :root[data-theme="dark"] .job-photo-overlay :is(.record-photo-add,.record-photo-remove) { background:#000; }
   /* Match the base button rule's specificity: unclassed Add/Cancel/Remove
      controls get a dark default without overriding semantic component states. */
   :where(:root[data-theme="dark"]) button { background:var(--surface); color:var(--ink); border-color:var(--line); }
@@ -69,7 +76,7 @@
   /* Mobile dashboard and newly branded Tasks / Timesheets / About headers. */
   :root[data-theme="dark"] .mobile-workspace {
     --mw-blue:#144d81; --mw-blue-deep:#081e34; --mw-link:#79dcff;
-    --mw-bg:#071421; --mw-line:#3a566f; --mw-ink:#eff6ff; --mw-muted:#a9bdd1;
+    --mw-bg:#000; --mw-line:#3a566f; --mw-ink:#eff6ff; --mw-muted:#a9bdd1;
     background:var(--mw-bg); color:var(--mw-ink);
   }
   :root[data-theme="dark"] .mobile-workspace :is(.mw-job-card,.mw-about-card,.mw-record-card,.mw-calendar,.mw-empty) { background:var(--surface); color:var(--ink); border-color:var(--line); }
@@ -79,15 +86,15 @@
   :root[data-theme="dark"] .mobile-workspace :is(.mw-job-settings:hover,.mw-date-filters button:hover) { background:var(--subtle); }
   :root[data-theme="dark"] .mobile-workspace .mw-date-filters button { color:var(--muted); }
   :root[data-theme="dark"] .mobile-workspace .mw-date-filters button.selected { background:var(--appearance-selected); color:#fff; }
-  :root[data-theme="dark"] .mobile-workspace .mw-ring { background:conic-gradient(var(--accent) calc(var(--progress) * 1%),var(--subtle) 0); }
+  :root[data-theme="dark"] .mobile-workspace .mw-ring { background:conic-gradient(var(--accent) calc(var(--progress) * 1%),#242424 0); }
   :root[data-theme="dark"] .mobile-workspace .mw-time-ring { background:#3a6590; }
   :root[data-theme="dark"] .mobile-workspace .mw-time { color:var(--muted); }
   :root[data-theme="dark"] .mobile-workspace .mw-conflict { color:#f4cd8c; }
-  :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav { background:#0c1d2e; border-color:var(--line); }
+  :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav { background:var(--surface); border-color:var(--line); }
   :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav :is(button,a) { background:transparent; color:var(--muted); }
-  :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav button[aria-current="page"] { background:var(--subtle); color:var(--accent-light); }
+  :root[data-theme="dark"] .mobile-workspace .mw-bottom-nav button[aria-current="page"] { background:var(--appearance-selected); color:var(--accent-light); }
   :root[data-theme="dark"] .mobile-workspace .mw-update-button { color:var(--accent-light); background:var(--surface); border-color:var(--line); }
-  :root[data-theme="dark"] body[data-page="home"] .workspace > header.jobs-banner-app-header .connection { background:#102438f2 !important; color:var(--ink) !important; border-color:var(--line) !important; }
+  :root[data-theme="dark"] body[data-page="home"] .workspace > header.jobs-banner-app-header .connection { background:#000 !important; color:var(--ink) !important; border-color:var(--line) !important; }
   :root[data-theme="dark"] body[data-page="home"] .workspace > header.jobs-banner-app-header .connection small { color:var(--muted) !important; }
 
   /* Notebook controls go dark; paper remains light to preserve saved text colours. */
@@ -152,7 +159,12 @@
   :root[data-theme="dark"] .release-help-error { color:var(--appearance-danger); background:var(--appearance-danger-bg); border-color:var(--appearance-danger-line); }
 
   /* Toolbox chrome changes; original picture guides and resistor band colours do not. */
-  :root[data-theme="dark"] .toolbox-chest { color:var(--ink); border-color:var(--line); box-shadow:0 18px 45px #0008; }
+  :root[data-theme="dark"] .toolbox-chest { --chest-blue:#000; --chest-deep:#000; color:var(--ink); border-color:var(--line); box-shadow:0 18px 45px #000; }
+  :root[data-theme="dark"] .toolbox-chest :is(.toolbox-chest-lid,.toolbox-chest-mark,.toolbox-chest-close) { background:#000; border-color:var(--line); }
+  :root[data-theme="dark"] .toolbox-chest .toolbox-chest-close:hover { background:var(--appearance-selected); }
+  :root[data-theme="dark"] .transfer-grid button { background:var(--surface); color:var(--ink); border-color:var(--line); }
+  :root[data-theme="dark"] .transfer-grid button svg { color:var(--accent); }
+  :root[data-theme="dark"] :is(.transfer-grid button small,.transfer-chest .muted) { color:var(--muted); }
   :root[data-theme="dark"] .toolbox-chest-tray { background:var(--canvas); scrollbar-color:var(--line) var(--canvas); }
   :root[data-theme="dark"] .jobs-toolbox { --toolbox-blue:#79dcff; --toolbox-deep:#eff6ff; --toolbox-line:#3a566f; --toolbox-muted:#a9bdd1; color:var(--ink); }
   :root[data-theme="dark"] .jobs-toolbox :is(.toolbox-card,.toolbox-form,.toolbox-result) { background:var(--surface); color:var(--ink); border-color:var(--line); }
@@ -164,7 +176,7 @@
   :root[data-theme="dark"] .jobs-toolbox .toolbox-actions .primary { background:var(--accent-dark); color:#fff; border-color:var(--accent-dark); }
   :root[data-theme="dark"] .jobs-toolbox :is(.toolbox-error-summary,.toolbox-storage-warning) { color:var(--appearance-danger); background:var(--appearance-danger-bg); border-color:var(--appearance-danger-line); }
   :root[data-theme="dark"] .jobs-toolbox .toolbox-field-error { color:var(--appearance-danger); }
-  :root[data-theme="dark"] .toolbox-extra { --text:#eff6ff; --muted:#a9bdd1; --accent:#79dcff; --surface:#102438; --line:#3a566f; --bg:#071421; background:var(--canvas); color:var(--text); border-color:var(--line); }
+  :root[data-theme="dark"] .toolbox-extra { --text:#eff6ff; --muted:#a9bdd1; --accent:#79dcff; --surface:#000; --line:#3a566f; --bg:#000; background:var(--canvas); color:var(--text); border-color:var(--line); }
   :root[data-theme="dark"] .toolbox-extra :is(h1,h2,h3,a,.eyebrow,.fess-answer-mark,.fess-correct-text,.fess-progress-circle) { color:var(--accent); }
   :root[data-theme="dark"] .toolbox-extra :is(button,a.secondary,a.subtle) { background:var(--surface); color:var(--text); border-color:var(--line); }
   :root[data-theme="dark"] .toolbox-extra :is(button.primary,a.primary) { background:var(--accent-dark); color:#fff; border-color:var(--accent-dark); }

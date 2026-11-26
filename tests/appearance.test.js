@@ -60,7 +60,7 @@ test('invalid saved appearance follows the system and an explicit choice survive
   f.system(false);
   assert.equal(f.document.documentElement.dataset.theme, 'dark');
   assert.equal(f.document.documentElement.style.colorScheme, 'dark');
-  assert.equal(f.document.querySelector('meta[name="theme-color"]').content, '#07121f');
+  assert.equal(f.document.querySelector('meta[name="theme-color"]').content, '#000000');
   controller.setPreference('system');
   assert.equal(f.document.documentElement.dataset.theme, 'light');
   assert.deepEqual([...f.records], [['synthetic-job', 'Existing job records'], [KEY, 'system']]);
@@ -167,7 +167,7 @@ test('the blocking first-paint script applies the saved choice before the applic
   assert.equal(f.document.documentElement.dataset.appearance, 'dark');
   assert.equal(f.document.documentElement.dataset.theme, 'dark');
   assert.equal(f.document.documentElement.style.colorScheme, 'dark');
-  assert.equal(f.document.querySelector('meta[name="theme-color"]').content, '#07121f');
+  assert.equal(f.document.querySelector('meta[name="theme-color"]').content, '#000000');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const script = html.match(/<script\b[^>]*src="\/appearance-init\.js"[^>]*>/)?.[0];
   assert.ok(script, 'The static entry page must load the first-paint script');

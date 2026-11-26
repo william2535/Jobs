@@ -20,7 +20,7 @@ export function createAppearanceController({ window: win = window, document: doc
     doc.documentElement.dataset.appearance = state.preference;
     doc.documentElement.dataset.theme = state.theme;
     doc.documentElement.style.colorScheme = state.theme;
-    doc.querySelector('meta[name="theme-color"]')?.setAttribute("content", state.theme === "dark" ? "#07121f" : "#123763");
+    doc.querySelector('meta[name="theme-color"]')?.setAttribute("content", state.theme === "dark" ? "#000000" : "#123763");
     subscribers.forEach(listener => listener(state));
   };
   const onStorage = event => {

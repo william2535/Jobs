@@ -21,11 +21,10 @@ body[data-page] .workspace > header.jobs-banner-app-header {
 }
 .jobs-banner-atmosphere {
   position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
-  background:radial-gradient(ellipse at 93% 120%,#075b9a55,transparent 55%),linear-gradient(112deg,#031026,#071b35 65%,#041329);
+  /* A bounded, static glow reaches transparency before every banner edge. */
+  background:radial-gradient(ellipse 30% 30% at 65% 55%,#06446b66,transparent 100%);
 }
-.jobs-banner-atmosphere i {position:absolute;display:block;width:115%;height:220px;border:1px solid #44deff9c;border-radius:50%;transform:rotate(-8deg);box-shadow:0 0 10px #00a8ff6b,0 0 2px #5deaff;}
-.jobs-banner-atmosphere i:first-child {top:-211px;left:-20%;}
-.jobs-banner-atmosphere i:last-child {bottom:-208px;right:-10%;transform:rotate(-7deg);}
+.jobs-banner-traces{display:block;width:100%;height:100%;}
 .jobs-banner-lockup{position:relative;min-width:0;z-index:1;flex:1;}
 .jobs-banner-brand{display:inline-grid;grid-template-columns:48px 1px minmax(0,1fr);align-items:center;column-gap:12px;min-height:64px;max-width:100%;color:#fff;text-decoration:none;}
 .jobs-banner-brand>img{display:block;width:48px;height:auto;aspect-ratio:119/140;object-fit:contain;}
@@ -42,7 +41,7 @@ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control
 .connection{position:relative;touch-action:pan-y;}
 .connection:has(.connection-dismiss:not([hidden])){padding-right:48px;min-height:44px;display:flex;flex-direction:column;justify-content:center;}
 .connection-dismiss {position:absolute;right:0;top:calc(50% - 22px);display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;margin:0;border:0;border-radius:8px;background:transparent;color:inherit;font-size:23px;line-height:1;cursor:pointer;touch-action:manipulation;}
-.connection-dismiss:hover{background:#778aa51f;}
+.connection-dismiss:hover{background:#e9eef5;}
 .connection-dismiss:focus-visible{outline:2px solid currentColor;outline-offset:-3px;}
 .connection[hidden],.connection-dismiss[hidden]{display:none!important;}
 
@@ -80,7 +79,7 @@ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control
   top:auto!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;
   transform:none!important;z-index:55!important;max-width:620px!important;width:auto!important;margin-inline:auto!important;
   padding:10px 14px!important;text-align:center!important;
-  border:1px solid #b8c8dc!important;border-radius:12px!important;background:#f8fafff5!important;color:#233a5a!important;
+  border:1px solid #b8c8dc!important;border-radius:12px!important;background:#f8faff!important;color:#233a5a!important;
   text-shadow:none!important;font-size:13px!important;line-height:1.4!important;pointer-events:auto!important;touch-action:pan-y!important;
  }
  body[data-page] .workspace > header.jobs-banner-app-header .connection:has(.connection-dismiss:not([hidden])){padding-right:52px!important;min-height:52px;}
@@ -121,7 +120,10 @@ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control
  .mobile-workspace.mw-timesheets-active{padding-bottom:calc(76px + env(safe-area-inset-bottom));}
 }
 @media screen{
- :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header .connection{background:#102438f5!important;color:#eff6ff!important;border-color:#3a566f!important;}
+ :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header{background:#000!important;}
+ :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control select{background:#000;border-color:var(--line);}
+ :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header .connection{background:#000!important;color:#eff6ff!important;border-color:var(--line)!important;}
+ :root[data-theme="dark"] .connection-dismiss:hover{background:#161616;}
  :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header .connection small{color:#cfdeee!important;}
 }
 @media print{.jobs-banner-atmosphere,.jobs-banner-lockup,.connection-dismiss{display:none!important;}}
