@@ -84,6 +84,9 @@ test('device cards save Pass directly and require explanations for Fail and N/A 
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await expect(first.getByRole('button', { name: 'Pass', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await second.getByRole('button', { name: 'Fail', exact: true }).click();
+  await expect(second.getByRole('button', { name: 'Fail', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(second.getByRole('button', { name: 'Fail', exact: true })).toHaveAttribute('data-pending', 'true');
+  expect((await stored(page, 'jobs'))[0].results.find(result => result.assetId === ids[1]).state).toBe('Not tested');
   let form = second.locator('.device-quick-explanation');
   await expect(form).toBeVisible();
   await form.getByRole('button', { name: 'Save result', exact: true }).click();
@@ -101,6 +104,7 @@ test('device cards save Pass directly and require explanations for Fail and N/A 
   try { await form.getByRole('button', { name: 'Cancel', exact: true }).click(); }
   finally { page.off('dialog', acceptDiscard); }
   await expect(form).toHaveCount(0);
+  await expect(second.getByRole('button', { name: 'Fail', exact: true })).toHaveAttribute('aria-pressed', 'false');
   expect((await stored(page, 'jobs'))[0].results.find(result => result.assetId === ids[1]).state).toBe('Not tested');
   await second.getByRole('button', { name: 'N/A', exact: true }).click();
   form = second.locator('.device-quick-explanation');

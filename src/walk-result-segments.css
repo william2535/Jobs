@@ -1,0 +1,12 @@
+:root :is(.device-card-results,.device-result-choices){background:#e7ebef;border-radius:10px;gap:2px;padding:2px;box-sizing:border-box}
+:root[data-theme="dark"] :is(.device-card-results,.device-result-choices){background:#203346}
+:root :is(.device-card-results,.device-result-choices) button[data-card-result],:root :is(.device-card-results,.device-result-choices) button[data-result-value]{border:0;border-radius:8px;background:transparent;color:var(--ink,#243244);text-decoration:none;box-shadow:none;transition:background-color .14s ease,color .14s ease,box-shadow .14s ease;font-weight:650}
+:root[data-theme] :is(.device-card-results,.device-result-choices) button[aria-pressed="true"]{color:#fff;background:#596575;box-shadow:0 1px 3px #0002;text-decoration:none}
+:root[data-theme] :is(.device-card-results,.device-result-choices) button:is([data-card-result="Satisfactory"],[data-result-value="Satisfactory"])[aria-pressed="true"]{background:#187b43;color:#fff}
+:root[data-theme] :is(.device-card-results,.device-result-choices) button:is([data-card-result="Unsatisfactory"],[data-result-value="Unsatisfactory"])[aria-pressed="true"]{background:#c12f3e;color:#fff}
+:root :is(.device-card-results,.device-result-choices) button[data-pending="true"]{box-shadow:inset 0 0 0 2px #ffffff99}
+.plan-asset-work-row .plan-inline-results{padding:0;gap:2px}
+@media(prefers-reduced-motion:reduce){:root :is(.device-card-results,.device-result-choices) button{transition:none}}
+
+/* Keep the desktop device grid compact without reducing touch target height. */
+@media(min-width:701px){.device-browser-grid article.device-row{padding-block:10px}.device-browser-grid .device-card-results{margin-top:8px;padding-block:0}}

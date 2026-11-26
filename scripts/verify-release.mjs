@@ -12,7 +12,7 @@ const PUBLIC_FILES = new Set([
   'pdf-runtime-NOTICE.txt',
 ]);
 const GENERATED_FILES = new Set(['index.html', 'sw.js', 'offline-manifest.json']);
-const OPTIONAL_APPROVED_FILES = new Set(['jobs-dashboard-banner.png', 'jobs-tasks-banner.png', 'jobs-timesheets-banner.png', 'jobs-about-banner.png']);
+const OPTIONAL_APPROVED_FILES = new Set(['jobs-touch-colour.png', 'jobs-dashboard-banner.png', 'jobs-tasks-banner.png', 'jobs-timesheets-banner.png', 'jobs-about-banner.png']);
 // jsPDF's bundled optional HTML dependencies use dotted ESM chunk names.
 // Keep these names explicit; customer files and other dotted assets remain denied.
 const PDF_VENDOR_CHUNK = /^assets\/(?:html2canvas\.esm|purify\.es|index\.es)-[A-Za-z\d_-]{6,}\.js$/;
