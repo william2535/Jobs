@@ -1020,7 +1020,7 @@ footer {
   padding: 12px;
   border-radius: 6px;
 }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   .edit-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1094,7 +1094,7 @@ footer {
 .workflow-module .wf-card .actions button {
   min-height: 44px;
 }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   .drawing-editor .edit-bottom > .edit-actions {
     width: 100%;
     display: grid;
@@ -1212,7 +1212,7 @@ footer {
     font-size: 30px;
   }
 }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   .job-main-nav {
     position: fixed;
     left: 0;
@@ -1578,7 +1578,7 @@ main:has(.drawing-editor) > .job-tools {
   flex: 1 1 260px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   body[data-page="home"] .workspace > header {
     min-height: 50px;
     padding: 8px 16px;
@@ -1608,7 +1608,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 @media(max-width:600px){body[data-page="home"] .workspace > header.jobs-banner-app-header{min-height:112px;background-position:center}}
 
 /* Jobs mobile banner: vibrant original artwork, no duplicate bottom-left Jobs label. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
   background-image:url("/jobs-dashboard-banner.png")!important;
   background-color:#03152c!important;
@@ -1620,10 +1620,10 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 }
 
 /* Approved deep-navy Jobs header artwork uploaded by owner; keep logo hotspot and badge functional. */
-@media(max-width:700px){body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:url("/jobs-dashboard-banner.png")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;min-height:112px!important}}
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){body[data-page="home"] .workspace > header.jobs-banner-app-header{background-image:url("/jobs-dashboard-banner.png")!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;min-height:112px!important}}
 
 /* Exact owner-uploaded Jobs banner, no fading; preserve separate live status and task badge. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
   background-image:url("/jobs-dashboard-banner.png")!important;
   background-size:100% 100%!important;background-position:center!important;
@@ -1642,7 +1642,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 }
 
 /* Mobile header: keep original banner aspect and move live storage status below content. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   min-height:0!important;height:auto!important;aspect-ratio:1734/600!important;
   background-size:contain!important;background-position:center!important;
@@ -1665,7 +1665,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 }
 
 /* Final mobile Jobs header: crisp artwork with natural proportions, never stretch logo. */
-@media (max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace > header.jobs-banner-app-header{
   box-sizing:border-box!important;
   height:clamp(78px,22vw,98px)!important;
@@ -1686,7 +1686,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 
 /* Unified mobile navigation headers: user-uploaded original artwork on each tab.
    One compact header, no duplicated blue title block or distorted artwork. */
-@media (max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  /* Tabs change artwork only; the shared mobile header owns sizing. */
  body[data-page="home"][data-jobs-mobile-tab="tasks"] .workspace>header.jobs-banner-app-header{
   background-image:url("/jobs-tasks-banner.png")!important
@@ -1719,7 +1719,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 
 /* Fill the entire mobile header without stretching uploaded artwork.
    Cover preserves aspect ratio; crop excess height rather than leave a blank right strip. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   background-size:cover!important;
   background-position:left center!important;
@@ -1729,7 +1729,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 
 /* Full-bleed final fix: scale uploaded banner to the header's real width,
    preserve image aspect ratio, and crop vertically if required. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   width:100%!important;
   max-width:none!important;
@@ -1741,7 +1741,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 }
 
 /* iPhone home-screen web app update control: native-looking, touch-sized and accessible. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  .mobile-workspace .mw-update-panel{
   margin:20px 16px 100px!important;padding:0!important;
   display:flex!important;justify-content:center!important;
@@ -1759,7 +1759,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 
 /* Correct mobile banner integration: no opaque logo overlay over page titles.
    The original crisp banner artwork remains intact, with one invisible home hit target. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   position:relative!important;
   background-size:cover!important;
@@ -1786,7 +1786,7 @@ body[data-page="home"] .workspace > header.jobs-banner-app-header strong,body[da
 
 /* Refined compact headers: align Tasks, Timesheets and About with Jobs' restrained height.
    Preserve artwork aspect ratio and full bleed; do not stretch the baked-in logo. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .workspace>header.jobs-banner-app-header{
   height:clamp(74px,19.5vw,88px)!important;
   min-height:0!important;max-height:88px!important;
