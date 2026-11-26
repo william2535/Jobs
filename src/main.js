@@ -679,7 +679,7 @@ function mobileWorkspaceNavigation() {
 }
 
 function syncToolboxTrigger({ reveal = false } = {}) {
-  const mobile = window.matchMedia('(max-width: 700px)').matches;
+  const mobile = window.matchMedia('(max-width: 700px), (max-width: 1366px) and (pointer: coarse)').matches;
   const menu = document.querySelector('.jobs-mobile-menu');
   // Keep a real, visible return target when the desktop rail becomes a phone menu.
   if (mobile && menu && (toolboxChest.isOpen || reveal)) menu.open = true;
@@ -725,7 +725,7 @@ function render() {
     s = rawJob ? siteOf(rawJob) : state.sites.find((s) => s.id === activeSite),
     j = rawJob ? effectiveJob(rawJob, s) : null;
   const mobileHome =
-    page === "home" && window.matchMedia("(max-width: 700px)").matches;
+    page === "home" && window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches;
   const pageLabel = ({ sites: 'Sites', help: 'Help & data', review: 'Import drawing', 'backup-review': 'Restore workspace', timesheets: 'Timesheets' })[page] || 'Jobs';
   const headerSite = page === "job" && j && s
     ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
@@ -1080,7 +1080,7 @@ async function downloadWorkspace(recovery = false) {
     : `Workspace backup download started. Confirm the file reached your chosen folder. ${dirty ? "It includes saved records only; current unsaved edits are excluded." : "Keep a copy outside this browser."}`);
 }
 function home() {
-  if (window.matchMedia("(max-width: 700px)").matches)
+  if (window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches)
     return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
   return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${sortJobs(state.jobs,state.sites).map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
@@ -1165,7 +1165,7 @@ function jobView(j, s) {
   return `${top}${primary}${workControl(j)}${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 
-const devicePageSize = () => window.matchMedia("(max-width: 700px)").matches ? 4 : 8;
+const devicePageSize = () => window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches ? 4 : 8;
 function filteredDevices(j, d) {
   const query = deviceQuery.trim().toLocaleLowerCase();
   return d.assets.filter((a) => {
@@ -2023,7 +2023,7 @@ async function init() {
   });
   else { offlineLabel = "Development mode · offline cache unavailable"; updateReleaseStatus(); }
 }
-window.matchMedia("(max-width: 700px)").addEventListener("change", () => {
+window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").addEventListener("change", () => {
   syncToolboxTrigger();
   if (dirty || busy || operationPending) return;
   // CSS adapts editors without discarding their open picker or unsaved draft.
