@@ -5,6 +5,9 @@ const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ||
   (existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined);
 const chromiumLaunchOptions = { executablePath, args: ["--no-sandbox"] };
+const webkitLaunchOptions = process.env.PLAYWRIGHT_WEBKIT_EXECUTABLE
+  ? { executablePath: process.env.PLAYWRIGHT_WEBKIT_EXECUTABLE }
+  : {};
 
 export default defineConfig({
   testDir: "./tests",
@@ -21,7 +24,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js", "**/jobs-intro.spec.js", "**/theme-navigation.spec.js", "**/job-notes.spec.js", "**/assets-workspace.spec.js", "**/certificates.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit" } },
+    { name: "iphone-webkit", testMatch: ["**/public-release.spec.js", "**/appearance.spec.js", "**/jobs-intro.spec.js", "**/theme-navigation.spec.js", "**/job-notes.spec.js", "**/assets-workspace.spec.js", "**/certificates.spec.js"], use: { ...devices["iPhone 13"], browserName: "webkit", launchOptions: webkitLaunchOptions } },
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: chromiumLaunchOptions } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"], launchOptions: chromiumLaunchOptions } },
   ],

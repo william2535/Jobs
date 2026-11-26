@@ -1,4 +1,4 @@
-@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
+@media (max-width: 700px), (max-width: 1440px) and (any-pointer: coarse) {
   .mobile-workspace {
     --mw-blue: #123c7b;
     --mw-blue-deep: #092650;
@@ -564,7 +564,7 @@
     padding: 0;
   }
 }
-@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
+@media (max-width: 700px), (max-width: 1440px) and (any-pointer: coarse) {
   .mobile-workspace.mw-timesheets-active {
     display: flex;
     flex-direction: column;
@@ -632,58 +632,9 @@
   }
 }
 
-/* Jobs branded dashboard banner: original artwork and an interactive home link. */
-@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
- .mobile-workspace .mw-header.mw-banner-dashboard{
-  width:100%;height:auto;min-height:0;aspect-ratio:1734/907;
-  padding:0 12px 0 0;align-items:flex-start;overflow:hidden;
-  background:#06162b url("/jobs-dashboard-banner.png") center center / contain no-repeat;
- }
- .mobile-workspace .mw-header.mw-banner-dashboard::after{display:none}
- .mobile-workspace .mw-banner-dashboard .mw-home-link{
-  display:block;position:absolute;z-index:2;left:0;top:0;
-  width:38%;height:100%;min-height:0;border-radius:0;
-  background:transparent;color:transparent;
- }
- .mobile-workspace .mw-banner-dashboard .mw-home-link .mw-brand,
- .mobile-workspace .mw-banner-dashboard .mw-home-link h1{
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
- }
- .mobile-workspace .mw-banner-dashboard .mw-home-link:focus-visible{
-  outline:3px solid #5ce9ff;outline-offset:-4px
- }
-}
+@media (max-width: 700px), (max-width: 1440px) and (any-pointer: coarse){.mobile-workspace .mw-job-transfer{right:49px}.mobile-workspace .mw-job-card .mw-card-head,.mobile-workspace .mw-job-card.has-record-photo .mw-card-head{padding-right:82px}}
 
-/* Compact correction: the branded artwork lives in the existing app header.
-   Never create a second full-height banner above dashboard metrics. */
-@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
- body[data-page="home"] .mobile-workspace .mw-header.mw-banner-dashboard{
-  aspect-ratio:auto!important;height:0!important;min-height:0!important;
-  padding:0!important;margin:0!important;overflow:visible!important;
-  background:none!important;border:0!important;
- }
- body[data-page="home"] .mobile-workspace .mw-banner-dashboard .mw-home-link{
-  display:none!important
- }
- body[data-page="home"] .workspace > header.jobs-banner-app-header{
-  /* Keep every tab at the approved Dashboard height, with no competing clamp. */
-  position:relative!important;height:112px!important;min-height:112px!important;
-  max-height:none!important;aspect-ratio:auto!important
- }
- body[data-page="home"] .jobs-banner-home-button{
-  position:absolute;z-index:4;left:0;top:0;width:66%;height:100%;
-  min-height:0;border:0;border-radius:0;background:transparent;
-  color:transparent;font-size:0;padding:0
- }
- body[data-page="home"] .jobs-banner-home-button:focus-visible{
-  outline:3px solid #5ce9ff;outline-offset:-4px
- }
-}
-
-@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){.mobile-workspace .mw-job-transfer{right:49px}.mobile-workspace .mw-job-card .mw-card-head,.mobile-workspace .mw-job-card.has-record-photo .mw-card-head{padding-right:82px}}
-
-@media screen and (min-width: 701px) and (max-width: 1366px) and (pointer: coarse) {
+@media screen and (min-width: 701px) and (max-width: 1440px) and (any-pointer: coarse) {
  .mobile-workspace { margin-inline: 0; }
  .mobile-workspace .mw-metrics, .mobile-workspace .mw-shortcuts, .mobile-workspace .mw-schedule { width: min(100%, 1000px); margin-inline: auto; }
  .mobile-workspace .mw-shortcuts { gap: 16px; }

@@ -539,6 +539,9 @@ export function renderMobileWorkspace({
     if (disposed) return;
     root.classList.toggle("mw-timesheets-active", tab === "Timesheets");
     document.body.dataset.jobsMobileTab = tab.toLowerCase();
+    // Every tab uses the same live heading and geometry, not differently scaled bitmap text.
+    const bannerTitle = document.querySelector(".jobs-banner-title");
+    if (bannerTitle) bannerTitle.textContent = tab === "Dashboard" ? "Jobs" : tab;
     if (timesheetView) {
       timesheetViewState = timesheetView.getViewState?.() || timesheetViewState;
       timesheetView.dispose?.();

@@ -1,0 +1,127 @@
+/* One real heading, one logo and one geometry for the workspace navigation.
+   No title is baked into an image; changing tabs changes text only. */
+body[data-page] .workspace > header.jobs-banner-app-header {
+  --jobs-banner-height:128px;
+  --jobs-banner-padding:32px;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  box-sizing:border-box;
+  height:calc(var(--jobs-banner-height) + env(safe-area-inset-top));
+  min-height:calc(var(--jobs-banner-height) + env(safe-area-inset-top));
+  max-height:none;
+  padding:env(safe-area-inset-top) max(var(--jobs-banner-padding), env(safe-area-inset-right)) 0 max(var(--jobs-banner-padding), env(safe-area-inset-left));
+  background:#061329;
+  color:#fff;
+  border:0;
+  overflow:visible;
+  isolation:isolate;
+}
+.jobs-banner-atmosphere {
+  position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;
+  background:radial-gradient(ellipse at 93% 120%,#075b9a55,transparent 55%),linear-gradient(112deg,#031026,#071b35 65%,#041329);
+}
+.jobs-banner-atmosphere i {position:absolute;display:block;width:115%;height:220px;border:1px solid #44deff9c;border-radius:50%;transform:rotate(-8deg);box-shadow:0 0 10px #00a8ff6b,0 0 2px #5deaff;}
+.jobs-banner-atmosphere i:first-child {top:-211px;left:-20%;}
+.jobs-banner-atmosphere i:last-child {bottom:-208px;right:-10%;transform:rotate(-7deg);}
+.jobs-banner-lockup{position:relative;min-width:0;z-index:1;flex:1;}
+.jobs-banner-brand{display:inline-grid;grid-template-columns:48px 1px minmax(0,1fr);align-items:center;column-gap:12px;min-height:64px;max-width:100%;color:#fff;text-decoration:none;}
+.jobs-banner-brand>img{display:block;width:48px;height:auto;aspect-ratio:119/140;object-fit:contain;}
+.jobs-banner-divider{display:block;width:1px;height:54px;background:#c7d4e2b3;}
+.jobs-banner-copy{display:block;min-width:0;}
+body[data-page] .workspace > header.jobs-banner-app-header .jobs-banner-title{font-family:inherit;font-size:32px;font-weight:750;line-height:36px;letter-spacing:-.035em;white-space:nowrap;color:#fff;text-shadow:none;margin:0;padding:0;}
+.jobs-banner-subtitle{display:block;font-size:11px;font-weight:650;letter-spacing:.13em;line-height:16px;white-space:nowrap;margin:4px 0 0;color:#e5edf8;}
+.jobs-banner-subtitle i{font-style:normal;color:#24daef;margin:0 5px;}
+.jobs-banner-brand:focus-visible{outline:3px solid #5ce9ff;outline-offset:5px;border-radius:3px;}
+body[data-page] .workspace > header.jobs-banner-app-header .connection{position:relative;color:#edf4ff;font-size:12px;line-height:1.45;}
+body[data-page] .workspace > header.jobs-banner-app-header .connection small{color:#c5d5ea;}
+body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control {position:relative;z-index:3;color:#fff;}
+body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control select {background:#102c50;color:#fff;border-color:#7295b9;color-scheme:dark;}
+.connection{position:relative;touch-action:pan-y;}
+.connection:has(.connection-dismiss:not([hidden])){padding-right:48px;min-height:44px;display:flex;flex-direction:column;justify-content:center;}
+.connection-dismiss {position:absolute;right:0;top:calc(50% - 22px);display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;margin:0;border:0;border-radius:8px;background:transparent;color:inherit;font-size:23px;line-height:1;cursor:pointer;touch-action:manipulation;}
+.connection-dismiss:hover{background:#778aa51f;}
+.connection-dismiss:focus-visible{outline:2px solid currentColor;outline-offset:-3px;}
+.connection[hidden],.connection-dismiss[hidden]{display:none!important;}
+
+/* Keep the common title scale on a narrow desktop with its sidebar open. */
+@media screen and (min-width:701px) and (max-width:1100px){
+ body[data-page] .workspace > header.jobs-banner-app-header{display:grid;grid-template-columns:minmax(max-content,1fr) minmax(0,220px);grid-template-rows:70px 1fr;gap:0 20px;}
+ .jobs-banner-lockup{grid-column:1;grid-row:1 / span 2;}
+ body[data-page] .workspace > header.jobs-banner-app-header .connection{grid-column:2;grid-row:1;min-width:0;max-width:220px;align-self:end;}
+ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control{grid-column:2;grid-row:2;justify-self:end;align-self:start;}
+}
+
+@media screen and (max-width:700px),screen and (max-width:1440px) and (any-pointer:coarse){
+ body[data-page] .workspace > header.jobs-banner-app-header{
+  --jobs-banner-height:112px;--jobs-banner-padding:20px;
+  display:flex;
+  height:calc(var(--jobs-banner-height) + env(safe-area-inset-top))!important;
+  min-height:calc(var(--jobs-banner-height) + env(safe-area-inset-top))!important;
+  max-height:none!important;aspect-ratio:auto!important;
+  position:relative!important;overflow:visible!important;
+  background:#061329!important;background-image:none!important;
+  margin-bottom:56px;
+ }
+ .jobs-banner-brand{grid-template-columns:40px 1px minmax(0,1fr);column-gap:9.5px;}
+ .jobs-banner-brand>img{width:40px;}
+ .jobs-banner-divider{height:47px;}
+ body[data-page] .workspace > header.jobs-banner-app-header .jobs-banner-title{font-size:32px;line-height:36px;}
+ .jobs-banner-subtitle{font-size:10px;line-height:14px;letter-spacing:.1em;}
+ .jobs-banner-subtitle i{margin:0 3px;}
+ body[data-page="home"] .mobile-workspace .mw-header{display:none!important;}
+ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control {
+  position:absolute;left:max(16px,env(safe-area-inset-left));right:auto;top:calc(100% + 6px);z-index:8;color:var(--ink);
+ }
+ body[data-page] .workspace > header.jobs-banner-app-header .connection{
+  position:fixed!important;left:max(12px,env(safe-area-inset-left))!important;right:max(12px,env(safe-area-inset-right))!important;
+  top:auto!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;
+  transform:none!important;z-index:55!important;max-width:620px!important;width:auto!important;margin-inline:auto!important;
+  padding:10px 14px!important;text-align:center!important;
+  border:1px solid #b8c8dc!important;border-radius:12px!important;background:#f8fafff5!important;color:#233a5a!important;
+  text-shadow:none!important;font-size:13px!important;line-height:1.4!important;pointer-events:auto!important;touch-action:pan-y!important;
+ }
+ body[data-page] .workspace > header.jobs-banner-app-header .connection:has(.connection-dismiss:not([hidden])){padding-right:52px!important;min-height:52px;}
+ body[data-page] .workspace > header.jobs-banner-app-header .connection small{display:block!important;color:#425675!important;font-size:12px!important;line-height:1.4!important;}
+ body[data-page] .workspace > header.jobs-banner-app-header .connection-dismiss{right:4px;}
+ body[data-page]:not([data-page="home"]) .workspace > header.jobs-banner-app-header .connection{bottom:calc(12px + env(safe-area-inset-bottom))!important;}
+ .mobile-workspace .mw-bottom-nav{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));}
+ .mobile-workspace.mw-timesheets-active{height:calc(100dvh - var(--jobs-banner-height,112px) - 56px - env(safe-area-inset-top));min-height:350px;}
+ .mobile-workspace.mw-timesheets-active > .timesheets-ui{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;}
+ .mobile-workspace.mw-timesheets-active .timesheet-shell{flex:1;height:auto;min-height:260px;}
+ .mobile-workspace .mw-update-panel{display:flex;justify-content:center;margin:22px 0 40px;}
+ .mobile-workspace .mw-update-button{min-height:48px;padding:12px 18px;width:100%;max-width:360px;border:1px solid #2a75c4;border-radius:12px;background:var(--accent-dark,#103e7b);color:#fff;font-size:15px;font-weight:650;}
+}
+@media screen and (min-width:701px) and (max-width:1440px) and (any-pointer:coarse){
+ body[data-page="home"] {--jobs-banner-height:128px;}
+ body[data-page] .workspace > header.jobs-banner-app-header{--jobs-banner-height:128px;--jobs-banner-padding:32px;}
+ .jobs-banner-brand{grid-template-columns:48px 1px minmax(0,1fr);column-gap:12px;}
+ .jobs-banner-brand>img{width:48px;}.jobs-banner-divider{height:54px;}
+ body[data-page] .workspace > header.jobs-banner-app-header .jobs-banner-title{font-size:32px;line-height:36px;}
+ .jobs-banner-subtitle{font-size:11px;line-height:16px;letter-spacing:.13em;}.jobs-banner-subtitle i{margin-inline:5px;}
+ body[data-page="home"] main {padding-inline:max(24px,env(safe-area-inset-left)) max(24px,env(safe-area-inset-right));}
+ .mobile-workspace{max-width:1120px;margin-inline:auto;min-height:calc(100dvh - 190px);}
+ .mobile-workspace .mw-dashboard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;column-gap:28px;}
+ .mobile-workspace .mw-dashboard>.mw-metrics{padding:20px 0 26px;grid-column:1;grid-row:1;}
+ .mobile-workspace .mw-dashboard>.mw-shortcuts{padding:20px 0 26px;grid-column:2;grid-row:1;}
+ .mobile-workspace .mw-dashboard>.mw-demo,.mobile-workspace .mw-dashboard>.mw-schedule{grid-column:1/-1;}
+ .mobile-workspace .mw-schedule{padding-inline:0;}
+ .mobile-workspace .mw-records-screen{padding:20px 0;max-width:1000px;margin:auto;}
+ .mobile-workspace .mw-about-card{padding:24px;border-radius:12px;}
+ .mobile-workspace .mw-about-card p{font-size:16px;line-height:1.65;}
+ .mobile-workspace .mw-shortcuts button{min-height:60px;font-size:15px;}
+ .mobile-workspace .mw-bottom-nav{padding-inline:max(24px,calc((100vw - 1120px)/2));}
+ .mobile-workspace .mw-bottom-nav :is(button,a){min-height:52px;font-size:13px;}
+ .mobile-workspace .mw-bottom-nav svg{width:25px;height:25px;}
+ .mobile-workspace .mw-ring{width:min(100%,116px);}
+ .mobile-workspace .timesheets-ui{max-width:none;}
+ body[data-page] .workspace > header.jobs-banner-app-header > .appearance-control{left:max(24px,env(safe-area-inset-left));}
+ .mobile-workspace.mw-timesheets-active{padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+}
+@media screen{
+ :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header .connection{background:#102438f5!important;color:#eff6ff!important;border-color:#3a566f!important;}
+ :root[data-theme="dark"] body[data-page] .workspace > header.jobs-banner-app-header .connection small{color:#cfdeee!important;}
+}
+@media print{.jobs-banner-atmosphere,.jobs-banner-lockup,.connection-dismiss{display:none!important;}}

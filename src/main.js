@@ -1,6 +1,7 @@
 import { chooseJobFolder, saveToJobFolder, sortJobs, folderName } from "./job-folder.js";
 import { initializeAppearance, createAppearanceControl } from "./appearance.js";
 import { initializePageScroll, scrollPageToTop } from "./page-scroll.js";
+import { createStatusBannerController } from "./status-banner.js";
 import "./style.css";
 import "./mobile-job.css";
 import "./mobile-shell.css";
@@ -74,6 +75,7 @@ import "./certificates-ui.css";
 import "./appearance.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
+import "./workspace-banner.css";
 import { photoMarkup, photoPicker, profilePhoto } from "./profile-photo.js";
 import { applyDrawingToJob, alignDrawingAssetsToSite } from "./revisions.js";
 import { newSite, createQuickJob, attachJobToSite, siteLabel, id, now, states } from "./model.js";
@@ -101,6 +103,14 @@ const toolboxChest = createToolboxChest({
 });
 initializeAppearance();
 initializePageScroll();
+const statusBanner = createStatusBannerController({
+  focusAfterDismiss: () => {
+    const target = [...document.querySelectorAll('.jobs-banner-brand, [data-action="help"], .jobs-mobile-menu > summary, main button')]
+      .find(element => !element.disabled && element.getClientRects().length);
+    target?.focus({preventScroll: true});
+  },
+});
+const statusBannerState = () => ({storageReady, hasRecovery: !!recoverySnapshot, busy, dirty, saveLabel, offlineLabel});
 let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
@@ -181,8 +191,7 @@ function reportNotice(text) {
   if (box) { box.className = "notice"; box.setAttribute("role", "status"); box.textContent = text; }
 }
 function updateReleaseStatus() {
-  const connection = $(".connection");
-  if(connection && (recoverySnapshot || !storageReady || saveLabel!=="Saved on this device" || !/ready offline/i.test(offlineLabel))) connection.style.removeProperty("display");
+  statusBanner.update(statusBannerState());
   $(".release-help")?.setStatus?.({ offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, updateAvailable });
   const recovery = $("#recovery-actions");
   if (recovery) recovery.hidden = !recoverySnapshot;
@@ -679,7 +688,7 @@ function mobileWorkspaceNavigation() {
 }
 
 function syncToolboxTrigger({ reveal = false } = {}) {
-  const mobile = window.matchMedia('(max-width: 700px), (max-width: 1366px) and (pointer: coarse)').matches;
+  const mobile = window.matchMedia('(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)').matches;
   const menu = document.querySelector('.jobs-mobile-menu');
   // Keep a real, visible return target when the desktop rail becomes a phone menu.
   if (mobile && menu && (toolboxChest.isOpen || reveal)) menu.open = true;
@@ -696,6 +705,7 @@ function syncToolboxTrigger({ reveal = false } = {}) {
 }
 
 function render() {
+  statusBanner.dispose();
   document.querySelector(".appearance-control")?.dispose?.();
   const previousAssets = document.querySelector('.assets-workspace');
   if (previousAssets?.dataset.jobId && previousAssets.getViewState)
@@ -725,17 +735,19 @@ function render() {
     s = rawJob ? siteOf(rawJob) : state.sites.find((s) => s.id === activeSite),
     j = rawJob ? effectiveJob(rawJob, s) : null;
   const mobileHome =
-    page === "home" && window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches;
+    page === "home" && window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").matches;
   const pageLabel = ({ sites: 'Sites', help: 'Help & data', review: 'Import drawing', 'backup-review': 'Restore workspace', timesheets: 'Timesheets' })[page] || 'Jobs';
   const headerSite = page === "job" && j && s
     ? `<button type="button" class="job-site-link" data-action="site:${esc(s.id)}" title="Open site folder"><strong>${esc(siteLabel(s))}</strong></button>`
     : `<strong>${esc(s ? siteLabel(s) : j ? j.workflow?.details?.title || "Job notes" : pageLabel)}</strong>`;
-  const headerIdentity = page === 'home'
-    ? `<div><span class="eyebrow">YOUR FIELD WORKSPACE</span>${headerSite}</div>`
+  const brandedHeader = ["home", "sites", "timesheets", "help"].includes(page);
+  const bannerTitle = page === "home" ? "Jobs" : pageLabel;
+  const headerIdentity = brandedHeader
+    ? `<div class="jobs-banner-atmosphere" aria-hidden="true"><i></i><i></i></div><div class="jobs-banner-lockup"><a class="jobs-banner-brand" href="#" data-action="home" aria-label="Jobs home" title="Go to Jobs dashboard"><img src="./jobs-logo.webp" width="119" height="140" alt=""><span class="jobs-banner-divider" aria-hidden="true"></span><div class="jobs-banner-copy"><h1 class="jobs-banner-title">${esc(bannerTitle)}</h1><span class="jobs-banner-subtitle">SITE <i>·</i> WORKS <i>·</i> REPORTS</span></div></a></div>`
     : `<div class="jobs-header-context"><img class="jobs-context-icon" src="./jobs-logo.webp" width="119" height="140" alt="Jobs logo"><div><span class="eyebrow">JOBS / ${page === 'job' ? 'YOUR VISIT' : 'YOUR WORKSPACE'}</span>${headerSite}</div></div>`;
   const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${page === "home" ? "jobs-banner-app-header" : "jobs-context-header"}">${mobileHome ? '<button type="button" class="jobs-banner-home-button" data-action="home" aria-label="Jobs home" title="Go to dashboard"></button>' : ""}${headerIdentity}<div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main>${mobileWorkspaceNavigation()}<div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}</div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title desktop-page-back">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title"><h1>Timesheets</h1>${button("‹ Home", "home", "text-button desktop-page-back")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${brandedHeader ? "jobs-banner-app-header" : "jobs-context-header"}">${headerIdentity}<div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main>${mobileWorkspaceNavigation()}<div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}</div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title desktop-page-back">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button desktop-page-back")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   const mobileMenu = document.querySelector('.jobs-mobile-menu');
   mobileMenu?.addEventListener('keydown', event => {
@@ -1022,23 +1034,7 @@ function render() {
     record.profilePhoto=value;
     if(await persist(next,"Site photo saved.")){render();return true;}return false;
   }}));
-  const statusBar=$(".connection");
-  if(statusBar){
-    let start=null;
-    statusBar.style.touchAction="none";
-    statusBar.style.pointerEvents="auto";
-    const dismiss=()=>{if(!recoverySnapshot && storageReady && !busy && !dirty && saveLabel==="Saved on this device" && /^Ready offline/i.test(offlineLabel))statusBar.style.setProperty("display","none","important");};
-    statusBar.addEventListener("touchstart",event=>{const t=event.changedTouches[0];start={x:t.clientX,y:t.clientY};},{passive:true});
-    statusBar.addEventListener("touchend",event=>{const t=event.changedTouches[0];if(start && Math.abs(t.clientX-start.x)>25 && Math.abs(t.clientX-start.x)>Math.abs(t.clientY-start.y))dismiss();start=null;},{passive:true});
-    statusBar.addEventListener("touchcancel",()=>{start=null;});
-    statusBar.addEventListener("pointerdown",event=>{start={x:event.clientX,y:event.clientY};if(event.pointerType==="mouse")statusBar.setPointerCapture?.(event.pointerId);});
-    statusBar.addEventListener("pointercancel",event=>{if(event.pointerType!=="touch")start=null;});
-    statusBar.addEventListener("pointerup",event=>{
-      if(event.pointerType==="touch")return;
-      if(start && Math.abs(event.clientX-start.x)>25 && Math.abs(event.clientX-start.x)>Math.abs(event.clientY-start.y))dismiss();
-      start=null;
-    });
-  }
+  statusBanner.mount($(".connection"), statusBannerState());
   syncToolboxTrigger();
   if (changedRoute) scrollPageToTop();
   else if (planScroll) window.scrollTo(planScroll.x, planScroll.y);
@@ -1080,13 +1076,13 @@ async function downloadWorkspace(recovery = false) {
     : `Workspace backup download started. Confirm the file reached your chosen folder. ${dirty ? "It includes saved records only; current unsaved edits are excluded." : "Keep a copy outside this browser."}`);
 }
 function home() {
-  if (window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches)
+  if (window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").matches)
     return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
   return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${sortJobs(state.jobs,state.sites).map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
 function sites() {
-  return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><h1>Sites</h1><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><div class="record-site-heading"><h2 id="create-site-title">Create site</h2><div id="new-site-photo"></div></div><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}">${photoMarkup(s.profilePhoto)}<strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
+  return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><div class="record-site-heading"><h2 id="create-site-title">Create site</h2><div id="new-site-photo"></div></div><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}">${photoMarkup(s.profilePhoto)}<strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
 }
 
 function jobCard(rawJob, siteFolder = false) {
@@ -1165,7 +1161,7 @@ function jobView(j, s) {
   return `${top}${primary}${workControl(j)}${j.importConflict ? `<div class="notice error">${esc(j.importConflict)} Both versions remain in Saved jobs.</div>` : ""}${content}`;
 }
 
-const devicePageSize = () => window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").matches ? 4 : 8;
+const devicePageSize = () => window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").matches ? 4 : 8;
 function filteredDevices(j, d) {
   const query = deviceQuery.trim().toLocaleLowerCase();
   return d.assets.filter((a) => {
@@ -2023,7 +2019,7 @@ async function init() {
   });
   else { offlineLabel = "Development mode · offline cache unavailable"; updateReleaseStatus(); }
 }
-window.matchMedia("(max-width: 700px), (max-width: 1366px) and (pointer: coarse)").addEventListener("change", () => {
+window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").addEventListener("change", () => {
   syncToolboxTrigger();
   if (dirty || busy || operationPending) return;
   // CSS adapts editors without discarding their open picker or unsaved draft.

@@ -64,7 +64,7 @@ async function sharedShell(page, { mobile, theme, route }) {
   await expect(page.getByTestId('save-status')).toBeVisible();
   const header = page.locator('.workspace > header');
   await expect(header).toBeVisible();
-  expect((await colors(header.locator('strong').first())).ratio).toBeGreaterThanOrEqual(4.5);
+  expect((await colors(header.locator('.jobs-banner-title, .jobs-header-context strong').first())).ratio).toBeGreaterThanOrEqual(4.5);
   if (mobile) {
     await expect(page.locator('.sidebar')).toBeHidden();
     const nav = page.getByRole('navigation', { name: 'Workspace navigation', exact: true });
@@ -127,8 +127,10 @@ for (const preference of ['light', 'dark', 'system']) {
         expect(dimensions.font).toBeGreaterThanOrEqual(16); expect(dimensions.height).toBeGreaterThanOrEqual(44);
       }
     }
-    await expect(page.locator('.workspace > header')).toHaveCSS('background-color', headerColor);
-    await expect(page.locator('.workspace > header')).toHaveCSS('background-image', headerImage);
+    // Top-level sections share the new branded banner. A saved site keeps its
+    // contextual identity; compare contextual screens with each other below.
+    const contextHeaderColor = await page.locator('.workspace > header').evaluate(node => getComputedStyle(node).backgroundColor);
+    const contextHeaderImage = await page.locator('.workspace > header').evaluate(node => getComputedStyle(node).backgroundImage);
     await page.screenshot({ path: testInfo.outputPath(`${preference}-site-folder.png`), fullPage: true });
     await action(page, 'sites');
     await expect(page.locator('.site-card')).toHaveCount(1);
@@ -141,8 +143,8 @@ for (const preference of ['light', 'dark', 'system']) {
     await page.locator('#zone-file').setInputFiles({ name: 'synthetic-theme.zonesketch.json', mimeType: 'application/json', buffer: demo });
     await sharedShell(page, { mobile, theme, route: 'review' });
     await readableSurface(page.locator('#match-site'), theme);
-    await expect(page.locator('.workspace > header')).toHaveCSS('background-color', headerColor);
-    await expect(page.locator('.workspace > header')).toHaveCSS('background-image', headerImage);
+    await expect(page.locator('.workspace > header')).toHaveCSS('background-color', contextHeaderColor);
+    await expect(page.locator('.workspace > header')).toHaveCSS('background-image', contextHeaderImage);
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.locator('body')).toHaveAttribute('data-page', 'home');
     expect(await storedSites(page)).toHaveLength(1);
@@ -224,7 +226,9 @@ test('backup review uses the shared theme and navigation without restoring until
 });
 
 test('Toolbox restores visible focus after resizing in both directions without losing an unfinished site', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
+  // A touch-capable 1280px viewport is an iPad-sized workspace. Use a width
+  // above the tablet range when this test explicitly needs desktop navigation.
+  await page.setViewportSize({ width: 1536, height: 900 });
   await page.goto('/');
   await action(page, 'sites');
   const form = page.locator('[data-form="site"]');
@@ -256,6 +260,12 @@ test('Toolbox restores visible focus after resizing in both directions without l
   await mobileToolbox.click();
   await expect(chest).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 900 });
+  if (await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)) {
+    await expect(desktopToolbox).toBeHidden();
+    await expect(mobileToolbox).toBeVisible();
+    await expect(name).toHaveValue('Synthetic resize draft');
+  }
+  await page.setViewportSize({ width: 1536, height: 900 });
   await expect(mobileToolbox).toBeHidden();
   await expect(desktopToolbox).toBeVisible();
   await page.keyboard.press('Escape');
