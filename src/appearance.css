@@ -13,7 +13,7 @@
 .appearance-status:not([hidden]) { display:block; max-width:280px; padding:8px 10px; background:var(--surface); color:var(--ink-soft); border:1px solid var(--line); border-radius:6px; font-size:12px; line-height:1.45; }
 .workspace > header .appearance-status:not([hidden]) { position:absolute; right:12px; top:100%; z-index:12; width:min(280px,calc(100vw - 24px)); }
 .workspace > header > .appearance-control--toggle .appearance-status:not([hidden]) { left:0; right:auto; top:calc(100% + 4px); }
-@media screen and (max-width:700px) {
+@media screen and (max-width: 700px), screen and (max-width: 1366px) and (pointer: coarse) {
   /* A single sun/moon control sits below the artwork, in the former Tasks slot. */
   body[data-page="home"] .workspace > header.jobs-banner-app-header { overflow:visible !important; margin-bottom:48px; }
   body[data-page="home"] .workspace > header > .appearance-control { position:absolute; left:16px; right:auto; top:calc(100% + 4px); z-index:8; }
