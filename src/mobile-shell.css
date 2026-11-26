@@ -1,4 +1,4 @@
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   .mobile-workspace {
     --mw-blue: #123c7b;
     --mw-blue-deep: #092650;
@@ -564,7 +564,7 @@
     padding: 0;
   }
 }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse) {
   .mobile-workspace.mw-timesheets-active {
     display: flex;
     flex-direction: column;
@@ -633,7 +633,7 @@
 }
 
 /* Jobs branded dashboard banner: original artwork and an interactive home link. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  .mobile-workspace .mw-header.mw-banner-dashboard{
   width:100%;height:auto;min-height:0;aspect-ratio:1734/907;
   padding:0 12px 0 0;align-items:flex-start;overflow:hidden;
@@ -657,7 +657,7 @@
 
 /* Compact correction: the branded artwork lives in the existing app header.
    Never create a second full-height banner above dashboard metrics. */
-@media(max-width:700px){
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){
  body[data-page="home"] .mobile-workspace .mw-header.mw-banner-dashboard{
   aspect-ratio:auto!important;height:0!important;min-height:0!important;
   padding:0!important;margin:0!important;overflow:visible!important;
@@ -681,4 +681,12 @@
  }
 }
 
-@media(max-width:700px){.mobile-workspace .mw-job-transfer{right:49px}.mobile-workspace .mw-job-card .mw-card-head,.mobile-workspace .mw-job-card.has-record-photo .mw-card-head{padding-right:82px}}
+@media (max-width: 700px), (max-width: 1366px) and (pointer: coarse){.mobile-workspace .mw-job-transfer{right:49px}.mobile-workspace .mw-job-card .mw-card-head,.mobile-workspace .mw-job-card.has-record-photo .mw-card-head{padding-right:82px}}
+
+@media screen and (min-width: 701px) and (max-width: 1366px) and (pointer: coarse) {
+ .mobile-workspace { margin-inline: 0; }
+ .mobile-workspace .mw-metrics, .mobile-workspace .mw-shortcuts, .mobile-workspace .mw-schedule { width: min(100%, 1000px); margin-inline: auto; }
+ .mobile-workspace .mw-shortcuts { gap: 16px; }
+ .mobile-workspace .mw-shortcuts button { min-height: 60px; font-size: 15px; }
+ .mobile-workspace .mw-bottom-nav :is(button,a) { font-size: 13px; }
+}
