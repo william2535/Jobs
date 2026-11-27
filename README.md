@@ -2,7 +2,7 @@
 
 **[Open the Jobs website](https://william2535.github.io/Jobs/)** · [Hosting and access details](docs/deployment.md)
 
-An independent, local-first job workspace for fire and security engineers. Release 1.2.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, issue a reviewed visit certificate, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
+An independent, local-first job workspace for fire and security engineers. Release 1.3.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, issue a reviewed visit certificate, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
 [Desktop notes](docs/screenshots/desktop-notes-job.png) · [Mobile notes](docs/screenshots/mobile-notes-job.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)
 
@@ -35,6 +35,20 @@ Use **Export workspace backup** to preserve all saved sites, jobs, drawings, pho
 Updates wait until you choose **Apply update** after saving. Other Jobs windows must be closed before activation. When upgrading from the earlier prototype, open Jobs online to download the update, then close all Jobs tabs/installed windows and reopen online so the waiting release can activate. Check the displayed version and wait for **Ready offline** before going to site; the app verifies its included shell files instead of assuming a controller is sufficient.
 
 Create a distributable build with `npm run release`; this validates and packages only compiled public files, with a file manifest and SHA-256 checksum. It excludes repository history and the supplied customer example. See [release build instructions](docs/release-build.md), [public release guide](docs/public-release.md) and [verification results](docs/VERIFICATION.md). Draft service reports and reviewed visit certificates are separate outputs. The FINDR job adapter and automatic Zone Sketch receiver remain separate future/deployment work.
+
+## Desktop office overview
+
+Opening Jobs on a PC now shows **Engineer days** above the saved-job workspace. Use **Receive day packs** or drop received `.jobsday.json` / `.jobs.json` files into the dashboard. You can select up to 20 files (100 MiB each, 200 MiB total). Every file is validated before the complete upload is saved; a rejected file leaves that upload unsaved. The PC never starts an engineer's timer just by receiving a pack.
+
+Packs group automatically under their engineer name tag. Names ignore casing and repeated spaces for grouping; use a consistent, distinct name for each person. Existing unnamed jobs remain separately visible. Tap the office NFC sticker, enter or confirm **Your name**, then collect the pack. That confirmed name travels in day packs, individual job exports and newly recorded time. A running day keeps its original engineer. Receiving an already-tagged ordinary job preserves its existing tag.
+
+Choose an engineer and date range to review their recorded start/finish, jobs, sessions, travel, breaks, other time and unallocated time. **Open timesheets** opens the editable timeline for that engineer/date; its exports and submissions keep the same engineer filter. **Export office CSV** downloads the currently selected day summaries. Job and certificate buttons continue to open the actual saved work.
+
+**Job time / attendance** means recorded Work sessions assigned to jobs divided by recorded attendance. It is a time-allocation measure, not a performance rating or payroll approval. Missing attendance, overlapping sessions, ambiguous time ownership or conflicting time make the percentage unavailable. Repeated imports do not add another day; only the latest received version counts, while earlier copies remain reviewable. Date filters clip overnight time to the selected period, and the CSV identifies clipped rows.
+
+This overview shows records received or saved on the PC, not live phone locations or a remote timer feed. Receive the engineer's updated file to update the office view. Mobile keeps its existing field dashboard and share chest. Everything remains usable offline after each device is prepared.
+
+**Sites awaiting Zone Sketch** lists saved sites with no retained Zone Sketch source plan. A blank drawing or a PNG on its own does not mark a site ready. **Assets added** counts distinct saved asset identities, including manual equipment and imported devices, with a source breakdown and links to their site or job. Revisions and repeated job copies do not add the same asset again. These are totals across all saved records, including retained history; older assets have no reliable creation date, so the engineer/date filters do not label them as additions made that day.
 
 ## Quick Transfer and offline office days
 

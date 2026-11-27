@@ -1,4 +1,5 @@
 /** Local calendar/clock sessions. No payroll approval or remote submission is implied. */
+import { engineerKey, normaliseEngineerName } from './engineer-identity.js';
 export const SESSION_TYPES = ['Work', 'Travel', 'Break', 'Administration', 'Training', 'Custom'];
 const BASE = ['id', 'date', 'start', 'end', 'hours', 'note', 'engineer', 'endDate', 'sessionType', 'customType', 'revision'];
 const EXTRA = ['submissionId', 'submittedAt', 'submissionHistory', 'deletedAt'];
@@ -245,7 +246,13 @@ function period(options) {
   return { from, to };
 }
 export function createTimesheetPackage(state, options) {
-  const selectedPeriod = period(options), rows = timesheetEntries(state).filter(row =>
+  const selectedPeriod = period(options), selectedEngineer = normaliseEngineerName(options.engineer ?? '', { required: false });
+  const selectedKey = engineerKey(selectedEngineer);
+  const matchesEngineer = row => {
+    if (!selectedKey) return true;
+    try { return engineerKey(row.entry.engineer || '') === selectedKey; } catch { return false; }
+  };
+  const rows = timesheetEntries(state).filter(row => matchesEngineer(row) &&
     (!options.refs || options.refs.some(ref => matches(row, ref))) &&
     splitTimesheetByDay(row.entry).some(segment => segment.date >= selectedPeriod.from && segment.date <= selectedPeriod.to));
   if (options.refs && (new Set(options.refs.map(ref => JSON.stringify(ref))).size !== options.refs.length || options.refs.some(ref => !rows.some(row => matches(row, ref))))) throw Error('Selected sessions must belong to this timesheet period.');
@@ -254,10 +261,11 @@ export function createTimesheetPackage(state, options) {
     return { jobId: row.jobId, jobTitle: row.job?.workflow?.details?.title || '', siteId: site?.id || null, siteName: site?.name || '', conflict: row.conflict, entry: validateTimesheetEntry(row.entry) };
   };
   const entries = rows.map(exportRow);
-  const archivedEntries = timesheetEntries(state, { includeDeleted: true }).filter(row => row.entry.deletedAt &&
+  const archivedEntries = timesheetEntries(state, { includeDeleted: true }).filter(row => row.entry.deletedAt && matchesEngineer(row) &&
+    (!options.refs || options.refs.some(ref => matches(row, ref))) &&
     splitTimesheetByDay({ ...row.entry, deletedAt: undefined }).some(segment => segment.date >= selectedPeriod.from && segment.date <= selectedPeriod.to)).map(exportRow);
   const total = predicate => rows.filter(row => !row.conflict && predicate(row)).reduce((sum, row) => sum + splitTimesheetByDay(row.entry).filter(segment => segment.date >= selectedPeriod.from && segment.date <= selectedPeriod.to).reduce((minutes, segment) => minutes + segment.minutes, 0), 0);
-  return { format: 'JobsTimesheetPackage', version: 1, exportedAt: now(), period: selectedPeriod, delivery: { status: 'local-export', sent: false }, ...(options.submissionId ? { submissionId: options.submissionId } : {}), entries, archivedEntries,
+  return { format: 'JobsTimesheetPackage', version: 1, exportedAt: now(), period: selectedPeriod, ...(selectedEngineer ? { engineer: selectedEngineer } : {}), delivery: { status: 'local-export', sent: false }, ...(options.submissionId ? { submissionId: options.submissionId } : {}), entries, archivedEntries,
     totals: { minutes: total(() => true), workMinutes: total(row => isWorkSession(row.entry)), unassignedMinutes: total(row => row.jobId === null), conflictCount: rows.filter(row => row.conflict).length } };
 }
 export function submitTimesheets(state, refs, options) {

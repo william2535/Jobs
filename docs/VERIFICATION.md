@@ -2,6 +2,17 @@
 
 Original milestone verified on 13 November 2026; daily timesheets update verified on 14 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Automated fixtures and committed screenshots are synthetic. Physical iPhone/Android testing remains outstanding.
 
+## Desktop office overview 1.3.0 — 27 November 2026
+
+Desktop Jobs now groups received day packs by engineer, shows recorded attendance and time allocation, opens engineer-filtered timesheets and exports office CSV. Office NFC entry explicitly confirms the engineer tag; that tag follows ordinary job exports, newly created jobs and recorded sessions. The site/asset overview counts saved sites without a retained Zone Sketch source and distinct saved asset identities, including manual registers and retained history. These inventory counts are independent of day/engineer filters and do not invent historical creation dates.
+
+- **432 unit/DOM/service-worker tests passed**, including atomic batch imports, engineer identity, filtered timesheet exports, latest-return selection, cross-engineer time conflicts and site/asset deduplication.
+- **21 targeted browser cases passed across the development runs** on iPhone WebKit, desktop Chromium and mobile Chromium. The final six-case run on build `2c37f488d5adb65f5bfc` verifies that changing the collecting engineer updates later NFC imports and new-job membership, and that repeated/amended packs retain three sites and seven distinct assets without inflation. Site/job drilldowns, reload, offline work, invalid-batch rollback, filtered CSV and day-return receipts are covered.
+- Production build and release verification passed with **30 distributable files** and complete offline precache. The complete browser regression suite also runs in GitHub CI before merge.
+- Light/dark desktop layouts were checked at 1024 and 1440 pixels. The phone field dashboard and existing Share chest remain the entry points for mobile work.
+
+The office view updates when files are received on that computer; it is not a live remote feed. Job time / attendance is an explicit allocation calculation and is withheld when timing is missing or conflicting. Hardware NFC, OS share sheets and mixed iPhone/Android offline file delivery still require physical-device testing. Engineer tags are entered names, not authenticated identities.
+
 ## Quick Transfer 1.2.0 — 27 November 2026
 
 The existing job-card share chest now supports multi-job day packs, manager save-only redistribution, explicit day start/finish, returned work and matching receiving-phone receipts. The Android share bridge accepts editable JSON packs as well as PDFs. NFC office links open the same chest without changing timers.

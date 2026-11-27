@@ -1,4 +1,5 @@
 /** Daily time records saved on this device. Submission never contacts an office. */
+import { engineerKey, normaliseEngineerName } from './engineer-identity.js';
 import { SESSION_TYPES, timesheetEntries, timesheetDayArchives, splitTimesheetByDay, shiftLocalDateTime, prepareTimesheetEdit, minutesForTimesheet, isWorkSession } from './timesheets.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -16,16 +17,33 @@ const typeFor = entry => entry.sessionType === 'Custom' ? entry.customType || 'C
 const plainType = entry => entry.sessionType === 'Travel' ? 'travel' : entry.sessionType === 'Break' ? 'break' : isWorkSession(entry) ? 'work' : 'other';
 const dayLabel = date => new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' });
 
-export function renderTimesheets({ state, onSave = async () => false, onDelete = async () => false, onSubmit = async () => false, onExport, onDirty = () => {}, initialDate, viewState } = {}) {
+export function renderTimesheets({ state, onSave = async () => false, onDelete = async () => false, onSubmit = async () => false, onExport, onDirty = () => {}, initialDate, initialEngineer = '', showEngineerFilter = false, viewState } = {}) {
   const root = document.createElement('section'); root.className = 'timesheets-ui';
   let workspace = state || { jobs: [], sites: [] };
   let date = validDay(viewState?.date) ? viewState.date : validDay(initialDate) ? initialDate : localDay();
+  let engineer = normaliseEngineerName(viewState?.engineer ?? initialEngineer, { required: false });
+  const withEngineerFilter = showEngineerFilter || !!initialEngineer || !!viewState?.engineer;
+  const matchesEngineer = row => {
+    if (!engineer) return true;
+    try { return engineerKey(row.entry.engineer || '') === engineerKey(engineer); } catch { return false; }
+  };
   let editor = null, reviewing = false, dirty = false, busy = false, disposed = false, notice = '';
   let scrollPosition = Number.isFinite(viewState?.scrollTop) ? Math.max(0, viewState.scrollTop) : null;
-  const rows = () => timesheetEntries(workspace);
+  const rows = () => timesheetEntries(workspace).filter(matchesEngineer);
   const undatedRows = () => rows().filter(row => !row.entry.date).map(row => ({ ...row, segment: { start: row.entry.start || '', end: row.entry.end || '', minutes: minutesForTimesheet(row.entry) } }));
   const dayRows = () => rows().flatMap(row => splitTimesheetByDay(row.entry).filter(segment => segment.date === date).map(segment => ({ ...row, segment })));
-  const archivedRows = () => timesheetDayArchives(workspace, date);
+  const archivedRows = () => timesheetDayArchives(workspace, date).filter(matchesEngineer);
+  const engineerOptions = () => {
+    const values = new Map();
+    for (const row of timesheetEntries(workspace, { includeDeleted: true })) {
+      try {
+        const name = normaliseEngineerName(row.entry.engineer || '', { required: false });
+        if (name && !values.has(engineerKey(name))) values.set(engineerKey(name), name);
+      } catch { /* Legacy untagged/invalid names stay available under All engineers. */ }
+    }
+    if (engineer) values.set(engineerKey(engineer), engineer);
+    return [...values.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  };
   const jobFor = id => (workspace.jobs || []).find(job => job.id === id);
   const siteName = job => (workspace.sites || []).find(site => site.id === job?.siteId)?.name || '';
   const rowName = row => row.job ? [siteName(row.job), titleFor(row.job)].filter(Boolean).join(' · ') : 'Unassigned session';
@@ -108,7 +126,13 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
   function render() {
     if (disposed) return;
     const current = dayRows(), summary = totals(current);
-    root.innerHTML = `<div class="timesheet-error" role="alert" hidden></div><div class="timesheet-shell"><div class="timesheet-daybar"><button type="button" data-timesheet-previous aria-label="Previous day">‹</button><label class="timesheet-date-control"><input type="date" aria-label="Timesheet date" value="${date}"><span>${esc(dayLabel(date))}</span></label><button type="button" data-timesheet-next aria-label="Next day">›</button><button type="button" data-timesheet-today>Today</button><button type="button" class="timesheet-add" data-timesheet-add aria-label="Add session">＋</button></div>${!current.length ? '<div class="timesheet-empty">No sessions for this day. Tap + to add one.</div>' : current.some(row => row.conflict) ? '<div class="timesheet-empty timesheet-conflict-warning" role="status">Duplicate session IDs are excluded from totals. Review these sessions before submitting.</div>' : ''}<div class="timesheet-scroll">${timelineMarkup(current)}</div><div class="timesheet-footer"><div class="timesheet-totals"><div><strong>${current.length}</strong><span>Sessions</span></div><div><strong>${summary.submitted}</strong><span>Submitted</span></div><div><strong class="timesheet-work-total">${durationLabel(summary.work)}</strong><span>Work</span></div></div><button type="button" data-timesheet-submit aria-label="Submit timesheet"${current.some(row => !row.entry.submissionId) && !current.some(row => row.conflict) ? '' : ' disabled'}>Submit timesheet<span aria-hidden="true"> (${current.filter(row => !row.entry.submissionId).length})</span></button></div></div>${undatedRows().length ? `<details class="timesheet-undated"><summary>Undated records (${undatedRows().length})</summary><p>Assign a recorded date to include these hours in a daily timesheet.</p>${undatedRows().map(row => sessionButton(row, '', 'timesheet-manual-session')).join('')}</details>` : ''}<div class="timesheet-secondary-summary"><span>Recorded <strong class="timesheet-recorded-total">${durationLabel(summary.recorded)}</strong> · Travel ${durationLabel(summary.travel)} · Break ${durationLabel(summary.break)} · Other ${durationLabel(summary.other)}</span>${onExport ? `<button type="button" data-timesheet-export${current.length || archivedRows().length ? '' : ' disabled'}>Export timesheet</button>` : ''}</div>${archivedRows().length ? `<p class="timesheet-submission-note">${archivedRows().length} session(s) retained in trash and included in this day's export.</p>` : ''}<p class="timesheet-submission-status" role="status">${esc(notice || (summary.submitted ? `${summary.submitted} submitted locally` : 'Not submitted on this device'))}</p>`;
+    root.innerHTML = `<div class="timesheet-error" role="alert" hidden></div>${withEngineerFilter ? `<label class="timesheet-engineer-filter">Engineer<select aria-label="Engineer filter"><option value="">All engineers</option>${engineerOptions().map(name => `<option value="${esc(name)}"${engineerKey(name) === engineerKey(engineer) ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select></label>` : ''}<div class="timesheet-shell"><div class="timesheet-daybar"><button type="button" data-timesheet-previous aria-label="Previous day">‹</button><label class="timesheet-date-control"><input type="date" aria-label="Timesheet date" value="${date}"><span>${esc(dayLabel(date))}</span></label><button type="button" data-timesheet-next aria-label="Next day">›</button><button type="button" data-timesheet-today>Today</button><button type="button" class="timesheet-add" data-timesheet-add aria-label="Add session">＋</button></div>${!current.length ? '<div class="timesheet-empty">No sessions for this day. Tap + to add one.</div>' : current.some(row => row.conflict) ? '<div class="timesheet-empty timesheet-conflict-warning" role="status">Duplicate session IDs are excluded from totals. Review these sessions before submitting.</div>' : ''}<div class="timesheet-scroll">${timelineMarkup(current)}</div><div class="timesheet-footer"><div class="timesheet-totals"><div><strong>${current.length}</strong><span>Sessions</span></div><div><strong>${summary.submitted}</strong><span>Submitted</span></div><div><strong class="timesheet-work-total">${durationLabel(summary.work)}</strong><span>Work</span></div></div><button type="button" data-timesheet-submit aria-label="Submit timesheet"${current.some(row => !row.entry.submissionId) && !current.some(row => row.conflict) ? '' : ' disabled'}>Submit timesheet<span aria-hidden="true"> (${current.filter(row => !row.entry.submissionId).length})</span></button></div></div>${undatedRows().length ? `<details class="timesheet-undated"><summary>Undated records (${undatedRows().length})</summary><p>Assign a recorded date to include these hours in a daily timesheet.</p>${undatedRows().map(row => sessionButton(row, '', 'timesheet-manual-session')).join('')}</details>` : ''}<div class="timesheet-secondary-summary"><span>Recorded <strong class="timesheet-recorded-total">${durationLabel(summary.recorded)}</strong> · Travel ${durationLabel(summary.travel)} · Break ${durationLabel(summary.break)} · Other ${durationLabel(summary.other)}</span>${onExport ? `<button type="button" data-timesheet-export${current.length || archivedRows().length ? '' : ' disabled'}>Export timesheet</button>` : ''}</div>${archivedRows().length ? `<p class="timesheet-submission-note">${archivedRows().length} session(s) retained in trash and included in this day's export.</p>` : ''}<p class="timesheet-submission-status" role="status">${esc(notice || (summary.submitted ? `${summary.submitted} submitted locally` : 'Not submitted on this device'))}</p>`;
+    root.querySelector('[aria-label="Engineer filter"]')?.addEventListener('change', event => {
+      const next = event.target.value; event.target.value = engineer;
+      if (!confirmLeave()) return;
+      engineer = normaliseEngineerName(next, { required: false });
+      scrollPosition = null; notice = ''; render();
+    });
     root.querySelector('[data-timesheet-previous]').onclick = () => shiftDate(-1);
     root.querySelector('[data-timesheet-next]').onclick = () => shiftDate(1);
     root.querySelector('[data-timesheet-today]').onclick = () => changeDate(localDay());
@@ -122,7 +146,7 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
       if (busy || disposed) return;
       rememberScroll(); lock(true);
       try {
-        const response = await onExport({ from: date, to: date });
+        const response = await onExport({ from: date, to: date, ...(engineer ? { engineer } : {}) });
         if (!response || !response.package) throw Error('The timesheet export could not be prepared. Try again.');
         notice = 'Timesheet export prepared on this device.';
         if (!disposed) render();
@@ -148,7 +172,7 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
   function editorMarkup() {
     const entry = editor.entry, legacy = !entry.sessionType, jobs = workspace.jobs || [];
     const existingJob = editor.jobId && !jobs.some(job => job.id === editor.jobId);
-    return `<form data-timesheet-form novalidate><div class="timesheet-editor-header"><button type="button" data-editor-cancel>Cancel</button><h2>${editor.isNew ? 'Add session' : 'Edit session'}</h2><button type="submit">Save session</button></div><div class="timesheet-editor-body"><div class="timesheet-error" role="alert" hidden></div><label>Task / job<select name="jobId" aria-label="Task / job"><option value="">Unassigned</option>${existingJob ? `<option value="${esc(editor.jobId)}" selected>Original job reference</option>` : ''}${jobs.map(job => `<option value="${esc(job.id)}"${editor.jobId === job.id ? ' selected' : ''}>${esc([siteName(job), titleFor(job)].filter(Boolean).join(' · '))}</option>`).join('')}</select></label><label>Type<select name="sessionType" aria-label="Type">${legacy ? '<option value="" selected>Legacy recorded time</option>' : ''}${SESSION_TYPES.map(type => `<option${entry.sessionType === type ? ' selected' : ''}>${esc(type)}</option>`).join('')}</select></label><label data-custom-type${entry.sessionType === 'Custom' ? '' : ' hidden'}>Custom type<input name="customType" aria-label="Custom type" value="${esc(entry.customType || '')}" maxlength="200"></label>${legacy || editor.hoursOnly ? `<label>Recorded date<input type="date" name="recordedDate" aria-label="Recorded date" value="${esc(entry.date)}"></label><label data-legacy-hours>Recorded hours<input name="hours" aria-label="Recorded hours" type="number" min="0" step="any" value="${esc(entry.hours)}"><small>${legacy ? 'These recorded hours remain authoritative. Choose a session type to calculate time from Start and Finish.' : 'Hours-only record. Keep both times empty to preserve recorded hours, or enter Start and Finish to calculate duration.'}</small></label>` : ''}${[['Start', 'startDateTime', entry.start ? `${entry.date}T${entry.start}` : ''], ['Finish', 'finishDateTime', entry.end ? `${entry.endDate || entry.date}T${entry.end}` : '']].map(([label, name, value]) => `<div class="timesheet-time-field"><label for="${editor.domId}-${name}">${label}</label><div class="timesheet-time-controls"><button type="button" data-time-step="-1" data-time-field="${name}" aria-label="${label} minus 1 minute">−</button><input type="datetime-local" id="${editor.domId}-${name}" name="${name}" aria-label="${label}" value="${esc(value)}" step="60"><button type="button" data-time-step="1" data-time-field="${name}" aria-label="${label} plus 1 minute">+</button></div></div>`).join('')}<div class="timesheet-duration"><span>${legacy ? 'Recorded hours' : 'Calculated duration'}</span><output aria-label="Session duration"></output></div><label>Description<textarea name="note" aria-label="Description" maxlength="10000" rows="3">${esc(entry.note)}</textarea></label>${entry.submissionId || entry.submissionHistory?.length ? `<details class="timesheet-submission-history"><summary>Submitted records (${entry.submissionHistory?.length || 0})</summary><p>Editing this session creates a draft. Earlier submitted records stay in the export.</p>${(entry.submissionHistory || []).map(record => `<p><strong>${esc(record.submittedAt)}</strong><br>${esc(record.entry.date)} · ${esc(record.entry.start || '')}${record.entry.end ? `–${esc(record.entry.end)}` : ''} · ${esc(record.entry.hours)} hours${record.entry.note ? `<br>${esc(record.entry.note)}` : ''}</p>`).join('')}</details>` : ''}<div class="timesheet-editor-footer"><small>${entry.submissionId ? 'Submitted on this device' : 'Saved only when you tap Save'}</small>${!editor.isNew ? '<button type="button" data-editor-delete>Trash session</button>' : ''}</div></div></form>`;
+    return `<form data-timesheet-form novalidate><div class="timesheet-editor-header"><button type="button" data-editor-cancel>Cancel</button><h2>${editor.isNew ? 'Add session' : 'Edit session'}</h2><button type="submit">Save session</button></div><div class="timesheet-editor-body"><div class="timesheet-error" role="alert" hidden></div><label>Engineer<input name="engineer" aria-label="Engineer" autocomplete="name" maxlength="200" value="${esc(entry.engineer || '')}" placeholder="Engineer name"></label><label>Task / job<select name="jobId" aria-label="Task / job"><option value="">Unassigned</option>${existingJob ? `<option value="${esc(editor.jobId)}" selected>Original job reference</option>` : ''}${jobs.map(job => `<option value="${esc(job.id)}"${editor.jobId === job.id ? ' selected' : ''}>${esc([siteName(job), titleFor(job)].filter(Boolean).join(' · '))}</option>`).join('')}</select></label><label>Type<select name="sessionType" aria-label="Type">${legacy ? '<option value="" selected>Legacy recorded time</option>' : ''}${SESSION_TYPES.map(type => `<option${entry.sessionType === type ? ' selected' : ''}>${esc(type)}</option>`).join('')}</select></label><label data-custom-type${entry.sessionType === 'Custom' ? '' : ' hidden'}>Custom type<input name="customType" aria-label="Custom type" value="${esc(entry.customType || '')}" maxlength="200"></label>${legacy || editor.hoursOnly ? `<label>Recorded date<input type="date" name="recordedDate" aria-label="Recorded date" value="${esc(entry.date)}"></label><label data-legacy-hours>Recorded hours<input name="hours" aria-label="Recorded hours" type="number" min="0" step="any" value="${esc(entry.hours)}"><small>${legacy ? 'These recorded hours remain authoritative. Choose a session type to calculate time from Start and Finish.' : 'Hours-only record. Keep both times empty to preserve recorded hours, or enter Start and Finish to calculate duration.'}</small></label>` : ''}${[['Start', 'startDateTime', entry.start ? `${entry.date}T${entry.start}` : ''], ['Finish', 'finishDateTime', entry.end ? `${entry.endDate || entry.date}T${entry.end}` : '']].map(([label, name, value]) => `<div class="timesheet-time-field"><label for="${editor.domId}-${name}">${label}</label><div class="timesheet-time-controls"><button type="button" data-time-step="-1" data-time-field="${name}" aria-label="${label} minus 1 minute">−</button><input type="datetime-local" id="${editor.domId}-${name}" name="${name}" aria-label="${label}" value="${esc(value)}" step="60"><button type="button" data-time-step="1" data-time-field="${name}" aria-label="${label} plus 1 minute">+</button></div></div>`).join('')}<div class="timesheet-duration"><span>${legacy ? 'Recorded hours' : 'Calculated duration'}</span><output aria-label="Session duration"></output></div><label>Description<textarea name="note" aria-label="Description" maxlength="10000" rows="3">${esc(entry.note)}</textarea></label>${entry.submissionId || entry.submissionHistory?.length ? `<details class="timesheet-submission-history"><summary>Submitted records (${entry.submissionHistory?.length || 0})</summary><p>Editing this session creates a draft. Earlier submitted records stay in the export.</p>${(entry.submissionHistory || []).map(record => `<p><strong>${esc(record.submittedAt)}</strong><br>${esc(record.entry.date)} · ${esc(record.entry.start || '')}${record.entry.end ? `–${esc(record.entry.end)}` : ''} · ${esc(record.entry.hours)} hours${record.entry.note ? `<br>${esc(record.entry.note)}` : ''}</p>`).join('')}</details>` : ''}<div class="timesheet-editor-footer"><small>${entry.submissionId ? 'Submitted on this device' : 'Saved only when you tap Save'}</small>${!editor.isNew ? '<button type="button" data-editor-delete>Trash session</button>' : ''}</div></div></form>`;
   }
   function openEditor(row = null) {
     if (busy || disposed || !confirmLeave()) return;
@@ -156,7 +180,7 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
     const now = new Date(), start = date === localDay(now) ? localTime(now) : '09:00';
     const finish = shiftLocalDateTime(`${date}T${start}`, 60);
     editor = {
-      entry: structuredClone(row?.entry || { id: crypto.randomUUID(), date, start, endDate: finish.slice(0, 10), end: finish.slice(11), hours: 1, note: '', engineer: '', sessionType: 'Work', customType: '' }),
+      entry: structuredClone(row?.entry || { id: crypto.randomUUID(), date, start, endDate: finish.slice(0, 10), end: finish.slice(11), hours: 1, note: '', engineer: engineer || workspace.officeDays?.find(day => day.status === 'running')?.engineer || '', sessionType: 'Work', customType: '' }),
       jobId: row?.jobId ?? null, previousJobId: row ? row.jobId ?? null : undefined, isNew: !row, hoursOnly: !!row && !row.entry.start && !row.entry.end, domId: `session-${crypto.randomUUID()}`,
     };
     const dialog = document.createElement('dialog'); dialog.className = 'timesheet-dialog'; dialog.setAttribute('aria-label', editor.isNew ? 'Add session' : 'Edit session'); dialog.innerHTML = editorMarkup();
@@ -209,6 +233,8 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
         if (selectedType && (!startValue || !finishValue) && !editor.hoursOnly) throw Error('Enter Start and Finish for this session.');
         const keepUndatedClocks = !selectedType && !recordedDate && !startValue && !finishValue && !editor.entry.date;
         const next = { ...structuredClone(editor.entry), date: startValue ? startValue.slice(0, 10) : recordedDate, start: startValue ? startValue.slice(11, 16) : keepUndatedClocks ? editor.entry.start : '', end: finishValue ? finishValue.slice(11, 16) : keepUndatedClocks ? editor.entry.end : '', endDate: finishValue ? finishValue.slice(0, 10) : recordedDate, note: String(data.get('note') || '') };
+        const enteredEngineer = String(data.get('engineer') || '');
+        if (enteredEngineer !== (editor.entry.engineer || '')) next.engineer = normaliseEngineerName(enteredEngineer, { required: false });
         if (selectedType) { next.sessionType = selectedType; next.customType = selectedType === 'Custom' ? String(data.get('customType') || '') : ''; }
         else { delete next.sessionType; delete next.customType; }
         if (!selectedType || (editor.hoursOnly && !startValue && !finishValue)) { const recorded = String(data.get('hours') || ''); if (!recorded.trim()) throw Error('Enter the recorded hours.'); next.hours = Number(recorded); }
@@ -239,7 +265,7 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
     dialog.querySelector('form').onsubmit = async event => {
       event.preventDefault(); if (busy || disposed) return; lock(true);
       try {
-        const response = await onSubmit({ refs: current.map(rowRef), from: date, to: date });
+        const response = await onSubmit({ refs: current.map(rowRef), from: date, to: date, ...(engineer ? { engineer } : {}) });
         applyResponse(response);
         closeDialog(true);
         notice = response.downloadError
@@ -252,7 +278,7 @@ export function renderTimesheets({ state, onSave = async () => false, onDelete =
   }
   root.confirmLeave = confirmLeave;
   root.canLeave = confirmLeave;
-  root.getViewState = () => { rememberScroll(); return { date, scrollTop: scrollPosition }; };
+  root.getViewState = () => { rememberScroll(); return { date, engineer, scrollTop: scrollPosition }; };
   root.dispose = () => { disposed = true; const dialog = root.querySelector('.timesheet-dialog'); if (dialog?.open) dialog.close(); dialog?.remove(); };
   render();
   return root;
