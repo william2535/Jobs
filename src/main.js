@@ -4,6 +4,11 @@ import { prepareJsonShare, safePackName } from "./job-share.js";
 import { createDayPack, inspectDayPack, importDayPack } from "./day-pack.js";
 import { activeOfficeDay, startOfficeDay, finishOfficeDay, markOfficeDayPrepared, acknowledgeOfficeDay, inspectDayReceipt } from "./day-session.js";
 import { buildTapLink, parseTapLink, writeTapSticker } from "./jobs-tap.js";
+import { normaliseEngineerName, engineerKey, readEngineerName, writeEngineerName, tagDayJobs } from "./engineer-identity.js";
+import { promptEngineerName } from "./engineer-identity-ui.js";
+import { renderOfficeDashboard } from "./office-dashboard.js";
+import { exportOfficeCsv } from "./office-analytics.js";
+import { prepareOfficeImport } from "./office-import.js";
 import { initializeAppearance, createAppearanceControl } from "./appearance.js";
 import { initializePageScroll, scrollPageToTop } from "./page-scroll.js";
 import { createStatusBannerController } from "./status-banner.js";
@@ -79,6 +84,7 @@ import { generateReportPdf, shareCertificatePdf } from "./certificate-pdf.js";
 import "./certificates-ui.css";
 import "./appearance.css";
 import "./quick-transfer.css";
+import "./office-dashboard.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
 import "./workspace-banner.css";
@@ -119,6 +125,8 @@ const statusBanner = createStatusBannerController({
 const statusBannerState = () => ({storageReady, hasRecovery: !!recoverySnapshot, busy, dirty, saveLabel, offlineLabel});
 let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
 let transferChest = null, transferOfficeId = "office", pendingTransferSave = null;
+let engineerNameInSession = "", confirmedTapEngineer = "", engineerPrompt = null;
+let officeViewState = {}, timesheetEngineer = "";
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
   page = "home",
@@ -344,13 +352,17 @@ async function persistTimesheets(change, success) {
 }
 const timesheetCallbacks = {
   onSaveTimesheet: ({ entry, jobId, previousJobId }) => persistTimesheets(
-    current => ({ state: saveTimesheet(current, entry, { jobId, previousJobId }) }), "Session saved on this device.",
+    current => {
+      const existing = current.unassignedTimesheets?.some(item => item.id === entry.id) || current.jobs.some(job => job.workflow?.timesheets?.some(item => item.id === entry.id));
+      const tagged = !existing && !entry.engineer?.trim() ? { ...entry, engineer: activeOfficeDay(current)?.engineer || savedEngineer() } : entry;
+      return { state: saveTimesheet(current, tagged, { jobId, previousJobId }) };
+    }, "Session saved on this device.",
   ),
   onDeleteTimesheet: locator => persistTimesheets(
     current => ({ state: deleteTimesheet(current, locator) }), "Session moved to trash. Its saved history is retained.",
   ),
-  onSubmitTimesheets: ({ refs, from, to }) => persistTimesheets(
-    current => submitTimesheets(current, refs, { from, to }), "Timesheet submitted locally. No office copy has been sent.",
+  onSubmitTimesheets: ({ refs, from, to, engineer }) => persistTimesheets(
+    current => submitTimesheets(current, refs, { from, to, engineer }), "Timesheet submitted locally. No office copy has been sent.",
   ),
   onExportTimesheets: async options => {
     if (busy || operationPending) throw Error("Please wait for the current save to finish.");
@@ -364,6 +376,13 @@ const timesheetCallbacks = {
 async function saveWorkflow(updatedJob) {
   const original = currentJob();
   return saveJob(captureJobOverrides(original, updatedJob, siteOf(original)));
+}
+function includeNewJobInDay(next, jobId) {
+  if (state.jobs.some(job => job.id === jobId)) return;
+  const day = next.officeDays?.find(day => day.status === "running"), job = next.jobs.find(job => job.id === jobId);
+  if (!day || !job || engineerKey(job.engineer) !== engineerKey(day.engineer) || day.jobIds.includes(jobId)) return;
+  if (day.jobIds.length >= 100) throw Error("This day already contains 100 jobs. Finish this pack before adding another job to the day.");
+  day.jobIds.push(jobId);
 }
 async function saveJob(updatedJob, afterTab = null, attachSiteId = null) {
   if (operationPending) return false;
@@ -382,6 +401,7 @@ async function saveJob(updatedJob, afterTab = null, attachSiteId = null) {
     else next.jobs[index] = saved;
     if (attachSiteId && saved.assetRegister)
       next = attachAssetJobToSite(next, saved.id, attachSiteId).state;
+    if (index < 0) includeNewJobInDay(next, saved.id);
     if (await persist(next)) {
       draftJob = null;
       if (afterTab) tab = afterTab;
@@ -402,6 +422,7 @@ async function saveAssetChange(change, success, saveDraft = false) {
     const next = structuredClone(state);
     if (saveDraft && draftJob) next.jobs.push(structuredClone(draftJob));
     const changed = change(next);
+    if (saveDraft && draftJob) includeNewJobInDay(changed.state || changed, draftJob.id);
     if (!(await persist(changed.state || changed, success))) return false;
     if (saveDraft) draftJob = null;
     render();
@@ -714,6 +735,11 @@ function syncToolboxTrigger({ reveal = false } = {}) {
 }
 
 function render() {
+  const previousOffice = document.querySelector('.office-dashboard');
+  if (previousOffice?.getViewState) officeViewState = previousOffice.getViewState();
+  previousOffice?.dispose?.();
+  const previousTimesheet = document.querySelector('.timesheets-ui')?.getViewState?.();
+  if (previousTimesheet?.engineer !== undefined) timesheetEngineer = previousTimesheet.engineer;
   statusBanner.dispose();
   document.querySelector(".appearance-control")?.dispose?.();
   const previousAssets = document.querySelector('.assets-workspace');
@@ -754,7 +780,7 @@ function render() {
   const headerIdentity = brandedHeader
     ? `<div class="jobs-banner-atmosphere" aria-hidden="true"><svg class="jobs-banner-traces" viewBox="0 0 1000 128" preserveAspectRatio="none" focusable="false"><defs><linearGradient id="jobs-banner-fade"><stop offset="0" stop-color="#25bfff" stop-opacity="0"/><stop offset=".25" stop-color="#25bfff" stop-opacity=".65"/><stop offset=".55" stop-color="#62d9ff" stop-opacity=".8"/><stop offset="1" stop-color="#25bfff" stop-opacity="0"/></linearGradient><path id="jobs-banner-curve-top" d="M44 22C220 54 356 48 620 18"/><path id="jobs-banner-curve-bottom" d="M370 112C560 76 760 82 956 102"/></defs><g fill="none" stroke="url(#jobs-banner-fade)" stroke-linecap="round"><g stroke-width="18" opacity=".06"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g><g stroke-width="5" opacity=".16"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g><g stroke-width="1.2" opacity=".7"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g></g></svg></div><div class="jobs-banner-lockup"><a class="jobs-banner-brand" href="#" data-action="home" aria-label="Jobs home" title="Go to Jobs dashboard"><img src="./jobs-logo.webp" width="119" height="140" alt=""><span class="jobs-banner-divider" aria-hidden="true"></span><div class="jobs-banner-copy"><h1 class="jobs-banner-title">${esc(bannerTitle)}</h1><span class="jobs-banner-subtitle">SITE <i>·</i> WORKS <i>·</i> REPORTS</span></div></a></div>`
     : `<div class="jobs-header-context"><img class="jobs-context-icon" src="./jobs-logo.webp" width="119" height="140" alt="Jobs logo"><div><span class="eyebrow">JOBS / ${page === 'job' ? 'YOUR VISIT' : 'YOUR WORKSPACE'}</span>${headerSite}</div></div>`;
-  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("Quick Transfer", "quick-transfer", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Office overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("Quick Transfer", "quick-transfer", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
     `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${brandedHeader ? "jobs-banner-app-header" : "jobs-context-header"}">${headerIdentity}<div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main>${mobileWorkspaceNavigation()}<div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}<button data-action="transfer-retry" ${pendingTransferSave?.next === recoverySnapshot && recoverySnapshot ? "" : "hidden"}>Retry failed transfer save</button></div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title desktop-page-back">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button desktop-page-back")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
@@ -779,6 +805,21 @@ function render() {
         onAction: (value, source) => value === "toolbox" ? action(value, source) : runTask(() => action(value, source)),
       }),
     );
+  }
+  if (page === "home" && $("#office-dashboard-root")) {
+    $("#office-dashboard-root").append(renderOfficeDashboard({
+      state: workspaceSnapshot(), viewState: officeViewState,
+      onImport: receiveOfficePacks,
+      onOpenJob: jobId => runTask(() => action("job:" + jobId)),
+      onOpenSite: siteId => runTask(() => action("site:" + siteId)),
+      onOpenTimesheets: ({ engineer, date }) => {
+        timesheetEngineer = engineer || ""; timesheetDate = date || null;
+        return runTask(() => action("timesheets"));
+      },
+      onQuickTransfer: source => runTask(() => action("quick-transfer", source)),
+      onShareReceipt: receipt => prepareJsonShare(receipt, safePackName("receipt", receipt.receiptId, ".jobsreceipt.json"))(),
+      onExport: exportOfficeSummary,
+    }));
   }
   updateInteractionLock();
   $("#zone-file").onchange = (e) => runTask(() => readZone(e.target.files[0]));
@@ -898,6 +939,8 @@ function render() {
     $("#timesheets-root").append(renderTimesheets({
       state: workspaceSnapshot(),
       initialDate: timesheetDate || undefined,
+      initialEngineer: timesheetEngineer,
+      showEngineerFilter: true,
       onSave: timesheetCallbacks.onSaveTimesheet,
       onDelete: timesheetCallbacks.onDeleteTimesheet,
       onSubmit: timesheetCallbacks.onSubmitTimesheets,
@@ -1088,7 +1131,7 @@ function home() {
   if (window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").matches)
     return '<div id="mobile-workspace-root"></div>';
   const open = state.jobs.filter((j) => j.status !== "Complete").length;
-  return `<section class="page-title"><div><span class="eyebrow">READY FOR THE NEXT VISIT</span><h1>Your workspace.</h1><p>Prepare the job. Record the work. Keep the evidence.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${sortJobs(state.jobs,state.sites).map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
+  return `<div id="office-dashboard-root"></div><section class="page-title"><div><span class="eyebrow">JOBS ON THIS COMPUTER</span><h2>Your workspace</h2><p>Create, import or open a saved job.</p></div>${button("+ Create job", "create", "primary")}</section><div class="metrics"><div><span>Saved jobs</span><strong>${state.jobs.length.toString().padStart(2, "0")}</strong></div><div><span>Open visits</span><strong>${String(open).padStart(2, "0")}</strong></div><div><span>Permanent sites</span><strong>${String(state.sites.length).padStart(2, "0")}</strong></div></div><section class="quick-actions" aria-label="Workspace actions"><button data-action="create" ><span class="tile-icon">+</span><strong>Create job</strong><small>Start a new site visit.</small><span class="arrow">→</span></button><button data-action="import-zone"><span class="tile-icon">⌑</span><strong>Import Zone Sketch</strong><small>Bring your site, plans and devices.</small><span class="arrow">→</span></button><button data-action="import-job"><span class="tile-icon">⇩</span><strong>Import job</strong><small>Reopen a job package and its evidence.</small><span class="arrow">→</span></button><button data-action="sites"><span class="tile-icon">⌂</span><strong>Sites</strong><small>Your asset records, across every visit.</small><span class="arrow">→</span></button></section><section><div class="section-head"><h2>Saved jobs <span class="count">${state.jobs.length}</span></h2><span class="muted">Stored on this device</span></div>${state.jobs.length ? `<div class="job-list">${sortJobs(state.jobs,state.sites).map((j) => jobCard(j)).join("")}</div>` : `<div class="empty"><span class="empty-symbol">▤</span><h3>A clear start.</h3><p>Create a site or import a drawing to prepare your first visit.<br>Every new device result starts as Not tested.</p>${button("Explore demonstration site", "demo", "text-button")}</div>`}</section><div class="info-strip"><strong>Built for work on site.</strong><span>No account needed. Plans, photographs and records travel with your exported job.</span>${button("Protect local storage", "persist", "text-button")}</div>`;
 }
 function sites() {
   return `<section class="page-title"><div><span class="eyebrow">YOUR SITES</span><p>Keep each site's details, plans and visits together.</p></div>${button("Import Zone Sketch", "import-zone")}</section><div class="sites-workspace"><section class="panel site-create-panel" aria-labelledby="create-site-title"><div class="record-site-heading"><h2 id="create-site-title">Create site</h2><div id="new-site-photo"></div></div><p class="muted">Start with its name. You can add contacts, plans and equipment after saving.</p><form data-form="site">${field("Site name", "name", "", "text", true)}${area("Address", "address")}<button class="primary">Save site</button></form></section><section class="saved-sites" aria-labelledby="saved-sites-title"><div class="section-head"><h2 id="saved-sites-title">Saved sites <span class="count">${state.sites.length}</span></h2></div><div class="sites-grid">${state.sites.map((s) => `<button class="site-card" data-action="site:${esc(s.id)}">${photoMarkup(s.profilePhoto)}<strong>${esc(siteLabel(s))}</strong><small>${esc(s.address || "Address not recorded")}</small><span>${state.jobs.filter((j) => j.siteId === s.id).length} jobs · ${s.drawings.at(-1).assets.length} devices · ${s.drawings.length} drawing revisions</span></button>`).join("") || '<div class="empty"><h3>No sites yet</h3><p>Create your first site or import a Zone Sketch drawing.</p></div>'}</div></section></div>`;
@@ -1317,6 +1360,29 @@ function alignImport(imported, siteId) {
   }
   return imported;
 }
+async function receiveOfficePacks(files) {
+  const retryKey = "office-upload:" + crypto.randomUUID();
+  return transferMutation(async () => {
+    const result = await prepareOfficeImport(state, files);
+    const message = `${result.imported.length} pack${result.imported.length === 1 ? "" : "s"} saved and grouped by engineer. ${result.duplicates ? result.duplicates + " already received; later edits kept. " : ""}${result.conflicts ? result.conflicts + " conflicting records kept for review." : ""}`;
+    return persistTransfer(result.state, message, retryKey, () => {
+      page = "home"; activeJob = null; activeSite = null; draftJob = null;
+      render(); reportNotice(message);
+      return { message };
+    });
+  }, retryKey);
+}
+function exportOfficeSummary(overview) {
+  assertTransferReady();
+  const csv = exportOfficeCsv(overview);
+  const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob), link = document.createElement("a");
+  link.href = url;
+  link.download = safePackName("engineer-days", [overview.filters?.from || "all", overview.filters?.to || "dates"].join("-"), ".csv");
+  try { document.body.append(link); link.click(); }
+  finally { link.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+  return { message: "Engineer summary download prepared." };
+}
 async function stageZone(input, jobId = importTargetJob) {
   const keys = zoneSourceKeys(input),
     matches = state.sites.filter((s) =>
@@ -1349,8 +1415,12 @@ function assertTransferReady(retryKey = null) {
   if (!storageReady || dirty || (recoverySnapshot && !retry) || draftJob)
     throw Error("Save your current work before opening Quick Transfer.");
 }
-function savedEngineer() { try { return localStorage.getItem("jobs.work-engineer") || ""; } catch { return ""; } }
-function rememberEngineer(name) { try { localStorage.setItem("jobs.work-engineer", name); } catch { /* The saved office day retains the name. */ } }
+function savedEngineer() { return engineerNameInSession || readEngineerName(); }
+function rememberEngineer(name) {
+  engineerNameInSession = normaliseEngineerName(name);
+  if (confirmedTapEngineer) confirmedTapEngineer = engineerNameInSession;
+  writeEngineerName(engineerNameInSession);
+}
 function checkDayEngineer(engineer) {
   const running = activeWork();
   if (running && running.engineer.trim().toLocaleLowerCase() !== engineer.trim().toLocaleLowerCase())
@@ -1420,9 +1490,11 @@ function openQuickTransfer(jobId = null, source = null, officeId = transferOffic
       return { share: prepareJsonShare(pack, safePackName("day", pack.packId, ".jobsday.json")), message: "Day pack ready. Share it using a nearby option, or save a copy." };
     },
     onStartDay: values => transferMutation(async () => {
-      checkDayEngineer(values.engineer);
-      const pack = await createDayPack(state, { ...values, officeId: transferOfficeId });
-      const result = startOfficeDay(state, { packId: pack.packId, parentPackId: pack.parentPackId, engineer: values.engineer, date: values.date, jobIds: values.jobIds, officeId: transferOfficeId });
+      const engineer = normaliseEngineerName(values.engineer);
+      checkDayEngineer(engineer);
+      const pack = await createDayPack(state, { ...values, engineer, officeId: transferOfficeId });
+      const result = startOfficeDay(state, { packId: pack.packId, parentPackId: pack.parentPackId, engineer, date: values.date, jobIds: values.jobIds, officeId: transferOfficeId });
+      if (!result.duplicate) result.state = tagDayJobs(result.state, result.day.jobIds, engineer);
       return persistTransfer(result.state, "Day started on this device.", startKey, () => {
         dialog.setStartRetry(false);
         rememberEngineer(result.day.engineer); render();
@@ -1459,7 +1531,7 @@ function reviewDayPack({ pack, summary }) {
   const dialog = document.createElement("dialog");
   dialog.className = "toolbox-chest transfer-chest transfer-review";
   dialog.setAttribute("aria-label", "Receive day pack");
-  dialog.innerHTML = `<header class="toolbox-chest-lid"><div class="toolbox-chest-title-row"><div><small>QUICK TRANSFER</small><h2>${assignment ? "Collect day pack" : "Receive finished day"}</h2></div><button type="button" data-day-cancel aria-label="Cancel receiving">×</button></div></header><div class="toolbox-chest-tray"><p><strong>${esc(pack.label || (assignment ? "Day pack" : pack.engineer + "’s day"))}</strong><br>${esc(pack.date)} · ${summary.jobCount} jobs</p>${assignment ? `<label>Engineer<input name="engineer" maxlength="200" autocomplete="name" value="${esc(pack.engineer || savedEngineer())}" placeholder="Your name to start the day"></label><p>Collecting saves the jobs and starts your day timer. A manager can save the pack without starting a timer.</p>` : `<p>Attendance: ${Math.floor(summary.attendanceMinutes / 60)}h ${summary.attendanceMinutes % 60}m. Returned work is kept for review alongside any different local copies.</p>`}<p class="transfer-status" role="alert" hidden></p><div class="actions">${assignment ? '<button type="button" class="primary" data-day-accept="start">Collect &amp; start day</button><button type="button" data-day-accept="save">Save pack only</button>' : '<button type="button" class="primary" data-day-accept="save">Save returned day</button>'}</div><p class="muted">Nothing is received or started until this save succeeds.</p></div>`;
+  dialog.innerHTML = `<header class="toolbox-chest-lid"><div class="toolbox-chest-title-row"><div><small>QUICK TRANSFER</small><h2>${assignment ? "Collect day pack" : "Receive finished day"}</h2></div><button type="button" data-day-cancel aria-label="Cancel receiving">×</button></div></header><div class="toolbox-chest-tray"><p><strong>${esc(pack.label || (assignment ? "Day pack" : pack.engineer + "’s day"))}</strong><br>${esc(pack.date)} · ${summary.jobCount} jobs</p>${assignment ? `<label>Engineer<input name="engineer" maxlength="200" autocomplete="name" value="${esc(activeOfficeDay(state)?.engineer || savedEngineer() || pack.engineer)}" placeholder="Your name to start the day"></label><p>Collecting saves the jobs and starts your day timer. A manager can save the pack without starting a timer.</p>` : `<p>Attendance: ${Math.floor(summary.attendanceMinutes / 60)}h ${summary.attendanceMinutes % 60}m. Returned work is kept for review alongside any different local copies.</p>`}<p class="transfer-status" role="alert" hidden></p><div class="actions">${assignment ? '<button type="button" class="primary" data-day-accept="start">Collect &amp; start day</button><button type="button" data-day-accept="save">Save pack only</button>' : '<button type="button" class="primary" data-day-accept="save">Save returned day</button>'}</div><p class="muted">Nothing is received or started until this save succeeds.</p></div>`;
   let saving = false;
   dialog.addEventListener("cancel", event => { if (saving) event.preventDefault(); });
   dialog.addEventListener("close", () => dialog.remove(), { once: true });
@@ -1475,9 +1547,10 @@ function reviewDayPack({ pack, summary }) {
         const imported = await importDayPack(state, pack);
         let next = imported.state;
         if (control.dataset.dayAccept === "start") {
-          const engineer = dialog.querySelector('[name="engineer"]').value.trim();
+          const engineer = normaliseEngineerName(dialog.querySelector('[name="engineer"]').value);
           checkDayEngineer(engineer);
-          next = startOfficeDay(next, { packId: pack.packId, parentPackId: pack.parentPackId, engineer, date: pack.date, jobIds: imported.jobIds, officeId: pack.officeId }).state;
+          const started = startOfficeDay(next, { packId: pack.packId, parentPackId: pack.parentPackId, engineer, date: pack.date, jobIds: imported.jobIds, officeId: pack.officeId });
+          next = started.duplicate ? started.state : tagDayJobs(started.state, imported.jobIds, engineer);
         }
         const recipientEngineer = activeOfficeDay(next)?.engineer;
         return persistTransfer(next, assignment ? "Day pack saved." : "Returned day received on this phone.", actionRetryKey, () => {
@@ -1542,7 +1615,16 @@ async function handleTapLink() {
       await runTask(() => action("site:" + target.siteId));
     } else {
       transferOfficeId = target.officeId || "office";
-      openQuickTransfer(null, null, transferOfficeId);
+      engineerPrompt?.dispose();
+      engineerPrompt = promptEngineerName({
+        name: savedEngineer(), activeEngineer: activeOfficeDay(state)?.engineer || "",
+        onConfirm: engineer => {
+          assertTransferReady(); rememberEngineer(engineer); confirmedTapEngineer = engineer;
+          openQuickTransfer(null, null, transferOfficeId);
+          return true;
+        },
+      });
+      engineerPrompt.openPrompt();
     }
     history.replaceState(null, "", target.cleanUrl);
   } catch (cause) { reportError(cause.message); }
@@ -1555,6 +1637,10 @@ async function readJob(file) {
     if (format === "JobsDayPack") return reviewDayPack(await inspectDayPack(text));
     if (format === "JobsDayReceipt") return acceptDayReceipt(text);
     const result = await importJobPackage(state, text);
+    const importedSite = result.state.sites.find(site => site.id === result.job.siteId);
+    if (confirmedTapEngineer && !result.duplicate && !effectiveJob(result.job, importedSite).engineer?.trim())
+      result.state = tagDayJobs(result.state, [result.job.id], activeOfficeDay(state)?.engineer || savedEngineer());
+    if (confirmedTapEngineer && !result.duplicate) includeNewJobInDay(result.state, result.job.id);
     if (await persist(result.state, result.message)) {
       activeJob = result.job.id;
       draftJob = null;
@@ -1581,10 +1667,12 @@ async function action(a, source) {
     const running=activeWork();
     if(a==="start-work"){
       if(running)throw Error("Finish your current work session first.");
-      const engineer=activeOfficeDay(state)?.engineer || window.prompt("Your name for this timesheet",savedEngineer())?.trim();
+      const name=activeOfficeDay(state)?.engineer || savedEngineer() || window.prompt("Your name for this timesheet", "")?.trim();
+      if(!name)return;
+      const engineer=normaliseEngineerName(name);
       if(!engineer)return;
       if(engineer.length>200)throw Error("Use a shorter engineer name.");
-      localStorage.setItem("jobs.work-engineer",engineer);
+      rememberEngineer(engineer);
       localStorage.setItem(WORK_TIMER_KEY,JSON.stringify({jobId:job.id,id:crypto.randomUUID(),engineer,startedAt:new Date().toISOString()}));
       render();reportNotice("Work started. Your timer is stored on this device.");return;
     }
@@ -1731,7 +1819,8 @@ async function action(a, source) {
   }
   if (a === "create") {
     const site = page === "site" ? state.sites.find((site) => site.id === activeSite) : null;
-    draftJob = createQuickJob(site);
+    const engineer = activeOfficeDay(state)?.engineer || confirmedTapEngineer;
+    draftJob = createQuickJob(site, engineer ? { engineer } : {});
     activeJob = draftJob.id;
     activeSite = null;
     page = "job";

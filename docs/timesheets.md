@@ -6,6 +6,14 @@ Tap **+ / Add session**, choose **Type**, enter **Start** and **Finish**, option
 
 Tap an existing session to edit it. Cancel protects unsaved changes. A failed save leaves the form available for retry and does not change the saved record. Saving, reopening, editing and exporting work offline once the production app has reported **Ready offline**. Records remain local to this browser profile, so keep exported backups.
 
+## Engineer tags and the office view
+
+On a PC, **Office overview → Engineer days** groups received work by the engineer's name tag. Opening a day's timesheet selects that engineer and date. **Engineer filter** can show one engineer or All engineers; the visible timeline, totals, trash, submission and exported file follow that selection. Copies with conflicting session IDs remain flagged even when the other copy belongs to an engineer hidden by the filter.
+
+New sessions use the selected engineer, or the engineer running the current office day. The editor's **Engineer** field can be changed deliberately; editing an existing session preserves its name until changed. Office NFC entry confirms a name before collecting jobs, so travel and break sessions carry the same tag as the day's work.
+
+The office's **Job time / attendance** figure uses only job-assigned Work in the numerator. Timesheets' Work total also includes unallocated Work, Administration and Training, so these two numbers serve different purposes. Unknown or conflicting timing is not turned into a percentage. Office CSV is a summary of the filtered received days; ordinary timesheet export retains the underlying sessions.
+
 ## Dates, durations and earlier entries
 
 Timed sessions use the entered local calendar dates and clock times. Choose the following date explicitly for an overnight finish; an earlier clock time on the same date is not silently treated as overnight. Duration uses wall-clock arithmetic without a recorded UTC offset or timezone. It is not a measurement of elapsed time across a daylight-saving change.

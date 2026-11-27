@@ -155,19 +155,21 @@ test('an offline manager redistributes two jobs and only an office receipt confi
     await office.clock.setFixedTime(new Date(`${DATE}T17:05:00.000Z`));
     await receivePack(office, returned);
     const officeJobs = await records(office, 'jobs');
-    expect(officeJobs).toHaveLength(3);
+    expect(officeJobs).toHaveLength(4);
+    expect(officeJobs.filter(job => job.engineer === 'Synthetic engineer')).toHaveLength(2);
+    expect(officeJobs.filter(job => originalJobs.some(original => original.id === job.id)).every(job => !job.engineer)).toBe(true);
     expect(officeJobs.find(job => job.id === changedJob.id).notesDocument.blocks[0].runs[0].text).toBe('Office retained this independent instruction.');
     expect(officeJobs.some(job => job.id !== changedJob.id && job.notesDocument.blocks.some(block => block.runs?.some(run => run.text.includes('Engineer recorded'))))).toBe(true);
     const officeReceipts = await metadata(office, 'office-receipts');
     expect(officeReceipts).toHaveLength(1);
-    expect(officeReceipts[0].summary).toMatchObject({ kind: 'return', conflictCount: 1, jobCount: 2 });
+    expect(officeReceipts[0].summary).toMatchObject({ kind: 'return', conflictCount: 2, jobCount: 2 });
     await receivePack(office, returned);
-    expect(await records(office, 'jobs')).toHaveLength(3);
+    expect(await records(office, 'jobs')).toHaveLength(4);
     expect(await metadata(office, 'office-receipts')).toHaveLength(1);
 
     chest = await openChest(office);
     await chest.locator('.transfer-office-returns > summary').click();
-    await expect(chest.locator('.transfer-return')).toContainText('1 to review');
+    await expect(chest.locator('.transfer-return')).toContainText('2 to review');
     const receiptFile = await downloadJson(office, chest.getByRole('button', { name: 'Share receipt', exact: true }));
     const receipt = await inspectDayReceipt(receiptFile.buffer.toString());
     expect(receipt.packId).toBe(returnedPack.pack.packId);
@@ -223,6 +225,11 @@ test('the existing job share chest keeps user activation and cancellation never 
   await expect(page.locator('#notice')).toContainText('already saved');
   expect(await records(page, 'jobs')).toHaveLength(1);
   await page.goto('/#jobs-tap=office&office=synthetic-office');
+  const engineerTag = page.getByRole('dialog', { name: 'Engineer tag', exact: true });
+  await expect(engineerTag).toBeVisible();
+  await engineerTag.getByLabel('Your name', { exact: true }).fill('Synthetic receiving engineer');
+  await engineerTag.getByRole('button', { name: 'Continue as engineer', exact: true }).click();
+  await expect(engineerTag).toBeHidden();
   await expect(page.getByRole('dialog', { name: 'Quick Transfer', exact: true })).toBeVisible();
   expect(await metadata(page, 'office-days')).toEqual([]);
   expect(await metadata(page, 'unassigned-timesheets')).toEqual([]);

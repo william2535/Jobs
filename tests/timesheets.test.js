@@ -160,3 +160,62 @@ test('conflicting copied session IDs remain visible and are excluded from confir
   assert.throws(() => saveTimesheet(state, session(), { jobId: state.jobs[1].id, previousJobId: state.jobs[0].id }), /already contains/);
   assert.equal(timesheetEntries({ jobs: [{ id: 'legacy', workflow: { timesheets: [{ hours: 1 }, { hours: 2 }] } }] }).some(row => row.conflict), false);
 });
+
+
+test('engineer exports group normalised names and include only that engineer’s active and archived records', () => {
+  const state = workspace();
+  state.jobs.forEach(job => { job.workflow = { version: 1, timesheets: [] }; });
+  state.jobs[0].workflow.timesheets = [
+    validateTimesheetEntry(session({ id: 'alice-one', engineer: ' Alice  Green ' })),
+    validateTimesheetEntry(session({ id: 'bob-one', engineer: 'Bob Green' })),
+    validateTimesheetEntry(session({ id: 'alice-trash', engineer: 'ALICE GREEN', deletedAt: '2026-11-14T17:00:00Z' })),
+    validateTimesheetEntry(session({ id: 'bob-trash', engineer: 'Bob Green', deletedAt: '2026-11-14T17:00:00Z' })),
+  ];
+  state.unassignedTimesheets = [validateTimesheetEntry(session({ id: 'alice-two', engineer: 'Ａｌｉｃｅ Green', start: '12:00', end: '12:30' }))];
+  const output = createTimesheetPackage(state, { from: '2026-11-14', engineer: ' Alice Green ' });
+  assert.equal(output.engineer, 'Alice Green');
+  assert.deepEqual(output.entries.map(row => row.entry.id), ['alice-one', 'alice-two']);
+  assert.deepEqual(output.archivedEntries.map(row => row.entry.id), ['alice-trash']);
+  assert.equal(output.totals.minutes, 120);
+  assert.equal(output.totals.unassignedMinutes, 30);
+  const all = createTimesheetPackage(state, { from: '2026-11-14' });
+  assert.equal(all.engineer, undefined);
+  assert.equal(all.entries.length, 3);
+  assert.equal(all.archivedEntries.length, 2);
+});
+
+test('engineer submission cannot include another engineer or leak unrelated archived sessions', () => {
+  const state = workspace(), jobId = state.jobs[0].id;
+  state.jobs.forEach(job => { job.workflow = { version: 1, timesheets: [] }; });
+  state.jobs[0].workflow.timesheets = [
+    validateTimesheetEntry(session({ id: 'alice', engineer: 'Alice Green' })),
+    validateTimesheetEntry(session({ id: 'bob', engineer: 'Bob Green' })),
+    validateTimesheetEntry(session({ id: 'alice-trash', engineer: 'Alice Green', deletedAt: '2026-11-14T17:00:00Z' })),
+    validateTimesheetEntry(session({ id: 'bob-trash', engineer: 'Bob Green', deletedAt: '2026-11-14T17:00:00Z' })),
+  ];
+  const before = structuredClone(state), options = { from: '2026-11-14', engineer: 'ALICE GREEN' };
+  assert.throws(() => submitTimesheets(state, [{ jobId, entryId: 'bob' }], options), /Selected sessions/);
+  assert.deepEqual(state, before);
+  const output = submitTimesheets(state, [{ jobId, entryId: 'alice' }], options);
+  assert.equal(output.package.engineer, 'ALICE GREEN');
+  assert.deepEqual(output.package.entries.map(row => row.entry.id), ['alice']);
+  assert.deepEqual(output.package.archivedEntries, []);
+  assert.equal(output.state.jobs[0].workflow.timesheets.find(entry => entry.id === 'bob').submissionId, undefined);
+  assert.deepEqual(state, before);
+  const subset = createTimesheetPackage(state, { from: options.from, refs: [{ jobId, entryId: 'alice' }] });
+  assert.deepEqual(subset.archivedEntries, [], 'a refs-based export is limited to the selected records');
+});
+
+test('engineer filtering does not hide global duplicate-ID conflicts or fail on other legacy names', () => {
+  const state = workspace();
+  state.jobs.forEach(job => { job.workflow = { version: 1, timesheets: [] }; });
+  state.jobs[0].workflow.timesheets = [validateTimesheetEntry(session({ engineer: 'Alice Green' }))];
+  state.jobs[1].workflow.timesheets = [validateTimesheetEntry(session({ engineer: 'Bob Green' }))];
+  state.unassignedTimesheets = [validateTimesheetEntry(session({ id: 'legacy-name', engineer: 'Old\nname' }))];
+  const output = createTimesheetPackage(state, { from: '2026-11-14', engineer: 'alice green' });
+  assert.equal(output.entries.length, 1);
+  assert.equal(output.entries[0].conflict, true);
+  assert.equal(output.totals.minutes, 0);
+  assert.equal(output.totals.conflictCount, 1);
+  assert.throws(() => submitTimesheets(state, [{ jobId: state.jobs[0].id, entryId: 'session-1' }], { from: '2026-11-14', engineer: 'Alice Green' }), /conflicting/);
+});
