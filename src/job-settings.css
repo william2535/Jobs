@@ -1,0 +1,18 @@
+.job-settings { max-width: 850px; margin-inline: auto; }
+.job-settings h1 { margin: 0 0 8px; font-size: 26px; }
+.job-settings fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.job-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.job-settings-grid label { display: grid; gap: 7px; min-width: 0; }
+.job-settings-grid label:has(textarea) { grid-column: 1 / -1; }
+.job-settings-grid input, .job-settings-grid select, .job-settings-grid textarea { width: 100%; min-width: 0; min-height: 44px; }
+.job-settings-grid [hidden] { display: none; }
+.job-settings-more { border-top: 1px solid var(--line); margin-top: 15px; }
+.job-settings summary { min-height: 44px; display: list-item; cursor: pointer; }
+.job-settings-inheritance, .job-settings-more .muted { font-size: 13px; line-height: 1.5; }
+.job-settings-actions { display: flex; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 700px) {
+  .job-settings { padding: 16px; }
+  .job-settings-grid input, .job-settings-grid select, .job-settings-grid textarea { font-size: 16px; }
+  .job-settings-actions button { width: 100%; }
+}
+@media (max-width: 380px) { .job-settings-grid { grid-template-columns: 1fr; } }

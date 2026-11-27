@@ -1,0 +1,73 @@
+.device-remarks { margin-top: 18px; min-width: 0; }
+.remark-section-head,.remark-editor-head,.remark-template-head,.remark-card-head,.remark-products-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.remark-section-head h3,.remark-editor-head h3,.remark-card-head h3 { margin: 0; overflow-wrap: anywhere; }
+.remark-section-head p { margin: 3px 0 0; font-size: 12px; }
+.remark-section-head button,.remark-products-head button { color: var(--accent-dark,#173d68); }
+.remark-template-picker { margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--subtle,#edf3fa); }
+.remark-template-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-top: 10px; }
+.remark-template-grid button { min-height: 52px; padding: 10px; text-align: left; }
+.remark-card-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,340px),1fr)); gap: 14px; margin-top: 14px; }
+.remark-card { min-width: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface,#fff); padding: 16px; }
+.remark-card h4 { font-size: 12px; margin: 14px 0 7px; text-transform: uppercase; letter-spacing: .6px; }
+.remark-summary-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0 6px; font-size: 14px; }
+.remark-summary-meta,.remark-evidence-count { font-size: 12px; color: var(--muted); margin: 6px 0; overflow-wrap: anywhere; }
+.remark-card > button { margin-top: 8px; }
+.remark-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.remark-quick-star { min-width: 46px; min-height: 46px; padding: 4px 8px; font-size: 29px; line-height: 1; color: #214f80; background: transparent; }
+.remark-quick-star[aria-pressed="true"] { color: #173d68; background: #e5eef9; border-color: #b9cce2; }
+.saved-quick-defects { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 10px; }
+.saved-quick-defects > h4 { margin: 5px 0 10px; font-size: 13px; color: #173d68; }
+.quick-defect-choice { display: flex; gap: 12px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding: 10px 0; }
+.quick-defect-choice > div { min-width: 0; }.quick-defect-choice strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.quick-defect-choice p { margin: 4px 0 0; font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.quick-defect-choice button { flex: 0 0 auto; min-width: 52px; padding: 8px 12px; color: #173d68; }
+.quick-defect-search { font-size: 12px; margin: 8px 0 12px; }.quick-defect-search input { width: 100%; min-height: 44px; }
+.remark-status { display: inline-block; flex: 0 0 auto; border-radius: 5px; padding: 4px 8px; background: #edf2f8; color: #244e7d; font-size: 12px; }
+.remark-status.resolved { background: #dfeaf8; color: #173d68; }
+.remark-readout { margin: 12px 0; }
+.remark-readout > div { border-bottom: 1px solid var(--soft-line,var(--line)); padding: 9px 0; }
+.remark-readout dt { font-size: 12px; font-weight: 650; color: var(--muted); }.remark-readout dd { margin: 3px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.remark-empty { margin: 8px 0 0; padding: 16px 0; color: var(--muted); font-size: 13px; }
+.remark-editor-head { margin: 4px 0 16px; }
+.remark-editor-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; align-items: start; }
+.remark-section { min-width: 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface,#fff); }
+.remark-section > h4 { margin: 0; padding: 12px 15px; background: #edf1f6; color: #173d68; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.remark-section-body { padding: 0 15px 15px; }
+.remark-photo-heading { margin: 14px 0 0; font-size: 12px; color: var(--muted); font-weight: 600; }
+.remark-field { display: grid; gap: 7px; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--soft-line,var(--line)); }
+.remark-field > span { font-size: 13px; font-weight: 650; }.remark-field small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 2px; }
+.remark-field input,.remark-field textarea,.remark-field select { margin: 0; width: 100%; min-width: 0; min-height: 44px; border-color: var(--line); }
+.remark-field textarea { resize: vertical; }
+.remark-photo-strip { display: flex; gap: 10px; overflow-x: auto; padding: 14px 0; align-items: flex-start; overscroll-behavior-x: contain; }
+.remark-photo { flex: 0 0 140px; min-width: 0; margin: 0; }
+.remark-photo img { display: block; width: 140px; height: 105px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #f1f4f8; }
+.remark-photo label { display: block; margin-top: 6px; }.remark-photo input { width: 100%; min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; }
+.remark-photo > button { padding: 5px 9px; min-height: 44px; font-size: 12px; width: 100%; margin-top: 4px; background: transparent; }
+.remark-photo figcaption { font-size: 12px; overflow-wrap: anywhere; margin-top: 5px; white-space: pre-wrap; }
+.remark-add-photo { display: flex; flex: 0 0 92px; height: 105px; padding: 10px; align-items: center; justify-content: center; flex-direction: column; gap: 7px; color: #214f80; border-style: dashed; font-size: 12px; }
+.remark-products-head { margin: 14px 0 10px; }.remark-products-head h4 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+.remark-products-head button { font-size: 12px; padding: 8px 10px; }
+.remark-product-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; border: 1px solid var(--line); border-radius: 6px; padding: 11px; margin-bottom: 10px; }
+.remark-product-row label { margin: 0; font-size: 12px; min-width: 0; }.remark-product-row input { width: 100%; min-width: 0; }
+.remark-product-description { grid-column: 1 / -1; }.remark-product-row button { grid-column: 1 / -1; font-size: 12px; }
+.remark-product-summary { list-style: none; padding: 0; margin: 10px 0; }.remark-product-summary li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }.remark-product-summary strong { font-weight: 600; overflow-wrap: anywhere; }
+.remark-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; bottom: 12px; z-index: 3; margin-top: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface,#fff); box-shadow: 0 3px 15px #10294512; }
+.remark-save-state { font-size: 12px; color: var(--muted); }.remark-save-bar .primary { min-width: 125px; }
+.remark-history-entry { border-top: 1px solid var(--line); margin-top: 12px; }.remark-history-current p { font-size: 13px; }.remark-history-current small { overflow-wrap: anywhere; }
+.remark-report-entry { margin: 16px 0; border-top: 1px solid var(--line); padding-top: 10px; }
+@media(max-width:700px) {
+  .device-remarks { margin-top: 12px; }
+  .remark-editor-columns { grid-template-columns: 1fr; gap: 14px; }
+  .remark-section-head { align-items: flex-start; }.remark-section-head > button { font-size: 12px; padding: 9px; white-space: nowrap; }
+  .remark-card-grid { grid-template-columns: 1fr; }
+  .remark-section-body { padding: 0 12px 12px; }
+  .remark-field input,.remark-field textarea,.remark-field select,.remark-product-row input,.remark-photo input { font-size: 16px; }
+  .quick-defect-search input { font-size: 16px; }
+  .remark-save-bar { bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
+@media print {
+  .device-remarks-report .remark-photo-strip { display: flex; flex-wrap: wrap; overflow: visible; }
+  .device-remarks-report .remark-photo { break-inside: avoid; }
+  .device-remarks-report .remark-readout > div { break-inside: avoid; }
+  .device-remarks-report .remark-photo img { max-width: 100%; }
+}

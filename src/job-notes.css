@@ -1,0 +1,79 @@
+.job-notes { max-width: 1080px; margin: 0 auto 20px; }
+.notes-form { position: relative; }
+.notes-title-label { margin: 0; }
+.notes-title {
+  width: 100%; border: 0; border-radius: 0; background: transparent;
+  font-size: 30px; font-weight: 700; line-height: 1.3; padding: 18px 4px;
+}
+.notes-title:focus { outline-offset: 2px; }
+.notes-toolbar {
+  position: relative;
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  padding: 8px; border: 1px solid var(--line); border-radius: 10px 10px 0 0;
+  background: var(--surface, #fff);
+}
+.notes-toolbar button, .notes-more > summary {
+  min-width: 44px; min-height: 44px; padding: 10px 12px; font-size: 14px;
+  border: 0; background: transparent; border-radius: 6px; margin: 0;
+}
+.notes-toolbar button:hover, .notes-more > summary:hover { background: var(--subtle, #edf3fa); }
+.notes-toolbar button[aria-pressed="true"] { background: var(--accent, #214f80); color: #fff; }
+.notes-more { padding: 0; position: static; }
+.notes-more > summary { cursor: pointer; display: list-item; list-style-position: inside; }
+.notes-extra {
+  position: absolute; right: 8px; top: calc(100% + 7px); z-index: 4;
+  width: min(370px, calc(100% - 16px)); padding: 14px; border: 1px solid var(--line);
+  border-radius: 9px; background: var(--surface, #fff); box-shadow: 0 8px 28px #10294524;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.notes-extra label { margin: 0; font-size: 12px; min-width: 0; }
+.notes-extra input, .notes-extra select { width: 100%; min-height: 44px; margin-top: 5px; }
+.notes-extra input[type="color"] { padding: 4px; }
+.notes-extra-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.notes-extra-actions button { border: 1px solid var(--line); font-size: 13px; }
+.notes-paper { padding: 20px 24px; border: 1px solid var(--line); border-top: 0; background: var(--surface, #fff); border-radius: 0 0 10px 10px; }
+.notes-editor { min-height: 320px; outline: 0; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.notes-editor:empty::before { content: attr(data-placeholder); color: var(--muted, #687587); pointer-events: none; }
+.notes-editor p, .job-notes-report p { margin: 0 0 12px; }
+.notes-editor :is(h1,h2,h3), .job-notes-report :is(h1,h2,h3) { color: inherit; line-height: 1.3; margin: 14px 0 10px; }
+.notes-editor h1 { font-size: 28px; }.notes-editor h2 { font-size: 24px; }.notes-editor h3 { font-size: 20px; }
+.notes-editor :is(ul,ol), .job-notes-report :is(ul,ol) { padding-left: 26px; }
+.notes-editor blockquote, .job-notes-report blockquote { border-left: 3px solid var(--accent, #214f80); padding-left: 15px; margin: 12px 0; }
+.notes-photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; margin-top: 16px; }
+.notes-photo { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface, #fff); margin: 0; min-width: 0; }
+.notes-photo img { display: block; width: 100%; height: 200px; object-fit: contain; border-radius: 5px; background: var(--subtle, #edf3fa); }
+.notes-photo label { font-size: 12px; margin-top: 10px; }.notes-photo input { width: 100%; min-width: 0; }
+.notes-remove-picture { font-size: 12px; background: transparent; margin-top: 8px; min-height: 44px; }
+.notes-save-bar {
+  position: sticky; bottom: 12px; z-index: 3; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; margin-top: 16px; box-shadow: 0 3px 16px #10294512;
+}
+.notes-save-bar .primary { min-width: 105px; }.notes-status { font-size: 12px; color: var(--muted, #687587); }
+.job-notes-report { white-space: pre-wrap; overflow-wrap: anywhere; }
+.job-notes-report figure { margin: 16px 0; break-inside: avoid; }.job-notes-report img { max-width: 100%; max-height: 430px; object-fit: contain; }
+.job-notes-report figcaption { font-size: 12px; margin-top: 7px; }
+@media (max-width: 700px) {
+  .notes-title { font-size: 25px; padding-top: 12px; }
+  .notes-toolbar { gap: 2px; padding: 5px; }
+  .notes-toolbar button, .notes-more > summary { padding: 10px 9px; font-size: 13px; }
+  .notes-paper { padding: 16px; }.notes-editor { min-height: 340px; }
+  .notes-extra select, .notes-extra input { font-size: 16px; }
+  .notes-save-bar { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .notes-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .notes-photo { padding: 9px; }.notes-photo img { height: 150px; }
+  .notes-photo input { font-size: 16px; }
+}
+@media print { .job-notes-report { break-before: auto; }.job-notes-report h2 { break-after: avoid; } }
+
+/* Common formatting stays visible, including on phones. */
+.notes-toolbar .notes-colour { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 3px 7px; font-size: 11px; line-height: 1.2; min-height: 44px; justify-content: center; }
+.notes-toolbar .notes-colour input[type="color"] { display: block; width: 54px; height: 25px; min-height: 25px; padding: 2px; border-radius: 5px; cursor: pointer; }
+.notes-editor ul[data-note-checklist], .notes-editor ol[data-note-checklist], .job-notes-report [data-note-checklist] { list-style: none; padding-left: 0; }
+.notes-editor [data-note-checklist] > li { position: relative; padding: 8px 0 8px 44px; min-height: 44px; }
+.notes-editor .note-check { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--accent, #214f80); font-size: 25px; line-height: 1; user-select: none; cursor: pointer; }
+.notes-editor .note-check:hover, .notes-editor .note-check:focus-visible { background: var(--subtle, #edf3fa); }
+.notes-editor .note-check:focus-visible { outline: 2px solid var(--accent, #214f80); outline-offset: -2px; }
+.notes-editor .note-check[aria-checked="true"] { color: var(--accent, #214f80); }
+.job-notes-report [data-note-checklist] > li { break-inside: avoid; margin: 5px 0; }
+.job-notes-report .note-check { display: inline-block; width: 1.5em; color: inherit; font-size: 1.1em; }

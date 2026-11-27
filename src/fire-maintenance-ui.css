@@ -1,0 +1,44 @@
+.fire-maintenance { min-width: 0; max-width: 1060px; margin: 0 auto; }
+.fire-maintenance .sr-only { position: absolute; width: 1px; min-width: 0; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.fire-maintenance-heading,.fire-maintenance-section-head,.fire-maintenance-equipment-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fire-maintenance-heading { margin-bottom: 14px; }.fire-maintenance-heading h2 { margin: 0; font-size: 21px; }.fire-maintenance-heading p { color: var(--muted); font-size: 13px; margin: 5px 0 0; }
+.fire-maintenance-progress { flex-shrink: 0; color: #173d68; background: #eaf0f8; border-radius: 7px; padding: 8px 10px; font-size: 12px; }
+.fire-maintenance-form { margin: 0; }.fire-maintenance-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.fire-maintenance-section { border: 1px solid var(--line,#d6dee8); border-radius: 10px; margin: 0 0 12px; background: var(--surface,#fff); overflow: hidden; }
+.fire-maintenance-section > summary { cursor: pointer; padding: 15px; min-height: 48px; font-weight: 650; color: #173d68; background: #edf2f8; }
+.fire-maintenance-section > summary > small { float: right; font-size: 12px; font-weight: 400; padding-left: 10px; }.fire-maintenance-section-body { padding: 4px 15px 15px; }
+.fire-check-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 20px; }
+.fire-check-item { min-width: 0; padding: 15px 0; border-bottom: 1px solid var(--line,#d6dee8); }
+.fire-check-label { display: block; font-size: 14px; font-weight: 600; line-height: 1.45; margin-bottom: 9px; overflow-wrap: anywhere; }
+.fire-check-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fire-check-choice { display: inline-flex; gap: 1px; border: 1px solid #b7c6da; border-radius: 7px; overflow: hidden; }
+.fire-check-choice button { border: 0; border-radius: 0; min-height: 44px; min-width: 48px; margin: 0; padding: 8px 13px; background: #fff; color: #173d68; box-shadow: none; }
+.fire-check-choice button + button { border-left: 1px solid #d1dce9; }.fire-check-choice button[aria-pressed="true"] { background: #173d68; color: #fff; }
+.fire-check-state { font-size: 12px; color: var(--muted); }.fire-check-clear { min-height: 44px; padding: 7px 9px; background: transparent; color: #173d68; font-size: 12px; }
+.fire-check-value { display: flex; align-items: center; gap: 8px; width: 100%; }.fire-check-value input { width: 100%; min-width: 0; min-height: 44px; }.fire-check-value span { font-size: 13px; color: var(--muted); min-width: 26px; }
+.fire-check-notes { margin-top: 9px; }.fire-check-notes summary { cursor: pointer; color: #244e7d; min-height: 36px; padding: 7px 0; font-size: 12px; }
+.fire-check-notes label { display: block; margin: 4px 0 0; font-size: 12px; }.fire-check-notes textarea { width: 100%; min-height: 64px; resize: vertical; margin-top: 6px; }
+.fire-maintenance-section-head { padding: 13px 0; }.fire-maintenance-section-head h3 { margin: 0; font-size: 15px; }.fire-maintenance-section-head button { color: #173d68; font-size: 12px; min-height: 44px; }
+.fire-maintenance-equipment { border: 1px solid var(--line,#d6dee8); border-radius: 8px; margin-top: 10px; overflow: hidden; }
+.fire-maintenance-equipment > summary { cursor: pointer; color: #173d68; padding: 13px; min-height: 46px; font-size: 14px; font-weight: 600; background: #f4f6f9; }
+.fire-maintenance-equipment > summary small { font-weight: 400; font-size: 12px; margin-left: 8px; }
+.fire-maintenance-equipment-body { padding: 0 13px 13px; }.fire-maintenance-equipment-head { padding: 10px 0 0; }.fire-maintenance-equipment-head p { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }.fire-maintenance-equipment-head button { font-size: 12px; padding: 7px 10px; color: #173d68; }
+.fire-maintenance-equipment-label { display: grid; gap: 6px; font-size: 12px; margin: 12px 0 0; }.fire-maintenance-equipment-label input { min-width: 0; width: 100%; min-height: 44px; }
+.fire-maintenance-equipment-picker { padding: 14px; background: #edf2f8; border: 1px solid #c6d3e3; border-radius: 8px; margin: 9px 0; }
+.fire-maintenance-equipment-picker h4 { margin: 0 0 12px; color: #173d68; font-size: 14px; }
+.fire-maintenance-picker-grid,.fire-maintenance-details-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 13px; }
+.fire-maintenance-picker-grid label,.fire-maintenance-details-grid label { display: grid; gap: 6px; min-width: 0; margin: 0; font-size: 13px; font-weight: 500; }
+.fire-maintenance-picker-grid input,.fire-maintenance-picker-grid select,.fire-maintenance-details-grid input,.fire-maintenance-details-grid textarea { width: 100%; min-width: 0; min-height: 44px; }
+.fire-maintenance-details-grid { padding-top: 14px; }.fire-maintenance-details-grid textarea { resize: vertical; min-height: 75px; }.fire-maintenance-wide { grid-column: 1 / -1; }
+.fire-maintenance-picker-actions { display: flex; gap: 8px; margin-top: 12px; }.fire-maintenance-picker-actions button { min-height: 44px; }
+.fire-maintenance-empty,.fire-maintenance-help { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 9px 0 0; }.fire-maintenance-empty { padding: 8px 0; }
+.fire-maintenance-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; bottom: 12px; z-index: 3; padding: 11px 13px; border: 1px solid var(--line,#d6dee8); border-radius: 9px; background: var(--surface,#fff); box-shadow: 0 3px 16px #10294514; margin-top: 15px; }
+.fire-maintenance-save-state { font-size: 12px; color: var(--muted); }.fire-maintenance-save-bar button { min-height: 46px; }
+.fire-maintenance-error { white-space: pre-wrap; }.fire-maintenance [hidden] { display: none !important; }
+@media(max-width:700px) {
+  .fire-maintenance-heading { align-items: flex-start; }.fire-maintenance-heading h2 { font-size: 19px; }.fire-maintenance-progress { padding: 7px 8px; }
+  .fire-check-grid,.fire-maintenance-picker-grid,.fire-maintenance-details-grid { grid-template-columns: 1fr; }
+  .fire-maintenance-section-body { padding: 0 12px 12px; }.fire-maintenance-section > summary { padding: 13px; }
+  .fire-maintenance input,.fire-maintenance textarea,.fire-maintenance select { font-size: 16px; }
+  .fire-maintenance-save-bar { bottom: calc(76px + env(safe-area-inset-bottom)); }.fire-maintenance-save-state { max-width: 45%; }
+}

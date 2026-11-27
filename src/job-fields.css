@@ -1,0 +1,85 @@
+/* Populated visit details, with a compact picker for omitted fields. */
+.workflow-module .wf-add-details {
+  margin: 0 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.workflow-module .wf-add-details > summary {
+  min-height: 44px;
+  padding: 12px 15px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.workflow-module .wf-add-details > p {
+  margin: 0;
+  padding: 0 15px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.workflow-module .wf-detail-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+.workflow-module .wf-detail-options button {
+  min-height: 44px;
+  text-align: left;
+  font-size: 13px;
+}
+.workflow-module .wf-hold-hint {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.workflow-module .wf-readout {
+  min-height: 44px;
+  padding: 9px 3px;
+  border-bottom: 1px solid var(--soft-line, var(--line));
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+.workflow-module .wf-readout:last-child {
+  border-bottom: 0;
+}
+.workflow-module .wf-readout dt {
+  margin-bottom: 3px;
+}
+.workflow-module .wf-readout dd,
+.workflow-module .wf-card .wf-readout dd {
+  margin: 0;
+  line-height: 1.5;
+}
+.workflow-module .wf-readout:focus-visible,
+.workflow-module .wf-add-details > summary:focus-visible {
+  outline: 2px solid var(--focus, var(--accent));
+  outline-offset: 3px;
+}
+.workflow-module .wf-empty-collection > .section-head {
+  margin-bottom: 0;
+}
+.workflow-module .wf-calculated {
+  font-weight: 600;
+}
+@media (max-width: 700px) {
+  .workflow-module .wf-detail-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .workflow-module .wf-hold-hint {
+    padding: 0 2px;
+    font-size: 11px;
+  }
+  .workflow-module .wf-details-card .wf-readout {
+    padding: 11px 1px;
+  }
+  .workflow-module .wf-readout dt {
+    font-size: 13px;
+  }
+  .workflow-module .wf-readout dd {
+    font-size: 14px;
+  }
+}

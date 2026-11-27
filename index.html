@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#123763" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Jobs" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script src="/appearance-init.js"></script>
+    <meta
+      name="description"
+      content="Your working day. All in one place. Jobs, plans, notes and timesheets for independent engineers."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jobs" />
+    <meta property="og:title" content="Jobs — Your working day. All in one place." />
+    <meta property="og:description" content="Jobs, plans, notes and timesheets for independent engineers. Works offline after preparation and keeps your jobs on your device." />
+    <meta property="og:url" content="https://william2535.github.io/Jobs/" />
+    <meta property="og:image" content="https://william2535.github.io/Jobs/jobs-share-banner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1734" />
+    <meta property="og:image:height" content="907" />
+    <meta property="og:image:alt" content="Jobs with a blue uptick logo and its mobile dashboard showing job progress, tools, plans and timesheets." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jobs — Your working day. All in one place." />
+    <meta name="twitter:description" content="Jobs, plans, notes and timesheets for independent engineers." />
+    <meta name="twitter:image" content="https://william2535.github.io/Jobs/jobs-share-banner.png" />
+    <meta name="twitter:image:alt" content="Jobs with a blue uptick logo and its mobile dashboard." />
+    <link rel="apple-touch-icon" sizes="180x180" href="./jobs-touch-colour.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" />
+    <title>Jobs · Field workspace</title>
+    <link rel="stylesheet" href="/jobs-intro.css" />
+    <script defer src="/jobs-intro.js"></script>
+  </head>
+  <body>
+    <section id="jobs-startup" role="dialog" aria-modal="true" aria-label="Welcome to Jobs" aria-describedby="jobs-intro-message" hidden>
+      <div class="jobs-intro-atmosphere" aria-hidden="true"><i></i><i></i></div>
+      <div class="jobs-intro-family" aria-hidden="true"><span class="jobs-intro-colours"><i></i><i></i><i></i></span> FIRE &amp; SECURITY APPS</div>
+      <div class="jobs-intro-scene">
+        <div class="jobs-intro-identity">
+          <div class="jobs-intro-lockup"><img src="./jobs-logo.webp" width="119" height="140" alt=""><h1>Jobs<span>SITE · WORKS · REPORTS</span></h1></div>
+          <p class="jobs-intro-headline" id="jobs-intro-message">Your working day.<br><strong>All in one place.</strong></p>
+        </div>
+        <div class="jobs-intro-cards" aria-label="Sites, visits and timesheets">
+          <div class="jobs-intro-card jobs-intro-site">
+            <span class="jobs-intro-card-number" aria-hidden="true">01 / ORGANISE</span>
+            <svg viewBox="0 0 100 72" fill="none" aria-hidden="true"><path d="M14 60V17h28V9h44v51H14Z" stroke="currentColor" stroke-width="2"/><path d="M42 17v18H14m28 0h20V9M42 35v25m20-25h24M62 47v13" stroke="currentColor" stroke-width="1.5" opacity=".6"/><path d="M20 25h9m36 22h12" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/><circle cx="65" cy="24" r="4" fill="#67e8f9"/></svg>
+            <strong>Site records</strong><span>Everything together</span>
+          </div>
+          <div class="jobs-intro-card jobs-intro-visit">
+            <span class="jobs-intro-card-number" aria-hidden="true">02 / GET IT DONE</span>
+            <svg viewBox="0 0 100 72" fill="none" aria-hidden="true"><rect x="24" y="9" width="52" height="54" rx="5" stroke="currentColor" stroke-width="2"/><path d="m33 27 3 3 6-7m-9 21 3 3 6-7" stroke="#96f279" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M50 27h16m-16 17h16M34 56h32" stroke="currentColor" stroke-width="2" opacity=".6"/><path d="M42 9h16" stroke="#96f279" stroke-width="4" stroke-linecap="round"/></svg>
+            <strong>Visits &amp; assets</strong><span>Ready for the field</span>
+          </div>
+          <div class="jobs-intro-card jobs-intro-time">
+            <span class="jobs-intro-card-number" aria-hidden="true">03 / KEEP TRACK</span>
+            <svg viewBox="0 0 100 72" fill="none" aria-hidden="true"><circle cx="50" cy="35" r="25" stroke="currentColor" stroke-width="2"/><path d="M50 19v17l11 7" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"/><path d="M50 13v3m0 39v3M28 35h3m38 0h3" stroke="currentColor" stroke-width="2" opacity=".6"/></svg>
+            <strong>Timesheets</strong><span>Your time, recorded</span>
+          </div>
+        </div>
+      </div>
+      <div class="jobs-intro-bottom"><p>BUILT FOR THE FIELD<span>Ready for your working day.</span></p><button type="button" data-intro-skip>Skip intro <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      <div class="jobs-intro-trace" aria-hidden="true"></div>
+    </section>
+    <div id="app"><div role="status"><h1>Jobs</h1><p>Opening your local workspace…</p><p>If Jobs does not open, reconnect and reload. Keep this browser’s website data to preserve your saved work.</p></div></div>
+    <noscript>Jobs needs JavaScript to open local records. Enable JavaScript for this website, then reload.</noscript>
+    <script type="module" src="/src/main.js"></script>
+  
+</body>
+</html>

@@ -1,0 +1,42 @@
+# Third-party and reference notes
+
+Jobs' importer and read-only renderer are independent implementations of the observed data contract. The full Zone Sketch application and proprietary symbol artwork are not included. At the owner's explicit request, eight original geometry routines are reused from the common engine under the unchanged proprietary licence in `vendor/zonesketch/LICENSE`; they are not relicensed by Jobs. Commit/line provenance and exact-source integrity tests are provided in that directory. The production build includes `zonesketch-LICENSE.txt` and `zonesketch-NOTICE.txt`. Reference commit and exact schema sources are documented in `zone-sketch.md`. FINDR implementation and instructions were read at the commit documented in `panel-pal-context.md`. The separately requested Toolbox reuse includes selected calculator modules, quantity parser, original guide pack, Resistor Lab and FESS learning components, with adapted interfaces documented below. The complete FINDR application is not included.
+
+Certificate PDFs use the bundled jsPDF runtime and embedded Open Sans fonts described below. Build/test dependencies are Vite (MIT), Playwright (Apache-2.0), fake-indexeddb (Apache-2.0), and Happy DOM (MIT), plus their locked transitive dependencies. Their original licences and notices remain in installed packages; no licence files were modified. The committed icon is an original simple geometric clipboard/check drawing. No remote fonts or assets are required.
+
+The repository owner's pre-existing files and instructions are retained. The supplied real customer drawing is not included in the generated static build or automated fixtures. Do not add customer saves, manuals or photographs to `public/` or test fixtures.
+
+## Certificate PDF runtime and fonts
+
+The certificate PDF feature uses **jsPDF 4.2.1** (MIT), bundled locally with its locked runtime dependencies. Included optional build paths use html2canvas (MIT), canvg (MIT) and DOMPurify (Apache-2.0 or MPL-2.0). Dependency licences, original copyright notices and jsPDF's bundled-component notices are distributed in [`pdf-runtime-NOTICE.txt`](../public/pdf-runtime-NOTICE.txt), including conservative notices for optional dependencies even when a build removes unused paths. The same file is included in the public release and offline cache; no npm install or CDN access is required on an engineer's device.
+
+PDF text embeds unmodified **Open Sans Regular and Semibold** TrueType fonts from opensans.com, with Google Corporation's original copyright and Apache-2.0 licence. The full licence is retained in [`src/vendor/OPEN-SANS-LICENSE.txt`](../src/vendor/OPEN-SANS-LICENSE.txt) and the public PDF runtime notice. The fonts render certificate text; they do not introduce third-party branding, certification marks or accreditation. PDF generation and sharing do not upload job records to the library authors or font provider.
+
+
+## Jobs header artwork
+
+The compact workspace and visit header uses `public/jobs-logo.webp`, copied unchanged from `assets/jobs-authentic.webp` in `william2535/FIRE-SECURITY-APP-PORTAL` at commit `638c1f0281de4ba638ad8576b7dd65f32dd1270d` ("Add supplied original Jobs logo asset"). This is the owner's supplied multicolour clipboard/check logo, rendered in its original proportions and cached with the app for offline use. SHA-256: `746967e111910732056aa3a435755290a34885ebf0934d9b7b69d45beae2cdba`. The artwork is not relicensed. Existing installation icons remain separate.
+
+## FINDR launcher artwork
+
+The owner-requested mobile launcher uses `public/findr-logo.png`, copied unchanged from FINDR `public/app/icons/icon-192.png` at commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. SHA-256: `b42a020989445ecabf16bd74d431c866353c28da60b3cc6351a12214a6f23dbb`. This is the owner's FINDR branding, not a newly open-source-licensed component; no licence is changed or granted by its inclusion. It is cached with the Jobs shell for offline display. The shortcut opens the existing FINDR app at `https://findr-fault-finder.floodyyy21.chatgpt.site/app/` in a separate tab; it does not transfer job data or implement the future Panel Pal adapter. This launcher does not bundle the FINDR app. The separate toolbox components are documented below.
+
+## Zone Sketch launcher artwork
+
+The mobile Zone Sketch button uses `public/zone-sketch-logo.png`, copied unchanged from `assets/zone-sketch-complete-house-v2.png` at Zone Sketch commit `dca2eff063f52a9980c2aed255879a65cc579379`. This is the original coloured house-and-flame logo already used by that app, included at the owner's explicit request. SHA-256: `330941de836307d0b0f47d3e9ea49b43805677626110f5d774f7912ea4b782d1`. The existing proprietary licence remains intact; the artwork is not relicensed. The source/hash is also retained in `vendor/zonesketch/PROVENANCE.json` and the distributed notice. The logo is cached locally with the app shell.
+
+## FINDR toolbox and on-site pack
+
+At the owner's explicit request, `vendor/findr-tools/` includes FINDR's four Toolbox calculators and six on-site pack calculators, plus `onsite-v1/pack.json`, six original SVG picture guides and the original pack manifest. The two calculator modules and pack assets are byte-identical to source commit `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. The manifest retains its original pack release reference `d6cfb85034994f73cbbf6b24a8490a9002ed7c62` and content hashes. Jobs bundles the pack for local use; it does not reuse FINDR's downloader.
+
+The core calculator dependency is a narrow, unchanged extraction of `parseDiagnosticQuantity` and its `blank`, `r` and `unitSets` helpers, including the original caution. That dependency extraction includes no field engine/model, application UI, storage, service worker, models or user manuals. The separate Jobs calculator interface adapts FINDR's form/rendering code for Jobs navigation and its own local draft storage. Exact source paths, extraction lines, byte counts and original/copied SHA-256 hashes are recorded in [`PROVENANCE.json`](../vendor/findr-tools/PROVENANCE.json).
+
+Original FINDR ownership and source publishers' rights remain intact. No source root licence grants a new project-wide open-source licence for these components, and this reuse applies none. The pack's original ownership statement, calculator warnings, guide limitations and source references are preserved. Referenced third-party pages/manuals are not redistributed. The production notice is [`findr-tools-NOTICE.txt`](../public/findr-tools-NOTICE.txt). Calculator outputs remain estimates/arithmetic, separate from engineer results and compliance declarations.
+
+## FINDR Resistor Lab and FESS practice
+
+At the owner's explicit request, `vendor/findr-extras/` reuses the Resistor Lab and FESS components from the same FINDR commit, `8bdd8b03feb8babd6266b80b57dbc5d53efeadb2`. This includes the resistor calculation/search engine, quiz and paper engines, audio and paper-view helpers, and the original FESS data containing 196 questions, 31 subject quizzes, 20 mocks and 10 practice papers. The original engines, helpers and question data are retained; adapted controllers support local Jobs routing, injected storage, component cleanup and unsaved-edit protection. Styles are scoped to the Jobs interface. File-level adaptation and integrity details are recorded in the [extras provenance](../vendor/findr-extras/PROVENANCE.json).
+
+Jobs supplies a separate `jobs-toolbox-extras` IndexedDB store for resistor drafts and learning progress. The reused controllers do not write to job results or import FINDR's manuals, Panel Pals, model data or saved user records. The FINDR repository and deployment are unchanged by this reuse.
+
+Existing FINDR ownership and source publishers' rights are preserved; no new licence is granted by copying these components. Question explanations and resource references retain their source qualifications. The practice papers remain unofficial: the original 60-minute practice timer is distinguished from the cited Highfield v5.0 75-minute assessment allowance. Publisher papers, standards text, accreditation or permission to issue certificates are not implied by this learning content.
