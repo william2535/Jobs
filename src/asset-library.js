@@ -40,6 +40,42 @@ const blankResult = assetId => ({ id: id(), assetId, state: 'Not tested', observ
 const register = () => ({ id: id(), revision: 'Register 1', kind: 'working', floors: [], assets: [], source: null, issuedSnapshots: [] });
 const drawingFor = (state, job) => job.siteId == null ? job.assetRegister : state.sites.find(site => site.id === job.siteId)?.drawings.find(drawing => drawing.id === job.drawingId);
 
+const referenceKey = value => String(value || '').trim().toLowerCase();
+function assetQuantity(value) {
+  if (!Number.isInteger(value) || value < 1 || value > 100)
+    throw Error('Choose a whole number of assets from 1 to 100.');
+  return value;
+}
+function incrementReference(reference) {
+  const number = reference.match(/\d+$/u)?.[0];
+  const next = number
+    ? reference.slice(0, -number.length) + (BigInt(number) + 1n).toString().padStart(number.length, '0')
+    : `${reference} 001`;
+  if (next.length > 200) throw Error('Reference is too long to number automatically. Shorten it first.');
+  return next;
+}
+
+/** The same collision-safe sequence is used by the preview and the saved batch. */
+export function previewAssetReferences(assets, firstReference, quantity = 1) {
+  assetQuantity(quantity);
+  let reference = text(firstReference, 'Reference', 200, true);
+  const used = new Set(assets.map(asset => referenceKey(asset.reference)));
+  const references = [];
+  while (references.length < quantity) {
+    if (!used.has(referenceKey(reference))) {
+      references.push(reference);
+      used.add(referenceKey(reference));
+    }
+    if (references.length < quantity) reference = incrementReference(reference);
+  }
+  return references;
+}
+
+/** Start after the selected device, preserving its tag prefix and number padding. */
+export function nextAssetReference(assets, sourceReference) {
+  return previewAssetReferences(assets, incrementReference(text(sourceReference, 'Reference', 200, true)))[0];
+}
+
 /** Adding unplaced equipment does not change any plan pixels. Keep the engine's
  * actual PNG sheets, with their original provenance, rather than rerasterizing. */
 function retainPlanPreviews(revised, previous) {
@@ -66,46 +102,84 @@ function manualAsset(values, drawing) {
     x: null, y: null, photos: [], drawingStatus: 'notRecorded', origin: 'manual' };
 }
 
-export function addJobAsset(state, jobId, values) {
-  const next = clone(state), job = next.jobs.find(item => item.id === jobId);
+function assetTarget(state, jobId, quantity) {
+  assetQuantity(quantity);
+  const job = state.jobs.find(item => item.id === jobId);
   if (!job) throw Error('Choose a job before adding equipment.');
-  let drawing = drawingFor(next, job);
+  let drawing = drawingFor(state, job);
   if (job.siteId == null) {
     if (job.drawingId != null) throw Error('The standalone job has an invalid drawing reference.');
     drawing ??= register();
   } else if (!drawing) throw Error('This job’s drawing could not be found.');
-  if (drawing.assets.length >= 50000) throw Error('A job can contain at most 50,000 assets.');
-  const asset = manualAsset(values, drawing);
-  if (drawing.assets.some(item => String(item.reference || '').trim().toLocaleLowerCase() === asset.reference.toLocaleLowerCase()))
-    throw Error('This reference is already used in the job. Give the new asset its own reference.');
+  if (drawing.assets.length + quantity > 50000) throw Error('A job can contain at most 50,000 assets.');
+  return { job, drawing };
+}
+
+/** All batch validation happens before this single revision is applied. */
+function commitAssets(state, job, drawing, assets) {
   if (job.siteId == null) {
-    drawing.assets.push(asset);
-    drawing.revision = `Register ${drawing.assets.length}`;
-    job.assetRegister = drawing;
-    job.results.push(blankResult(asset.id));
-    job.revision++; job.updatedAt = now();
-    return { state: next, job, asset };
+    const next = clone(state), updatedJob = next.jobs.find(item => item.id === job.id);
+    const updatedDrawing = updatedJob.assetRegister || drawing;
+    updatedDrawing.assets.push(...assets);
+    updatedDrawing.revision = `Register ${updatedDrawing.assets.length}`;
+    updatedJob.assetRegister = updatedDrawing;
+    updatedJob.results.push(...assets.map(asset => blankResult(asset.id)));
+    updatedJob.revision++; updatedJob.updatedAt = now();
+    return { state: next, job: updatedJob, asset: assets[0], assets };
   }
   const revised = clone(drawing);
   revised.id = id(); revised.basedOnDrawingId = drawing.id; revised.kind = 'working';
   revised.revision = `${drawing.revision} · Assets ${job.revision + 1}`;
-  revised.assets.push(asset);
+  revised.assets.push(...assets);
   retainPlanPreviews(revised, drawing);
-  const updated = applyDrawingToJob(next, jobId, revised);
-  return { state: updated, job: updated.jobs.find(item => item.id === jobId), asset };
+  const updated = applyDrawingToJob(state, job.id, revised);
+  const updatedJob = updated.jobs.find(item => item.id === job.id);
+  const added = drawingFor(updated, updatedJob).assets.slice(-assets.length);
+  return { state: updated, job: updatedJob, asset: added[0], assets: added };
+}
+
+function firstReference(values) {
+  const info = specification(values);
+  const reference = text(values.reference ?? '', 'Reference', 200);
+  return reference || `${(info.typeName || info.type).slice(0, 196).trimEnd()} 001`;
+}
+
+/** Create up to 100 fresh, unplaced assets in one all-or-nothing working revision. */
+export function addJobAssets(state, jobId, values, quantity = 1) {
+  const { job, drawing } = assetTarget(state, jobId, quantity);
+  const references = previewAssetReferences(drawing.assets, firstReference(values), quantity);
+  const assets = references.map(reference => manualAsset({ ...values, reference }, drawing));
+  return commitAssets(state, job, drawing, assets);
+}
+
+/** Keep explicit single-add collision checks; a blank tag is generated automatically. */
+export function addJobAsset(state, jobId, values) {
+  const { job, drawing } = assetTarget(state, jobId, 1);
+  const first = firstReference(values);
+  const asset = manualAsset({ ...values, reference: first }, drawing);
+  if (values.reference?.trim() && drawing.assets.some(item => referenceKey(item.reference) === referenceKey(first)))
+    throw Error('This reference is already used in the job. Give the new asset its own reference.');
+  [asset.reference] = previewAssetReferences(drawing.assets, first);
+  return commitAssets(state, job, drawing, [asset]);
 }
 
 /** Duplication copies a specification, never a source ID, position, serial or visit evidence. */
-export function duplicateJobAsset(state, jobId, assetId, values = {}) {
+export function duplicateJobAssets(state, jobId, assetId, values = {}, quantity = 1) {
+  assetQuantity(quantity);
   const job = state.jobs.find(item => item.id === jobId);
-  const asset = job && drawingFor(state, job)?.assets.find(item => item.id === assetId);
+  const drawing = job && drawingFor(state, job);
+  const asset = drawing?.assets.find(item => item.id === assetId);
   if (!asset) throw Error('Choose an existing asset to duplicate.');
-  const used = new Set(drawingFor(state, job).assets.map(item => String(item.reference || '').trim().toLocaleLowerCase()));
-  const base = (asset.reference || asset.typeName || asset.type).trim();
-  let suffix = ' copy', counter = 1;
-  while (used.has(`${base.slice(0, 200 - suffix.length)}${suffix}`.toLocaleLowerCase())) suffix = ` copy ${++counter}`;
-  const reference = `${base.slice(0, 200 - suffix.length)}${suffix}`;
-  return addJobAsset(state, jobId, { ...specification(asset), reference, ...values });
+  if (!values || typeof values !== 'object' || Array.isArray(values)) throw Error('Choose an equipment specification.');
+  const override = text(values.reference ?? '', 'Reference', 200);
+  const reference = override || nextAssetReference(drawing.assets, asset.reference?.trim() || asset.typeName || asset.type);
+  return addJobAssets(state, jobId, {
+    ...specification(asset), location: asset.location || '', floorId: asset.floorId ?? null, ...values, reference,
+  }, quantity);
+}
+
+export function duplicateJobAsset(state, jobId, assetId, values = {}) {
+  return duplicateJobAssets(state, jobId, assetId, values);
 }
 
 /** Attach a standalone register by retaining it as a historical drawing and making

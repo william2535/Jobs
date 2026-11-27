@@ -35,7 +35,7 @@ import { renderDeviceRemarks, renderDeviceRemarkReport, renderRemarkProducts, re
 import { renderJobNotes, validateNotesDocument } from "./job-notes.js";
 import { renderAssetsWorkspace } from "./assets-workspace.js";
 import "./assets-workspace.css";
-import { addJobAsset, duplicateJobAsset, saveAssetTemplate, validateAssetTemplates, attachAssetJobToSite } from "./asset-library.js";
+import { addJobAssets, duplicateJobAssets, saveAssetTemplate, validateAssetTemplates, attachAssetJobToSite } from "./asset-library.js";
 import { renderJobSettings, effectiveJob, adoptSiteSettings, captureJobOverrides } from "./job-settings.js";
 import "./hold-to-edit.css";
 import { attachHoldToEdit } from "./hold-to-edit.js";
@@ -317,7 +317,7 @@ function resetDeviceBrowser() {
 }
 function markDirty(value = true) {
   dirty = value;
-  saveLabel = value ? "Unsaved changes" : draftJob ? "Not saved yet" : "Saved on this device";
+  saveLabel = recoverySnapshot ? "Save failed — retry this form" : value ? "Unsaved changes" : draftJob ? "Not saved yet" : "Saved on this device";
   updateStatus();
 }
 function workspaceSnapshot() {
@@ -970,8 +970,8 @@ function render() {
       templates: state.assetTemplates || [],
       initialViewState: assetViews.get(rawJob.id),
       renderAssetCard: asset => planAssetCard(asset, { issued: false }),
-      onCreate: values => saveAssetChange(next => addJobAsset(next, rawJob.id, values), "Asset saved.", true),
-      onDuplicate: (assetId, values) => saveAssetChange(next => duplicateJobAsset(next, rawJob.id, assetId, values), "Asset duplicated. Ready for its own inspection.", true),
+      onCreate: (values, quantity = 1) => saveAssetChange(next => addJobAssets(next, rawJob.id, values, quantity), quantity === 1 ? "Asset saved." : `${quantity} assets saved with their own references.`, true),
+      onDuplicate: (assetId, values, quantity = 1) => saveAssetChange(next => duplicateJobAssets(next, rawJob.id, assetId, values, quantity), quantity === 1 ? "Asset duplicated. Ready for its own inspection." : `${quantity} duplicates saved. Each is ready for its own inspection.`, true),
       onSaveTemplate: asset => saveAssetChange(next => ({ ...next, assetTemplates: saveAssetTemplate(next.assetTemplates, asset) }), "Asset saved to favourites."),
       onRemoveTemplate: templateId => saveAssetChange(next => ({ ...next, assetTemplates: validateAssetTemplates((next.assetTemplates || []).filter(item => item.id !== templateId)) }), "Favourite removed."),
       onViewPlan: () => runTask(() => action("tab:Plan")),

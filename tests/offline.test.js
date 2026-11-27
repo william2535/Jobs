@@ -33,6 +33,13 @@ function fixture({ controlled = true } = {}) {
   return { container, registration, worker, statuses, updates, requests, options };
 }
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function until(check) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (check()) return;
+    await delay(2);
+  }
+  assert.fail('Offline recovery did not complete.');
+}
 
 test('first installation requests a missed claim and verifies the cached current build before readiness', async t => {
   const f = fixture({ controlled: false });
@@ -71,7 +78,7 @@ test('a redundant first-install worker fails promptly and a later retry can prep
 });
 
 test('registration and unresponsive legacy workers time out rather than showing a false ready state', async t => {
-  const stalled = fixture(); stalled.container.register = () => new Promise(() => {});
+  const stalled = fixture({ controlled: false }); stalled.container.register = () => new Promise(() => {});
   const api = startOffline({ ...stalled.options, timeoutMs: 15 }); t.after(() => api.dispose());
   assert.equal(await api.retry(), false);
   assert.match(stalled.statuses.at(-1), /registration timed out/);
@@ -80,6 +87,176 @@ test('registration and unresponsive legacy workers time out rather than showing 
   assert.equal(await legacy.retry(), false);
   assert.match(old.statuses.at(-1), /Close other Jobs windows/);
   assert.equal(old.statuses.includes('Ready offline'), false);
+});
+
+test('an installed current cache is verified without waiting for a hung or failed network registration', async t => {
+  for (const register of [() => new Promise(() => {}), () => Promise.reject(Error('Network is offline.'))]) {
+    const f = fixture(); f.container.register = register;
+    const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+    assert.equal(await api.retry(), true);
+    assert.deepEqual(f.requests, ['JOBS_CACHE_STATUS']);
+    await delay(20);
+    assert.equal(f.statuses.at(-1), 'Ready offline');
+    assert.equal(f.statuses.some(value => /registration timed out|Network is offline/.test(value)), false);
+  }
+});
+
+test('a retained active registration can claim and verify offline while registration is stalled', async t => {
+  const f = fixture({ controlled: false });
+  f.container.register = () => new Promise(() => {});
+  f.container.getRegistration = async () => f.registration;
+  const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+  assert.equal(await api.retry(), true);
+  assert.equal(f.container.controller, f.worker);
+  assert.deepEqual(f.requests, ['JOBS_CLAIM_CLIENT', 'JOBS_CACHE_STATUS']);
+});
+
+test('late first registration recovers a timed-out startup only after cache and build verification', async t => {
+  const f = fixture({ controlled: false }); let resolveRegistration;
+  f.container.register = () => new Promise(resolve => { resolveRegistration = resolve; });
+  const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+  assert.equal(await api.retry(), false);
+  assert.match(f.statuses.at(-1), /registration timed out/);
+  assert.equal(f.statuses.includes('Ready offline'), false);
+  resolveRegistration(f.registration);
+  await until(() => f.statuses.at(-1) === 'Ready offline');
+  assert.equal(f.container.controller, f.worker);
+  assert.ok(f.requests.includes('JOBS_CACHE_STATUS'));
+});
+
+test('an active worker which finishes activating after the preparation timeout is reverified', async t => {
+  const f = fixture({ controlled: false });
+  f.worker.state = 'activating'; f.container.ready = new Promise(() => {});
+  const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+  assert.equal(await api.retry(), false);
+  assert.match(f.statuses.at(-1), /preparation timed out/);
+  f.worker.state = 'activated'; f.worker.dispatchEvent(new Event('statechange'));
+  await until(() => f.statuses.at(-1) === 'Ready offline');
+  assert.equal(f.container.controller, f.worker);
+});
+
+test('an existing controller never substitutes for missing, unresponsive or mismatched cache evidence', async t => {
+  for (const kind of ['missing', 'unresponsive', 'mismatched']) {
+    const f = fixture(); f.container.register = () => new Promise(() => {});
+    if (kind === 'missing') { f.worker.ready = false; f.worker.repair = false; }
+    if (kind === 'unresponsive') f.worker.reply = false;
+    if (kind === 'mismatched') f.worker.buildId = 'previous-build';
+    const api = startOffline({ ...f.options, timeoutMs: 15, messageTimeoutMs: 10 }); t.after(() => api.dispose());
+    assert.equal(await api.retry(), false);
+    assert.equal(f.statuses.includes('Ready offline'), false);
+    assert.doesNotMatch(f.statuses.at(-1), /registration timed out/);
+    if (kind === 'mismatched') assert.equal(f.requests.includes('JOBS_PREPARE_OFFLINE'), false);
+  }
+});
+
+test('late registration completion exposes an update without erasing readiness or automatically activating it', async t => {
+  const f = fixture(); let resolveRegistration;
+  f.container.register = () => new Promise(resolve => { resolveRegistration = resolve; });
+  const waiting = new Target(); waiting.state = 'installed'; let activations = 0;
+  waiting.postMessage = () => { activations++; };
+  const api = startOffline(f.options); t.after(() => api.dispose());
+  assert.equal(await api.retry(), true);
+  f.registration.waiting = waiting; resolveRegistration(f.registration);
+  await until(() => f.updates.at(-1)?.available === true);
+  assert.equal(f.statuses.at(-1), 'Ready offline');
+  assert.equal(activations, 0);
+});
+
+test('a deliberate update check can find the existing registration after a cached offline startup', async t => {
+  const f = fixture(); let checks = 0;
+  f.container.register = () => new Promise(() => {});
+  f.container.getRegistration = async () => f.registration;
+  f.registration.update = async () => { checks++; throw Error('Network is offline.'); };
+  const api = startOffline(f.options); t.after(() => api.dispose());
+  assert.equal(await api.retry(), true);
+  assert.equal(await api.checkForUpdates(), false);
+  assert.equal(checks, 1);
+  assert.match(f.statuses.at(-1), /^Ready offline · update check unavailable/);
+});
+
+test('a late first install with incomplete cache does not turn its timeout into a false success', async t => {
+  const f = fixture({ controlled: false }); let resolveRegistration;
+  f.worker.ready = false; f.worker.repair = false;
+  f.container.register = () => new Promise(resolve => { resolveRegistration = resolve; });
+  const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+  assert.equal(await api.retry(), false);
+  resolveRegistration(f.registration);
+  await until(() => f.statuses.at(-1) === 'Device cache is full.');
+  assert.equal(f.statuses.includes('Ready offline'), false);
+});
+
+test('disposing before late registration completion prevents recovery and listener installation', async () => {
+  const f = fixture({ controlled: false }); let resolveRegistration;
+  f.container.register = () => new Promise(resolve => { resolveRegistration = resolve; });
+  const api = startOffline({ ...f.options, timeoutMs: 15 });
+  assert.equal(await api.retry(), false);
+  api.dispose(); const count = f.statuses.length;
+  resolveRegistration(f.registration); await delay(5);
+  assert.equal(f.statuses.length, count);
+  assert.equal(f.registration.listeners.size, 0);
+  assert.equal(f.container.listeners.size, 0);
+  assert.equal(f.requests.length, 0);
+});
+
+test('a previous worker reply cannot announce readiness after the page controller changes', async t => {
+  const f = fixture(); let oldReply;
+  f.worker.postMessage = (message, ports) => { oldReply = ports[0]; };
+  const replacement = new Target(); replacement.state = 'activated';
+  replacement.postMessage = (message, ports) => ports[0].postMessage({ ready: false, buildId: 'different-build' });
+  const api = startOffline(f.options); t.after(() => api.dispose());
+  const initial = api.retry(); await until(() => !!oldReply);
+  f.registration.active = replacement; f.container.controller = replacement;
+  f.container.dispatchEvent(new Event('controllerchange'));
+  oldReply.postMessage({ ready: true, buildId: 'test-build' });
+  assert.equal(await initial, false);
+  await until(() => /This app version is not prepared offline/.test(f.statuses.at(-1)));
+  assert.equal(f.statuses.includes('Ready offline'), false);
+});
+
+test('a controller change invalidates earlier verified readiness and checks the replacement cache', async t => {
+  const f = fixture(); const api = startOffline(f.options); t.after(() => api.dispose());
+  assert.equal(await api.retry(), true);
+  const requests = [], replacement = new Target(); replacement.state = 'activated';
+  replacement.postMessage = (message, ports) => {
+    requests.push(message.type);
+    ports[0].postMessage({ ready: false, buildId: 'test-build', error: 'Replacement cache is incomplete.' });
+  };
+  f.registration.active = replacement; f.container.controller = replacement;
+  f.container.dispatchEvent(new Event('controllerchange'));
+  await until(() => f.statuses.at(-1) === 'Replacement cache is incomplete.');
+  assert.deepEqual(requests, ['JOBS_CACHE_STATUS', 'JOBS_PREPARE_OFFLINE']);
+});
+
+test('retiring an old active worker is not labelled as a failed update download', async t => {
+  const f = fixture(); const api = startOffline(f.options); t.after(() => api.dispose());
+  assert.equal(await api.retry(), true);
+  f.worker.state = 'redundant'; f.worker.dispatchEvent(new Event('statechange'));
+  assert.equal(f.statuses.at(-1), 'Ready offline');
+  const installing = new Target(); installing.state = 'installing';
+  f.registration.installing = installing; f.registration.dispatchEvent(new Event('updatefound'));
+  installing.state = 'redundant'; installing.dispatchEvent(new Event('statechange'));
+  assert.match(f.statuses.at(-1), /Ready offline · update download failed/);
+});
+
+test('explicit retry supersedes hung registration and ignores obsolete registration and discovery results', async t => {
+  const f = fixture({ controlled: false });
+  let registrations = 0, discoveries = 0, oldRegister, oldDiscovery, currentChecks = 0, obsoleteChecks = 0;
+  f.container.register = () => ++registrations === 1 ? new Promise(resolve => { oldRegister = resolve; }) : Promise.resolve(f.registration);
+  f.container.getRegistration = () => ++discoveries === 1 ? new Promise(resolve => { oldDiscovery = resolve; }) : Promise.resolve(f.registration);
+  f.registration.update = async () => { currentChecks++; };
+  const api = startOffline({ ...f.options, timeoutMs: 15 }); t.after(() => api.dispose());
+  assert.equal(await api.retry(), false);
+  assert.match(f.statuses.at(-1), /registration timed out/);
+  assert.equal(await api.retry(), true);
+  assert.equal(registrations, 2);
+  const obsolete = new Target(); obsolete.active = f.worker; obsolete.waiting = new Target();
+  obsolete.update = async () => { obsoleteChecks++; };
+  oldRegister(obsolete); oldDiscovery(obsolete); await delay(5);
+  assert.equal(f.statuses.at(-1), 'Ready offline');
+  assert.equal(f.updates.at(-1).available, false);
+  assert.equal(await api.checkForUpdates(), false);
+  assert.equal(currentChecks, 1); assert.equal(obsoleteChecks, 0);
+  assert.equal(obsolete.listeners.size, 0);
 });
 
 test('an active cache for a different build is not reported ready for the current app', async t => {

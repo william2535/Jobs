@@ -43,7 +43,10 @@ export function startOffline({
     return { retry, checkForUpdates, applyUpdate: checkForUpdates, dispose() { disposed = true; } };
   }
   let disposed = false, registration = null, inFlight = null, prepared = false;
+  let registrationAttempt = null, recoverOnRegistration = false, recoveryQueued = false, applyingUpdate = false;
+  let registrationGeneration = 0, controllerGeneration = 0;
   let watchers = [];
+  const lifecycle = [];
   const pending = new Set();
   const status = message => { if (!disposed) onStatus(message); };
   const update = value => { if (!disposed) onUpdate(value); };
@@ -53,7 +56,8 @@ export function startOffline({
   };
   function bounded(promise, message, ms = timeoutMs) {
     return new Promise((resolve, reject) => {
-      const finish = (method, value) => { clearTimeout(task.timer); pending.delete(task); method(value); };
+      let settled = false;
+      const finish = (method, value) => { if (settled) return; settled = true; clearTimeout(task.timer); pending.delete(task); method(value); };
       const task = { cancel: () => finish(reject, Error('Offline preparation stopped.')) };
       task.timer = setTimeout(() => finish(reject, Error(message)), ms);
       pending.add(task);
@@ -76,22 +80,74 @@ export function startOffline({
   function announceUpdate() {
     update({ available: !!registration?.waiting, blocked: false, message: registration?.waiting ? 'An update is ready. Save your work before applying it.' : '' });
   }
+  function recover() {
+    if (disposed || prepared || applyingUpdate || recoveryQueued) return;
+    recoveryQueued = true;
+    queueMicrotask(async () => {
+      if (inFlight) await inFlight;
+      recoveryQueued = false;
+      if (!disposed && !prepared && !applyingUpdate) void beginPreparation(false);
+    });
+  }
   function observe() {
     for (const remove of watchers) remove(); watchers = [];
     const seen = new Set();
     const inspect = () => {
-      const worker = registration?.installing;
-      if (worker && !seen.has(worker)) {
+      for (const worker of [registration?.installing, registration?.active]) if (worker && !seen.has(worker)) {
         seen.add(worker);
+        let previousState = worker.state;
         listen(worker, 'statechange', () => {
+          const failedInstallation = worker.state === 'redundant' && ['installing', 'activating'].includes(previousState);
+          previousState = worker.state;
           announceUpdate();
-          if (worker.state === 'redundant' && prepared) status('Ready offline · update download failed; try checking again.');
+          if (worker.state === 'activated') recover();
+          if (failedInstallation && prepared) status('Ready offline · update download failed; try checking again.');
         }, watchers);
       }
       announceUpdate();
     };
     listen(registration, 'updatefound', inspect, watchers);
     inspect();
+  }
+  function retainRegistration(value) {
+    if (disposed || !value) return value;
+    if (registration !== value) { registration = value; observe(); }
+    else announceUpdate();
+    if (recoverOnRegistration) { recoverOnRegistration = false; recover(); }
+    return value;
+  }
+  function registerInBackground(fresh = false) {
+    if (registrationAttempt && !fresh) return registrationAttempt;
+    // Registration can perform a network update check even when an installed
+    // worker already controls this page. It must not gate verified offline use.
+    const attempt = { generation: ++registrationGeneration };
+    attempt.promise = Promise.resolve().then(() => serviceWorker.register('./sw.js', { updateViaCache: 'none' }));
+    registrationAttempt = attempt;
+    attempt.promise.then(value => {
+      if (attempt.generation !== registrationGeneration) return;
+      registrationAttempt = null;
+      retainRegistration(value);
+    }, () => { if (registrationAttempt === attempt) registrationAttempt = null; });
+    return attempt;
+  }
+  async function findRegistration(attempt) {
+    if (registration) return registration;
+    const existing = typeof serviceWorker.getRegistration === 'function'
+      ? Promise.resolve().then(() => serviceWorker.getRegistration()).then(value => {
+        if (!value) throw Error('No installed offline worker was found.');
+        if (attempt.generation !== registrationGeneration) throw Error('Offline preparation was superseded by a retry.');
+        return retainRegistration(value);
+      }) : null;
+    try {
+      const value = await bounded(existing ? Promise.any([attempt.promise, existing]) : attempt.promise, 'Offline registration timed out. Retry online.');
+      if (attempt.generation !== registrationGeneration) throw Error('Offline preparation was superseded by a retry.');
+      return retainRegistration(value);
+    } catch (error) {
+      // A slow browser registration can still complete after our UI timeout.
+      // Recheck its cache then, rather than retaining a stale failure forever.
+      recoverOnRegistration = true;
+      throw error instanceof AggregateError ? error.errors[0] : error;
+    }
   }
   async function waitForActive() {
     if (registration.active?.state === 'activated') return registration.active;
@@ -131,23 +187,37 @@ export function startOffline({
     waiting.catch(() => {});
     return { promise: waiting, cancel };
   }
-  async function prepare() {
+  async function prepare(freshRegistration = false) {
     if (disposed) return false;
     if (!serviceWorker) { status('Offline use requires HTTPS and a browser that supports installation.'); return false; }
     prepared = false;
     status('Preparing offline use…');
+    const attempt = registerInBackground(freshRegistration);
     try {
-      registration = await bounded(serviceWorker.register('./sw.js', { updateViaCache: 'none' }), 'Offline registration timed out. Retry online.');
-      if (disposed) return false;
-      observe();
-      const active = await waitForActive();
+      // The controller serves this open app, so it is the authoritative cache
+      // to verify. A registration result is unnecessary on an offline reopen.
+      let active = serviceWorker.controller;
+      if (!active) {
+        await findRegistration(attempt);
+        if (disposed) return false;
+        active = await waitForActive();
+      }
       if (!serviceWorker.controller) {
         const change = controllerChange(null);
         active.postMessage({ type: 'JOBS_CLAIM_CLIENT' });
         if (!await change.promise) return false;
       }
+      active = serviceWorker.controller;
+      const generation = controllerGeneration;
+      const checkController = () => {
+        if (serviceWorker.controller !== active || controllerGeneration !== generation)
+          throw Error('The offline worker changed. Rechecking offline readiness…');
+      };
       let result = await request(active, 'JOBS_CACHE_STATUS');
+      checkController();
+      if (expectedBuildId && result?.buildId && result.buildId !== expectedBuildId) throw Error('This app version is not prepared offline. Apply the available update, or close Jobs windows and reopen online.');
       if (!result?.ready) result = await request(active, 'JOBS_PREPARE_OFFLINE', timeoutMs);
+      checkController();
       if (!result?.ready) throw Error(result?.error || 'Required offline files are missing. Retry online to prepare them.');
       if (expectedBuildId && result.buildId !== expectedBuildId) throw Error('This app version is not prepared offline. Apply the available update, or close Jobs windows and reopen online.');
       prepared = true;
@@ -156,15 +226,19 @@ export function startOffline({
       return true;
     } catch (error) { status(error.message || 'Offline preparation failed. Retry online.'); return false; }
   }
-  function retry() {
+  function beginPreparation(freshRegistration) {
     if (disposed) return Promise.resolve(false);
-    if (!inFlight) inFlight = prepare().finally(() => { inFlight = null; });
+    if (!inFlight) inFlight = prepare(freshRegistration).finally(() => { inFlight = null; });
     return inFlight;
   }
+  // Explicit retries can replace a browser registration promise that never
+  // settles. Generation checks prevent its eventual result replacing the retry.
+  function retry() { return beginPreparation(true); }
   async function checkForUpdates() {
     if (disposed) return false;
-    if (!registration && !await retry()) return false;
     try {
+      if (!registration) await findRegistration(registerInBackground());
+      if (disposed) return false;
       await bounded(registration.update(), 'The update check timed out. Try again online.');
       announceUpdate();
       return !!registration.waiting;
@@ -174,6 +248,7 @@ export function startOffline({
     if (disposed || !registration?.waiting) return false;
     const worker = registration.waiting;
     const change = controllerChange(serviceWorker.controller);
+    applyingUpdate = true;
     try {
       const result = await request(worker, 'JOBS_ACTIVATE_UPDATE');
       if (!result?.activated) {
@@ -185,16 +260,24 @@ export function startOffline({
       if (changed) { update({ available: false, blocked: false, message: '' }); status('Update applied. Reopening Jobs…'); }
       return changed;
     } catch (error) { change.cancel(); status(error.message); return false; }
+    finally { applyingUpdate = false; }
   }
   const api = {
     retry, checkForUpdates, applyUpdate,
     dispose() {
       disposed = true;
       for (const remove of watchers) remove(); watchers = [];
+      for (const remove of lifecycle) remove();
       for (const task of [...pending]) task.cancel();
     },
   };
+  listen(serviceWorker, 'controllerchange', () => {
+    controllerGeneration++;
+    if (applyingUpdate) return;
+    prepared = false;
+    recover();
+  }, lifecycle);
   // Let the caller retain the controller before callbacks run.
-  queueMicrotask(() => { if (!disposed) retry(); });
+  queueMicrotask(() => { if (!disposed) beginPreparation(false); });
   return api;
 }
