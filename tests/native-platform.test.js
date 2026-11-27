@@ -113,6 +113,82 @@ test('binary PDFs survive native chunks with their MIME and use the share action
   }
 });
 
+test('native sharing keeps job, day-pack and receipt JSON bytes and propagates the actual share result once', async t => {
+  for (const name of ['synthetic.jobs.json', 'synthetic.jobsday.json', 'synthetic.jobsreceipt.json']) {
+    const text = JSON.stringify({ name, engineer: 'José 🛠', notes: 'Fire 🔥 é µ 𠮷\r\n'.repeat(45000) });
+    const expectedBytes = Buffer.from(text, 'utf8');
+    for (const status of ['shared', 'saved', 'cancelled']) {
+      const chunks = []; let written = 0, shareRequest;
+      const f = fixture((request, respond) => {
+        if (request.type === 'exportStart') respond(request, { token: 'json-share' });
+        else if (request.type === 'exportChunk') {
+          const chunk = Buffer.from(request.data, 'base64');
+          chunks.push(chunk); written += chunk.length;
+          respond(request, { bytesWritten: written });
+        } else if (request.type === 'exportShare') shareRequest = request;
+      });
+      const client = createNativePlatform({ host: f.host }); t.after(() => client.dispose());
+      let settled = false;
+      const operation = client.exportBlob(new Blob([text], { type: 'application/json' }), name, { share: true })
+        .then(result => { settled = true; return result; });
+      await until(() => shareRequest);
+      assert.equal(settled, false, 'Transferring bytes must not claim that the native share completed');
+      assert.equal(client.isBusy, true);
+      assert.deepEqual(Object.fromEntries(Object.entries(f.requests[0]).filter(([key]) => key !== 'id')), {
+        name, mime: 'application/json', bytes: expectedBytes.length, type: 'exportStart',
+      });
+      assert.ok(chunks.length > 2, 'Exercise multibyte JSON across several native chunks');
+      assert.ok(chunks.every(chunk => chunk.length <= EXPORT_CHUNK_BYTES));
+      assert.deepEqual(Buffer.concat(chunks), expectedBytes, name);
+      assert.equal(f.requests.filter(request => request.type === 'exportShare').length, 1);
+      assert.ok(f.requests.slice(1).every(request => request.token === 'json-share'));
+      const nativeResult = { status, bytes: written };
+      f.respond(shareRequest, nativeResult);
+      assert.deepEqual(await operation, nativeResult, `${name}: preserve the exact native ${status} outcome`);
+      assert.equal(client.isBusy, false);
+      assert.equal(f.requests.some(request => ['exportFinish', 'exportCancel'].includes(request.type)), false,
+        'A native share outcome must not trigger a second save or cancellation request');
+      assert.equal(f.opened.length, 0, 'Native sharing must not open a browser fallback');
+    }
+  }
+});
+
+test('cancelled day-pack sharing can retry with a fresh native token and no duplicate download', async t => {
+  const text = JSON.stringify({ format: 'SyntheticDayPack', notes: 'Équipe 🛠\nRetain my saved work.' });
+  const files = new Map(); let starts = 0, shareRequest;
+  const f = fixture((request, respond) => {
+    if (request.type === 'exportStart') {
+      const token = `day-share-${++starts}`;
+      files.set(token, []); respond(request, { token });
+    } else if (request.type === 'exportChunk') {
+      const chunks = files.get(request.token); chunks.push(Buffer.from(request.data, 'base64'));
+      respond(request, { bytesWritten: Buffer.concat(chunks).length });
+    } else if (request.type === 'exportShare') shareRequest = request;
+  });
+  const client = createNativePlatform({ host: f.host }); t.after(() => client.dispose());
+  const blob = new Blob([text], { type: 'application/json' });
+  const first = client.exportBlob(blob, 'day.jobsday.json', { share: true });
+  await until(() => shareRequest);
+  await assert.rejects(client.exportBlob(blob, 'day.jobsday.json', { share: true }), /already being exported/);
+  assert.equal(starts, 1);
+  f.respond(shareRequest, { status: 'cancelled' });
+  assert.deepEqual(await first, { status: 'cancelled' });
+  assert.equal(client.isBusy, false);
+  shareRequest = null;
+  const retry = client.exportBlob(blob, 'day.jobsday.json', { share: true });
+  await until(() => shareRequest);
+  assert.equal(shareRequest.token, 'day-share-2');
+  f.respond(shareRequest, { status: 'shared' });
+  assert.deepEqual(await retry, { status: 'shared' });
+  assert.equal(client.isBusy, false);
+  assert.equal(starts, 2);
+  for (const chunks of files.values()) assert.equal(Buffer.concat(chunks).toString('utf8'), text);
+  assert.deepEqual(f.requests.map(request => request.type), [
+    'exportStart', 'exportChunk', 'exportShare', 'exportStart', 'exportChunk', 'exportShare',
+  ]);
+  assert.equal(f.opened.length, 0);
+});
+
 test('picker cancellation is distinct from success and interactive actions do not use request timeouts', async t => {
   const f = fixture((request, respond) => {
     if (request.type === 'exportStart') respond(request, { token: 'cancelled-save' });

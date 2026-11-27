@@ -22,11 +22,17 @@ Old records without a date appear separately under **Undated records** and are e
 
 **Export timesheet** downloads the selected day's job-linked and unassigned time without marking it submitted. If the browser download fails after a submission has saved, the committed submission remains intact and the app reports the download failure. Use Export timesheet to retry the download without submitting again.
 
-An amended submitted session returns to draft and retains its earlier submitted snapshot. The editor's **Submitted records** shows that retained information; it also travels in exports. **Trash session** removes a session from active views and totals while retaining its deleted record and submitted history locally. The day's download includes these records separately in `archivedEntries`, excluded from totals; Export remains available even when the day contains only trashed sessions. Job-linked deleted records also remain in the job package. There is no office receipt, server reconciliation or signed audit trail.
+An amended submitted session returns to draft and retains its earlier submitted snapshot. The editor's **Submitted records** shows that retained information; it also travels in exports. **Trash session** removes a session from active views and totals while retaining its deleted record and submitted history locally. The day's download includes these records separately in `archivedEntries`, excluded from totals; Export remains available even when the day contains only trashed sessions. Job-linked deleted records also remain in the job package. This timesheet submission receipt is local; the separate Quick Transfer day-return flow can record a matching receiving-phone receipt. Neither is server reconciliation or a signed audit trail.
 
 Job-linked sessions travel in that job's normal `.jobs.json` export/import. Unassigned sessions belong to the local workspace and are not put in an unrelated job package. The separate `JobsTimesheetPackage` version 1 download covers the selected day's time across jobs and unassigned sessions. A timesheet-file import or office adapter is not implemented in this milestone.
 
 If imported job copies contain the same active time-entry ID, the export flags those entries as conflicts and excludes them from confirmed totals. Local submission is blocked until those conflicting copies are reviewed; they are not silently added together or overwritten.
+
+## Office day packs
+
+The existing job-card Share chest can collect a day pack and start an office day, or save a pack without a timer for a manager to redistribute. Finishing reviews attendance, closes any active job timer and fills only uncovered intervals as unassigned Work with an explicit unallocated-time description. It does not count recorded work, travel or breaks again. Reconcile hours-only or conflicting entries first if their intervals cannot be determined safely.
+
+Generated time remains editable in Timesheets, including assignment to a job. The finished pack includes those current job/time records plus the recorded attendance start and finish. A return remains pending until the engineer imports the receipt created after the office phone successfully saves that exact pack. Repeating an import preserves later local edits and does not create another timer. This is an explicit file handover between phones; no internet or office server is required after app preparation. A passive NFC sticker only opens the handover screen. See [Quick Transfer instructions](../README.md#quick-transfer-and-offline-office-days) for device limitations.
 
 ## Data and integration
 
