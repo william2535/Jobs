@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newSite, newJob, createQuickJob } from '../src/model.js';
-import { addJobAsset, duplicateJobAsset, saveAssetTemplate, validateAssetTemplates, attachAssetJobToSite } from '../src/asset-library.js';
+import { addJobAsset, addJobAssets, duplicateJobAsset, duplicateJobAssets, previewAssetReferences, nextAssetReference, saveAssetTemplate, validateAssetTemplates, attachAssetJobToSite } from '../src/asset-library.js';
 import { createJobPackage, validateJobPackage, importJobPackage } from '../src/packages.js';
 import { createWorkspaceBackup, restoreWorkspaceBackup } from '../src/workspace-backup.js';
 import { acceptZoneSketchPreviews, hasPlanPreviews, ensurePlanPreviews } from '../src/plan-preview.js';
@@ -27,12 +27,124 @@ test('manual standalone assets and duplicates are unplaced, independently identi
   assert.equal(state.jobs[0].assetRegister.assets.length, 1);
   assert.equal(before.jobs[0].siteId, null); assert.equal(duplicate.job.drawingId, null);
   assert.throws(() => addJobAsset(state, job.id, { ...values, floorId: 'unknown-floor' }), /Choose a floor/);
-  assert.throws(() => addJobAsset(state, job.id, { ...values, reference: '' }), /Reference/);
+  assert.equal(addJobAsset(state, job.id, { ...values, reference: '' }).asset.reference, 'PIR detector 001');
   assert.throws(() => addJobAsset(state, job.id, { ...values, reference: '  pir 01  ' }), /already used/);
   const automatic = duplicateJobAsset(state, job.id, asset.id);
-  assert.equal(automatic.asset.reference, 'PIR 01 copy');
+  assert.equal(automatic.asset.reference, 'PIR 02');
   const another = duplicateJobAsset(automatic.state, job.id, asset.id);
-  assert.equal(another.asset.reference, 'PIR 01 copy 2');
+  assert.equal(another.asset.reference, 'PIR 03');
+});
+
+test('numbering preserves tag prefixes and zero padding, skips case-insensitive collisions, and handles large suffixes exactly', () => {
+  const assets = ['MCP-L2/009', 'mcp-l2/010', ' MCP-L2/012 '].map(reference => ({ reference }));
+  assert.deepEqual(previewAssetReferences(assets, 'MCP-L2/009', 4), ['MCP-L2/011', 'MCP-L2/013', 'MCP-L2/014', 'MCP-L2/015']);
+  assert.equal(nextAssetReference(assets, 'MCP-L2/009'), 'MCP-L2/011');
+  assert.deepEqual(previewAssetReferences([], 'SM-099', 3), ['SM-099', 'SM-100', 'SM-101']);
+  assert.deepEqual(previewAssetReferences([], 'SD-9007199254740992', 2), ['SD-9007199254740992', 'SD-9007199254740993']);
+  assert.equal(nextAssetReference([{ reference: 'Camera 001' }], 'Camera'), 'Camera 002');
+  assert.deepEqual(previewAssetReferences([], 'Camera', 3), ['Camera', 'Camera 001', 'Camera 002']);
+  assert.equal(previewAssetReferences([], 'x'.repeat(200))[0], 'x'.repeat(200));
+  assert.throws(() => previewAssetReferences([], 'x'.repeat(200), 2), /too long to number/);
+});
+
+test('standalone batch creation and duplication need no typed tags and retain specification and location without copying evidence', async () => {
+  const job = createQuickJob(), initial = { ...blank(), jobs: [job] };
+  const created = addJobAssets(initial, job.id, { ...values, reference: '' }, 3);
+  assert.equal(initial.jobs[0].assetRegister, undefined);
+  assert.equal(created.job.revision, job.revision + 1);
+  assert.deepEqual(created.assets.map(asset => asset.reference), ['PIR detector 001', 'PIR detector 002', 'PIR detector 003']);
+  const original = created.assets[0];
+  original.location = 'Rear entrance'; original.serial = 'Old serial'; original.sourceId = 'Imported source';
+  original.photos.push({ id: 'source-photo', image });
+  created.job.results[0].state = 'Unsatisfactory';
+  created.job.results[0].notes = 'Retain this observation';
+  created.job.results[0].defects = 'Existing defect';
+  created.job.results[0].photos.push({ id: 'result-photo', image });
+  const before = structuredClone(created.state);
+  const duplicated = duplicateJobAssets(created.state, job.id, original.id, {}, 20);
+  assert.deepEqual(created.state, before);
+  assert.equal(duplicated.job.revision, created.job.revision + 1);
+  assert.equal(duplicated.job.assetRegister.revision, 'Register 23');
+  assert.equal(duplicated.assets[0].reference, 'PIR detector 004');
+  assert.equal(duplicated.assets.at(-1).reference, 'PIR detector 023');
+  assert.equal(duplicated.assets.length, 20);
+  assert.equal(new Set(duplicated.job.assetRegister.assets.map(asset => asset.id)).size, 23);
+  assert.equal(new Set(duplicated.job.results.map(result => result.id)).size, 23);
+  for (const asset of duplicated.assets) {
+    assert.equal(asset.location, 'Rear entrance'); assert.equal(asset.manufacturer, values.manufacturer);
+    assert.equal(asset.model, values.model); assert.equal(asset.description, values.description);
+    assert.equal(asset.serial, undefined); assert.equal(asset.sourceId, undefined);
+    assert.equal(asset.x, null); assert.equal(asset.y, null); assert.deepEqual(asset.photos, []);
+    const result = duplicated.job.results.find(item => item.assetId === asset.id);
+    assert.equal(result.state, 'Not tested'); assert.equal(result.notes, ''); assert.equal(result.defects, '');
+    assert.deepEqual(result.photos, []); assert.deepEqual(result.readings, []);
+  }
+  assert.deepEqual(duplicated.job.results[0], created.job.results[0]);
+  // Source-only details above deliberately exceed a manual register's contract.
+  delete duplicated.job.assetRegister.assets[0].sourceId;
+  const wire = await createJobPackage(null, duplicated.job), reopened = validateJobPackage(wire);
+  assert.deepEqual(reopened.job.assetRegister, duplicated.job.assetRegister);
+  assert.deepEqual(reopened.job.results, duplicated.job.results);
+  const imported = await importJobPackage(blank(), wire);
+  assert.equal(imported.state.jobs[0].assetRegister.assets.length, 23);
+});
+
+test('linked batches make one revision, preserve other visits and source plans, and duplicate floor and location by default', async () => {
+  const site = newSite('Batch site'), base = site.drawings[0];
+  base.source = { preserved: 'Original source' };
+  base.issuedSnapshots.push({ id: 'issued', revision: 'Issued 1', floors: [], assets: [] });
+  const job = newJob(site), other = newJob(site), initial = { sites: [site], jobs: [job, other] };
+  const before = structuredClone(initial);
+  const created = addJobAssets(initial, job.id, { ...values, reference: 'SM-001', floorId: base.floors[0].id, location: 'Production' }, 100);
+  assert.deepEqual(initial, before);
+  assert.equal(created.state.sites[0].drawings.length, 2);
+  assert.equal(created.job.revision, job.revision + 1);
+  assert.equal(created.job.drawingChanges.length, 1);
+  assert.equal(created.job.drawingChanges[0].addedAssetIds.length, 100);
+  assert.equal(created.assets[0].reference, 'SM-001'); assert.equal(created.assets.at(-1).reference, 'SM-100');
+  assert.deepEqual(created.state.jobs[1], other);
+  assert.deepEqual(created.state.sites[0].drawings[0], base);
+  assert.deepEqual(created.state.sites[0].drawings[1].source, base.source);
+  assert.deepEqual(created.state.sites[0].drawings[1].issuedSnapshots, base.issuedSnapshots);
+  created.job.results[0].state = 'Satisfactory'; created.job.results[0].notes = 'Original tested';
+  const duplicated = duplicateJobAssets(created.state, job.id, created.asset.id, {}, 2);
+  assert.equal(duplicated.state.sites[0].drawings.length, 3);
+  assert.equal(duplicated.job.drawingChanges.length, 2);
+  assert.equal(duplicated.job.revision, created.job.revision + 1);
+  assert.deepEqual(duplicated.assets.map(asset => asset.reference), ['SM-101', 'SM-102']);
+  for (const asset of duplicated.assets) {
+    assert.equal(asset.floorId, base.floors[0].id); assert.equal(asset.floorName, 'Ground floor');
+    assert.equal(asset.location, 'Production'); assert.equal(asset.x, null); assert.equal(asset.y, null);
+    assert.equal(duplicated.job.results.find(result => result.assetId === asset.id).state, 'Not tested');
+  }
+  assert.deepEqual(duplicated.job.results[0], created.job.results[0]);
+  const revisedLocation = duplicateJobAsset(created.state, job.id, created.asset.id, { reference: 'CCTV-009', floorId: null, location: 'Office' });
+  assert.equal(revisedLocation.asset.reference, 'CCTV-009');
+  assert.equal(revisedLocation.asset.floorId, null); assert.equal(revisedLocation.asset.location, 'Office');
+  const reopened = validateJobPackage(await createJobPackage(duplicated.state.sites[0], duplicated.job));
+  assert.deepEqual(reopened.site.drawings.at(-1).assets, duplicated.state.sites[0].drawings.at(-1).assets);
+  assert.equal(reopened.job.drawingChanges.length, 2);
+});
+
+test('invalid counts, specifications, floors, numbering overflow and capacity reject a whole batch without changing state', () => {
+  const { state, job, asset } = standalone(), before = structuredClone(state);
+  for (const count of [0, -1, 1.5, 101, '2', null, NaN, Infinity]) {
+    assert.throws(() => addJobAssets(state, job.id, values, count), /whole number/);
+    assert.throws(() => duplicateJobAssets(state, job.id, asset.id, {}, count), /whole number/);
+    assert.throws(() => previewAssetReferences([], 'SM-001', count), /whole number/);
+  }
+  assert.throws(() => addJobAssets(state, job.id, { ...values, type: '' }, 20), /nonempty/);
+  assert.throws(() => addJobAssets(state, job.id, { ...values, floorId: 'missing' }, 20), /Choose a floor/);
+  assert.throws(() => duplicateJobAssets(state, job.id, asset.id, { description: 'x'.repeat(5001) }, 20), /5000/);
+  assert.throws(() => addJobAssets(state, job.id, { ...values, reference: 'x'.repeat(200) }, 2), /too long to number/);
+  assert.deepEqual(state, before);
+  const nearCapacity = structuredClone(state);
+  nearCapacity.jobs[0].assetRegister.assets = Array.from({ length: 49999 }, (_, index) => ({ id: `asset-${index}`, reference: `SM-${index}` }));
+  const originalRegister = nearCapacity.jobs[0].assetRegister;
+  assert.throws(() => addJobAssets(nearCapacity, job.id, values, 2), /50,000/);
+  assert.equal(nearCapacity.jobs[0].assetRegister, originalRegister);
+  assert.equal(originalRegister.assets.length, 49999);
+  assert.equal(nearCapacity.jobs[0].revision, job.revision);
 });
 
 test('adding linked equipment creates one drawing revision without changing other visits, original source or issued records', () => {

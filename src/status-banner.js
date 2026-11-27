@@ -2,15 +2,12 @@
 export const STATUS_BANNER_SESSION_KEY = 'jobs-status-banner-dismissed-v1';
 const controls = 'button, a[href], input, select, textarea, summary, [role="button"], [contenteditable="true"]';
 
-/** Unknown readiness messages stay visible, including failures after Ready offline. */
-export function canDismissStatusBanner({storageReady, hasRecovery, busy, dirty, saveLabel, offlineLabel} = {}) {
-  if (!storageReady || hasRecovery || busy || dirty || saveLabel !== 'Saved on this device') return false;
-  const offline = String(offlineLabel || '').trim();
-  if (/failed|failure|unavailable|could not|cannot|timed out|missing|not prepared|not match|requires|blocked|stopped/i.test(offline)) {
-    return offline === 'Development mode · offline cache unavailable';
-  }
-  return ['Ready offline', 'Ready offline · included in this app', 'Ready offline · check Google Play for app updates',
-    'Preparing offline use…', 'Checking installed app…', 'Checking offline readiness…', 'Update applied. Reopening Jobs…'].includes(offline);
+/** Local save safety controls this overlay; offline availability remains in Help & data. */
+export function canDismissStatusBanner({storageReady, hasRecovery, busy, dirty, saveLabel} = {}) {
+  // Failing to cache the app for a future offline visit does not mean already
+  // saved job records were lost. Keep actual save/recovery problems visible,
+  // but let the engineer dismiss preparation failures and continue working.
+  return storageReady === true && !hasRecovery && !busy && !dirty && saveLabel === 'Saved on this device';
 }
 
 /** One controller survives re-renders; only its non-sensitive preference is stored. */

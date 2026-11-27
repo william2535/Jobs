@@ -2,6 +2,21 @@
 
 Original milestone verified on 13 November 2026; daily timesheets update verified on 14 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Automated fixtures and committed screenshots are synthetic. Physical iPhone/Android testing remains outstanding.
 
+## Offline startup and quick assets 1.3.1 — 27 November 2026
+
+Already installed Jobs now verifies the controlling worker's saved files and build without waiting for network registration. First installations that finish late can recover automatically; manual retry can replace a hung registration. Controller identity and attempt generations prevent delayed replies from claiming readiness for the wrong worker. Missing, incomplete, mismatched or unresponsive caches remain unverified. Update activation remains explicit and never discards work.
+
+Saved-work status banners can be closed, swiped horizontally or dismissed with Escape even when offline registration failed. Vertical gestures retain native scrolling. Actual unsaved work, failed saves, recovery and unavailable local storage still force the status visible; Help & data retains offline readiness information.
+
+Quick asset presets, favourites and duplicates support 1–100 equipment records in one atomic save. Numbering retains prefixes and padding while skipping occupied references. Duplicates prefill equipment details, floor and location; every new device has a fresh identity and untested result, without copied serial numbers, map positions, photos or inspection evidence. A linked batch creates one working drawing revision. Compact quick forms keep quantity, reference preview and Add together on mobile; unchanged preview text preserves the first Safari submit tap after typing.
+
+Job headers no longer contain the appearance dropdown. The homepage controls still set the theme throughout the app; System changes preserve unfinished notes without remounting the editor.
+
+- **455 unit/DOM/service-worker tests passed**, including controller races, registration retry, status gestures, batch validation/rollback, large numbered sequences, fresh evidence and package round trips.
+- All **15 targeted offline/asset browser cases passed** on iPhone WebKit, desktop Chromium and mobile Chromium. After removing the job header selector, all **15 appearance/asset browser cases passed** on the updated build. Tests create 100 devices offline, duplicate without retyping, preserve original photo/result evidence, retry a failed batch save, reload and export 103 distinct devices. Prepared profiles reopen with registration deliberately hung or rejected; timeout banners dismiss without suppressing unsaved-work warnings. Gesture handling is tested with pointer events and native Chromium wheel scrolling; physical iPhone swipes remain a hardware check.
+- Production build `f7dec0e7e060b9416aea` and release verification passed with **30 distributable files** and complete offline precache.
+- Light/dark quick forms were checked at 375, 390 and 1024 pixels without horizontal overflow. Browser regression scenarios cover cached offline reload, timeout dismissal, first-tap saving, a 100-asset batch, duplication, failed-save retry and exported evidence.
+
 ## Desktop office overview 1.3.0 — 27 November 2026
 
 Desktop Jobs now groups received day packs by engineer, shows recorded attendance and time allocation, opens engineer-filtered timesheets and exports office CSV. Office NFC entry explicitly confirms the engineer tag; that tag follows ordinary job exports, newly created jobs and recorded sessions. The site/asset overview counts saved sites without a retained Zone Sketch source and distinct saved asset identities, including manual registers and retained history. These inventory counts are independent of day/engineer filters and do not invent historical creation dates.

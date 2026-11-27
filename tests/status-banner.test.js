@@ -25,9 +25,23 @@ function setup(t, {storage, touchOnly = false} = {}) {
   return {window, doc, root, controller, pointer, touch, focusReturns: () => focusReturns};
 }
 
-test('only informational statuses can hide; unsaved work, offline failures and recovery stay visible', () => {
-  for (const offlineLabel of ['Ready offline', 'Ready offline · included in this app', 'Preparing offline use…', 'Checking installed app…', 'Development mode · offline cache unavailable']) assert.equal(canDismissStatusBanner({...ready, offlineLabel}), true, offlineLabel);
-  for (const patch of [{storageReady: false}, {hasRecovery: true}, {busy: true}, {dirty: true}, {saveLabel: 'Save failed — retry this form'}, {saveLabel: 'Not saved yet'}, {offlineLabel: 'Ready offline · update download failed; try checking again.'}, {offlineLabel: 'Required offline files are missing. Retry online to prepare them.'}, {offlineLabel: 'Offline use requires HTTPS and a browser that supports installation.'}, {offlineLabel: 'Something unexpected happened'}, {offlineLabel: 'Ready offline · unknown warning'}, {offlineLabel: ''}]) assert.equal(canDismissStatusBanner({...ready, ...patch}), false, JSON.stringify(patch));
+test('saved local records allow dismissing offline availability errors while save risks stay visible', () => {
+  const availability = [
+    'Ready offline', 'Ready offline · included in this app', 'Preparing offline use…',
+    'Checking installed app…', 'Development mode · offline cache unavailable',
+    'Offline registration timed out. Retry online to prepare offline use.',
+    'Offline preparation timed out. Retry online and check available device storage.',
+    'Ready offline · update download failed; try checking again.',
+    'Required offline files are missing. Retry online to prepare them.',
+    'Offline use requires HTTPS and a browser that supports installation.',
+    'Offline readiness could not be verified.', 'Something unexpected happened', '',
+  ];
+  const risks = [{storageReady: false}, {storageReady: undefined}, {hasRecovery: true}, {busy: true}, {dirty: true}, {saveLabel: 'Save failed — retry this form'}, {saveLabel: 'Not saved yet'}, {saveLabel: 'Saving…'}];
+  for (const offlineLabel of availability) {
+    assert.equal(canDismissStatusBanner({...ready, offlineLabel}), true, offlineLabel);
+    for (const patch of risks) assert.equal(canDismissStatusBanner({...ready, offlineLabel, ...patch}), false, JSON.stringify({offlineLabel, ...patch}));
+  }
+  assert.equal(canDismissStatusBanner(), false);
 });
 
 test('visible close control dismisses just the presentation and survives re-render and tab reload', t => {
@@ -50,15 +64,55 @@ test('visible close control dismisses just the presentation and survives re-rend
   reopened.dispose(); assert.ok(doc.querySelector('#help'));
 });
 
-test('new failed saves or offline errors always reappear and cannot be dismissed', t => {
+test('new failed saves, unavailable local records and recovery reappear and cannot be dismissed', t => {
   const {root, controller} = setup(t);
   controller.dismiss(); assert.equal(root.hidden, true);
-  for (const patch of [{hasRecovery: true, saveLabel: 'Save failed — retry this form'}, {offlineLabel: 'Offline readiness could not be verified.'}, {dirty: true, saveLabel: 'Unsaved changes'}]) {
+  for (const patch of [{hasRecovery: true, saveLabel: 'Save failed — retry this form'}, {storageReady: false}, {busy: true, saveLabel: 'Saving…'}, {dirty: true, saveLabel: 'Unsaved changes'}]) {
     controller.update({...ready, ...patch});
     assert.equal(root.hidden, false); assert.equal(root.querySelector('.connection-dismiss').hidden, true);
     assert.equal(controller.dismiss(), false);
     controller.update(ready); assert.equal(root.hidden, true, 'normal status still respects the session preference');
   }
+});
+
+test('offline registration timeout can be closed without changing its message and stays dismissed across retries and remounts', t => {
+  const {window, root, controller} = setup(t);
+  const failed = {...ready, offlineLabel: 'Offline registration timed out. Retry online to prepare offline use.'};
+  root.querySelector('#offline-status').textContent = failed.offlineLabel;
+  controller.update(failed);
+  const close = root.querySelector('.connection-dismiss');
+  assert.equal(close.hidden, false); assert.equal(close.disabled, false);
+  close.click();
+  assert.equal(root.hidden, true);
+  assert.equal(root.querySelector('#offline-status').textContent, failed.offlineLabel, 'hiding is presentation only');
+  assert.equal(window.sessionStorage.getItem(STATUS_BANNER_SESSION_KEY), '1');
+  for (const offlineLabel of ['Preparing offline use…', 'Offline readiness could not be verified.', 'Ready offline']) {
+    controller.update({...ready, offlineLabel}); assert.equal(root.hidden, true);
+  }
+  const replacement = root.cloneNode(true); root.replaceWith(replacement);
+  controller.mount(replacement, failed); assert.equal(replacement.hidden, true);
+  controller.update({...failed, hasRecovery: true}); assert.equal(replacement.hidden, false);
+  assert.equal(controller.dismiss(), false);
+  controller.update(failed); assert.equal(replacement.hidden, true);
+});
+
+test('offline timeout supports horizontal swipe and Escape while a new save cancels an in-flight gesture', t => {
+  const {window, root, controller, pointer, focusReturns} = setup(t);
+  const failed = {...ready, offlineLabel: 'Offline preparation timed out. Retry online and check available device storage.'};
+  controller.update(failed);
+  pointer('pointerdown', 180, 100); pointer('pointerup', 80, 104);
+  assert.equal(root.hidden, true);
+  controller.show();
+  const close = root.querySelector('.connection-dismiss'); close.focus();
+  const escape = new window.KeyboardEvent('keydown', {key: 'Escape', bubbles: true, cancelable: true});
+  close.dispatchEvent(escape);
+  assert.equal(root.hidden, true); assert.equal(escape.defaultPrevented, true); assert.equal(focusReturns(), 1);
+  controller.show();
+  pointer('pointerdown', 180, 100);
+  controller.update({...failed, busy: true, saveLabel: 'Saving…'});
+  pointer('pointerup', 80, 104);
+  assert.equal(root.hidden, false);
+  assert.equal(controller.dismiss(), false);
 });
 
 test('left or right horizontal touch-pointer swipe dismisses without preventing native events', t => {
@@ -110,6 +164,7 @@ test('Escape from the close control hides status and returns keyboard focus to a
 
 test('touch-only WebViews support swipe and preserve vertical/multi-finger gestures', t => {
   const {root, controller, touch} = setup(t, {touchOnly: true});
+  controller.update({...ready, offlineLabel: 'Offline registration timed out. Retry online.'});
   const point = (x, y, identifier = 1) => ({clientX: x, clientY: y, identifier});
   touch('touchstart', [point(100, 100)]);
   touch('touchmove', [point(101, 170)]);
