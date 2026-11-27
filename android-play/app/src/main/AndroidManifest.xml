@@ -5,6 +5,10 @@
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="application/pdf" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="application/json" />
+        </intent>
     </queries>
     <!-- Bundled web content is completely offline. File access uses Android's picker. -->
     <application

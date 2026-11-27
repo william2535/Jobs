@@ -2,6 +2,8 @@ import { validateQuickDefects } from "./quick-defects.js";
 import { validateTimesheetEntries } from "./timesheets.js";
 import { validateAssetTemplates } from "./asset-library.js";
 import { validateJobCertificates } from "./certificates.js";
+import { validateOfficeDays } from "./day-session.js";
+import { validateOfficeReceipts } from "./day-pack.js";
 
 const DATABASE = "jobs-local";
 const VERSION = 2;
@@ -85,6 +87,8 @@ export async function loadState() {
     const quickDefects = transaction.objectStore("metadata").get("quick-defects");
     const unassignedTimesheets = transaction.objectStore("metadata").get("unassigned-timesheets");
     const assetTemplates = transaction.objectStore("metadata").get("asset-templates");
+    const officeDays = transaction.objectStore("metadata").get("office-days");
+    const officeReceipts = transaction.objectStore("metadata").get("office-receipts");
     transaction.oncomplete = () => {
       try {
         const library = validateQuickDefects(quickDefects.result?.value);
@@ -92,7 +96,8 @@ export async function loadState() {
         const templates = validateAssetTemplates(assetTemplates.result?.value);
         for (const job of jobs.result) validateJobCertificates(job.certificates);
         lastSeenRevision = revision.result?.value || 0;
-        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions, assetTemplates: templates });
+        resolve({ sites: sites.result, jobs: jobs.result, quickDefects: library, unassignedTimesheets: sessions, assetTemplates: templates,
+          officeDays: validateOfficeDays(officeDays.result?.value), officeReceipts: validateOfficeReceipts(officeReceipts.result?.value) });
       } catch (error) {
         reject(error);
       }
@@ -113,6 +118,8 @@ export async function saveState(state) {
   const quickDefects = state.quickDefects === undefined ? undefined : validateQuickDefects(state.quickDefects);
   const unassignedTimesheets = state.unassignedTimesheets === undefined ? undefined : validateTimesheetEntries(state.unassignedTimesheets);
   const assetTemplates = state.assetTemplates === undefined ? undefined : validateAssetTemplates(state.assetTemplates);
+  const officeDays = state.officeDays === undefined ? undefined : validateOfficeDays(state.officeDays);
+  const officeReceipts = state.officeReceipts === undefined ? undefined : validateOfficeReceipts(state.officeReceipts);
   for (const job of state.jobs) validateJobCertificates(job?.certificates);
   for (const collection of [state.sites, state.jobs]) {
     if (
@@ -175,6 +182,10 @@ export async function saveState(state) {
           transaction.objectStore("metadata").put({ key: "unassigned-timesheets", value: unassignedTimesheets });
         if (assetTemplates !== undefined)
           transaction.objectStore("metadata").put({ key: "asset-templates", value: assetTemplates });
+        if (officeDays !== undefined)
+          transaction.objectStore("metadata").put({ key: "office-days", value: officeDays });
+        if (officeReceipts !== undefined)
+          transaction.objectStore("metadata").put({ key: "office-receipts", value: officeReceipts });
         transaction
           .objectStore("metadata")
           .put({ key: "revision", value: expectedRevision + 1 });

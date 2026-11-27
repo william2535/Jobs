@@ -1,4 +1,9 @@
 import { chooseJobFolder, saveToJobFolder, sortJobs, folderName } from "./job-folder.js";
+import { renderQuickTransfer } from "./quick-transfer.js";
+import { prepareJsonShare, safePackName } from "./job-share.js";
+import { createDayPack, inspectDayPack, importDayPack } from "./day-pack.js";
+import { activeOfficeDay, startOfficeDay, finishOfficeDay, markOfficeDayPrepared, acknowledgeOfficeDay, inspectDayReceipt } from "./day-session.js";
+import { buildTapLink, parseTapLink, writeTapSticker } from "./jobs-tap.js";
 import { initializeAppearance, createAppearanceControl } from "./appearance.js";
 import { initializePageScroll, scrollPageToTop } from "./page-scroll.js";
 import { createStatusBannerController } from "./status-banner.js";
@@ -73,6 +78,7 @@ import { renderCertificate } from "./certificate-renderer.js";
 import { generateReportPdf, shareCertificatePdf } from "./certificate-pdf.js";
 import "./certificates-ui.css";
 import "./appearance.css";
+import "./quick-transfer.css";
 import "./workspace-shell.css";
 import "./profile-photo.css";
 import "./workspace-banner.css";
@@ -112,6 +118,7 @@ const statusBanner = createStatusBannerController({
 });
 const statusBannerState = () => ({storageReady, hasRecovery: !!recoverySnapshot, busy, dirty, saveLabel, offlineLabel});
 let offlineController, updateAvailable = false, recoverySnapshot = null, recoveryCapturedAt = null, recoveryRetryKey = null, pendingRestore = null;
+let transferChest = null, transferOfficeId = "office", pendingTransferSave = null;
 let state = { sites: [], jobs: [] },
   timesheetDate = null,
   page = "home",
@@ -195,6 +202,8 @@ function updateReleaseStatus() {
   $(".release-help")?.setStatus?.({ offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, updateAvailable });
   const recovery = $("#recovery-actions");
   if (recovery) recovery.hidden = !recoverySnapshot;
+  const transferRetry = $('[data-action="transfer-retry"]');
+  if (transferRetry) transferRetry.hidden = !pendingTransferSave || pendingTransferSave.next !== recoverySnapshot;
   const update = $("#release-update");
   if (update) update.hidden = !updateAvailable;
   const offline = $("#offline-status");
@@ -745,9 +754,9 @@ function render() {
   const headerIdentity = brandedHeader
     ? `<div class="jobs-banner-atmosphere" aria-hidden="true"><svg class="jobs-banner-traces" viewBox="0 0 1000 128" preserveAspectRatio="none" focusable="false"><defs><linearGradient id="jobs-banner-fade"><stop offset="0" stop-color="#25bfff" stop-opacity="0"/><stop offset=".25" stop-color="#25bfff" stop-opacity=".65"/><stop offset=".55" stop-color="#62d9ff" stop-opacity=".8"/><stop offset="1" stop-color="#25bfff" stop-opacity="0"/></linearGradient><path id="jobs-banner-curve-top" d="M44 22C220 54 356 48 620 18"/><path id="jobs-banner-curve-bottom" d="M370 112C560 76 760 82 956 102"/></defs><g fill="none" stroke="url(#jobs-banner-fade)" stroke-linecap="round"><g stroke-width="18" opacity=".06"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g><g stroke-width="5" opacity=".16"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g><g stroke-width="1.2" opacity=".7"><use href="#jobs-banner-curve-top"/><use href="#jobs-banner-curve-bottom"/></g></g></svg></div><div class="jobs-banner-lockup"><a class="jobs-banner-brand" href="#" data-action="home" aria-label="Jobs home" title="Go to Jobs dashboard"><img src="./jobs-logo.webp" width="119" height="140" alt=""><span class="jobs-banner-divider" aria-hidden="true"></span><div class="jobs-banner-copy"><h1 class="jobs-banner-title">${esc(bannerTitle)}</h1><span class="jobs-banner-subtitle">SITE <i>·</i> WORKS <i>·</i> REPORTS</span></div></a></div>`
     : `<div class="jobs-header-context"><img class="jobs-context-icon" src="./jobs-logo.webp" width="119" height="140" alt="Jobs logo"><div><span class="eyebrow">JOBS / ${page === 'job' ? 'YOUR VISIT' : 'YOUR WORKSPACE'}</span>${headerSite}</div></div>`;
-  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
+  const sidebar = `<aside class="sidebar"><a class="brand" href="#" data-action="home"><span class="brand-icon">▤</span> Jobs<span class="version">${esc(APP_VERSION)}</span></a><div class="side-caption">FIELD WORKSPACE</div><nav>${button("▦ &nbsp; Overview", "home", page === "home" ? "nav active" : "nav")}${button("⌂ &nbsp; Sites", "sites", page === "sites" ? "nav active" : "nav")}${button("Timesheets", "timesheets", page === "timesheets" ? "nav active" : "nav")}${button("Toolbox", "toolbox", "nav")}${button("Quick Transfer", "quick-transfer", "nav")}${button("+ &nbsp; Create job", "create", "nav")}${button("Help &amp; data", "help", page === "help" ? "nav active" : "nav")}</nav><div class="side-bottom"><span class="dot"></span> Local workspace<p>Your work stays on this device.<br>Export jobs to keep a backup.</p></div></aside>`;
   $("#app").innerHTML =
-    `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${brandedHeader ? "jobs-banner-app-header" : "jobs-context-header"}">${headerIdentity}<div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main>${mobileWorkspaceNavigation()}<div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}</div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title desktop-page-back">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button desktop-page-back")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
+    `${mobileHome ? "" : sidebar}<div class="workspace"><header class="${brandedHeader ? "jobs-banner-app-header" : "jobs-context-header"}">${headerIdentity}<div class="connection"><span data-testid="save-status">${esc(saveLabel)}</span><small id="offline-status">${esc(offlineLabel)}</small></div></header><main>${mobileWorkspaceNavigation()}<div id="notice" role="status" class="${error ? "notice error" : message ? "notice" : ""}">${esc(error || message)}</div><div id="recovery-actions" class="notice" ${recoverySnapshot ? "" : "hidden"}><strong>Latest save failed.</strong> Keep this editor open and retry, or download the attempted records for recovery. ${button("Download unsaved recovery", "recovery-download")}<button data-action="transfer-retry" ${pendingTransferSave?.next === recoverySnapshot && recoverySnapshot ? "" : "hidden"}>Retry failed transfer save</button></div><div id="release-update" class="notice" ${updateAvailable ? "" : "hidden"}>An update is ready. Save your current work before applying it. ${button("Apply update", "update-apply")}</div>${!storageReady && page !== "help" ? startupView() : page === "help" ? `<div class="quick-section-title desktop-page-back">${button("‹ Home", "home", "text-button")}</div><div id="release-help-root"></div>` : page === "backup-review" ? backupReview() : page === "home" ? home() : page === "sites" ? sites() : page === "timesheets" ? `<div class="quick-section-title">${button("‹ Home", "home", "text-button desktop-page-back")}</div><div id="timesheets-root"></div>` : page === "site" ? siteView(s) : page === "review" ? importReview() : jobView(j, s)}</main><footer>JOBS / LOCAL FIRST <span>Version ${esc(APP_VERSION)} · Engineer-confirmed records</span></footer></div><input id="zone-file" type="file" accept=".json,.zonesketch,application/json" hidden><input id="job-file" type="file" accept=".json,application/json" hidden><input id="workspace-file" type="file" accept=".json,application/json" hidden>`;
   bindActions();
   const mobileMenu = document.querySelector('.jobs-mobile-menu');
   mobileMenu?.addEventListener('keydown', event => {
@@ -773,7 +782,7 @@ function render() {
   }
   updateInteractionLock();
   $("#zone-file").onchange = (e) => runTask(() => readZone(e.target.files[0]));
-  $("#job-file").onchange = (e) => runTask(() => readJob(e.target.files[0]));
+  $("#job-file").onchange = (e) => { const file = e.target.files[0]; e.target.value = ""; if (file) runTask(() => readJob(file)); };
   $("#workspace-file").onchange = (e) => { const file = e.target.files[0]; e.target.value = ""; runTask(() => readWorkspaceBackup(file)); };
   document.querySelectorAll("#app form").forEach((f) => {
     f.addEventListener("input", () => {
@@ -881,8 +890,8 @@ function render() {
   }
   if (page === "help" && $("#release-help-root")) {
     $("#release-help-root").append(renderReleaseHelp({ version: APP_VERSION, buildId: BUILD_ID, offlineStatus: offlineLabel, storageStatus: saveLabel, hasRecovery: !!recoverySnapshot, onAction: value => runTask(() => action(value)) }));
-    const settings=document.createElement("section");settings.className="panel";settings.innerHTML='<h2>Settings</h2><h3>Job pack storage</h3><p>Choose an existing folder to load editable job packs. PDFs are ignored.</p>';
-    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);$("#release-help-root").append(settings);
+    const settings=document.createElement("section");settings.className="panel";settings.innerHTML='<h2>Settings</h2><button type="button" data-action="quick-transfer">Quick Transfer / office day</button><h3>Job pack storage</h3><p>Choose an existing folder to load editable job packs. PDFs are ignored.</p>';
+    const choose=document.createElement("button");choose.type="button";choose.textContent="Choose folder"+(folderName()?" · "+folderName():"");choose.onclick=()=>runTask(()=>action("choose-job-folder"));settings.append(choose);$("#release-help-root").append(settings);bindActions(settings);
     updateReleaseStatus();
   }
   if (page === "timesheets" && $("#timesheets-root")) {
@@ -1335,9 +1344,217 @@ async function stageZone(input, jobId = importTargetJob) {
   message = "";
   render();
 }
+function assertTransferReady(retryKey = null) {
+  const retry = retryKey && pendingTransferSave?.key === retryKey && pendingTransferSave.next === recoverySnapshot;
+  if (!storageReady || dirty || (recoverySnapshot && !retry) || draftJob)
+    throw Error("Save your current work before opening Quick Transfer.");
+}
+function savedEngineer() { try { return localStorage.getItem("jobs.work-engineer") || ""; } catch { return ""; } }
+function rememberEngineer(name) { try { localStorage.setItem("jobs.work-engineer", name); } catch { /* The saved office day retains the name. */ } }
+function checkDayEngineer(engineer) {
+  const running = activeWork();
+  if (running && running.engineer.trim().toLocaleLowerCase() !== engineer.trim().toLocaleLowerCase())
+    throw Error("Finish the other engineer’s active job timer before starting your day.");
+}
+async function transferMutation(change, retryKey) {
+  assertTransferReady(retryKey);
+  if (operationPending || busy) throw Error("Please wait for the current save to finish.");
+  operationPending = true; updateInteractionLock();
+  try {
+    if (pendingTransferSave?.key === retryKey && pendingTransferSave.next === recoverySnapshot) return await pendingTransferSave.retry();
+    return await change();
+  } finally { operationPending = false; updateInteractionLock(); }
+}
+async function persistTransfer(next, message, key, afterSave) {
+  const attempt = { next, key, retry: async () => {
+    if (!(await persist(next, message, key))) {
+      pendingTransferSave = attempt; updateReleaseStatus();
+      throw Error("The save failed. Retry this action to save the same records; nothing has been acknowledged.");
+    }
+    if (pendingTransferSave === attempt) pendingTransferSave = null;
+    return afterSave();
+  } };
+  return attempt.retry();
+}
+function returnPack(current, day) {
+  return createDayPack(current, { kind: "return", day, officeId: day.officeId });
+}
+function finishRunningWork(current, day, finishedAt) {
+  const running = activeWork();
+  if (!running) return { state: current, timer: null };
+  if (running.engineer.trim().toLocaleLowerCase() !== day.engineer.trim().toLocaleLowerCase())
+    throw Error("Finish the other engineer’s active job timer before finishing this day.");
+  const job = current.jobs.find(item => item.id === running.jobId);
+  if (!job) throw Error("The running work timer’s job is missing. Restore it before finishing the day.");
+  if (job.workflow?.timesheets?.some(entry => entry.id === running.id)) return { state: current, timer: running };
+  const start = localClock(new Date(running.startedAt)), end = localClock(new Date(finishedAt));
+  return { state: saveTimesheet(current, { id: running.id, date: start.date, start: start.time, endDate: end.date,
+    end: end.time, sessionType: "Work", customType: "", hours: null, note: "", engineer: running.engineer }, { jobId: job.id }), timer: running };
+}
+function openQuickTransfer(jobId = null, source = null, officeId = transferOfficeId) {
+  transferChest?.dispose();
+  const job = jobId ? state.jobs.find(item => item.id === jobId) : null;
+  if (jobId && !job) throw Error("Job no longer available.");
+  const day = activeOfficeDay(state) || [...(state.officeDays || [])].reverse().find(day => !job || day.jobIds.includes(job.id)) || null;
+  transferOfficeId = day?.officeId || officeId || "office";
+  const receipts = [...(state.officeReceipts || [])].reverse().filter(item => item.summary.kind === "return").slice(0, 30).map(item => ({
+    ...item.summary, id: item.receipt.receiptId, receipt: item.receipt, jobIds: item.mappings.map(value => value.jobId), day: item.day, timeConflicts: item.timeConflicts || [],
+  }));
+  const startKey = "day-start:" + crypto.randomUUID(), finishKey = "day-finish:" + (day?.id || "none");
+  let dialog;
+  dialog = renderQuickTransfer({
+    job, jobs: state.jobs, day, receipts, engineer: day?.engineer || savedEngineer(), officeId: transferOfficeId,
+    prepareJobShare: async selected => prepareJsonShare(await createJobPackage(siteOf(selected) || null, selected), safePackName("job", selected.id)),
+    prepareDayShare: async selected => {
+      const latest = state.officeDays?.find(value => value.id === selected.id);
+      if (!latest) throw Error("This day is no longer saved.");
+      const pack = await returnPack(state, latest);
+      dialog?.setReceiptCurrent?.(!latest.receipt || latest.preparedPackId === pack.packId);
+      return prepareJsonShare(pack, safePackName("day", latest.id, ".jobsday.json"));
+    },
+    onReceive: () => $("#job-file").click(),
+    onPrepareDay: async values => {
+      assertTransferReady();
+      const parent = [...(state.officeReceipts || [])].reverse().find(record => record.summary.kind === "assignment" && values.jobIds.every(id => record.mappings.some(mapping => mapping.jobId === id)));
+      const pack = await createDayPack(state, { ...values, officeId: transferOfficeId, parentPackId: parent?.receipt.packId || null });
+      return { share: prepareJsonShare(pack, safePackName("day", pack.packId, ".jobsday.json")), message: "Day pack ready. Share it using a nearby option, or save a copy." };
+    },
+    onStartDay: values => transferMutation(async () => {
+      checkDayEngineer(values.engineer);
+      const pack = await createDayPack(state, { ...values, officeId: transferOfficeId });
+      const result = startOfficeDay(state, { packId: pack.packId, parentPackId: pack.parentPackId, engineer: values.engineer, date: values.date, jobIds: values.jobIds, officeId: transferOfficeId });
+      return persistTransfer(result.state, "Day started on this device.", startKey, () => {
+        dialog.setStartRetry(false);
+        rememberEngineer(result.day.engineer); render();
+        return { day: result.day, message: result.duplicate ? "This day is already running." : "Day started. Your jobs and timer are saved on this phone." };
+      }).catch(cause => {
+        if (pendingTransferSave?.key === startKey && pendingTransferSave.next === recoverySnapshot) dialog.setStartRetry(true);
+        throw cause;
+      });
+    }, startKey),
+    onFinishDay: selected => transferMutation(async () => {
+      const latest = state.officeDays?.find(value => value.id === selected.id);
+      if (!latest) throw Error("This day is no longer saved.");
+      const at = now(), work = finishRunningWork(state, latest, at);
+      let result = finishOfficeDay(work.state, latest.id, { at });
+      const pack = await returnPack(result.state, result.day);
+      result = markOfficeDayPrepared(result.state, result.day.id, pack.packId);
+      return persistTransfer(result.state, "Day finished. Ready to return.", finishKey, () => {
+        if (work.timer) { try { localStorage.removeItem(WORK_TIMER_KEY); } catch { /* Saved result ID prevents another entry on retry. */ } }
+        render(); return { day: result.day, message: "Timesheet saved. Share the finished day back to the office phone." };
+      });
+    }, finishKey),
+    onOpenJob: id => { dialog.dispose(); void runTask(() => action("job:" + id)); },
+    onShareReceipt: item => prepareJsonShare(item.receipt, safePackName("receipt", item.receipt.receiptId, ".jobsreceipt.json"))(),
+    onTapSetup: () => openTapSetup(),
+    onClose: () => { if (transferChest === dialog) transferChest = null; },
+  });
+  transferChest = dialog;
+  dialog.openChest(source);
+  return dialog;
+}
+function reviewDayPack({ pack, summary }) {
+  transferChest?.dispose();
+  const original = state, assignment = pack.kind === "assignment", retryKey = "day-receive:" + crypto.randomUUID();
+  const dialog = document.createElement("dialog");
+  dialog.className = "toolbox-chest transfer-chest transfer-review";
+  dialog.setAttribute("aria-label", "Receive day pack");
+  dialog.innerHTML = `<header class="toolbox-chest-lid"><div class="toolbox-chest-title-row"><div><small>QUICK TRANSFER</small><h2>${assignment ? "Collect day pack" : "Receive finished day"}</h2></div><button type="button" data-day-cancel aria-label="Cancel receiving">×</button></div></header><div class="toolbox-chest-tray"><p><strong>${esc(pack.label || (assignment ? "Day pack" : pack.engineer + "’s day"))}</strong><br>${esc(pack.date)} · ${summary.jobCount} jobs</p>${assignment ? `<label>Engineer<input name="engineer" maxlength="200" autocomplete="name" value="${esc(pack.engineer || savedEngineer())}" placeholder="Your name to start the day"></label><p>Collecting saves the jobs and starts your day timer. A manager can save the pack without starting a timer.</p>` : `<p>Attendance: ${Math.floor(summary.attendanceMinutes / 60)}h ${summary.attendanceMinutes % 60}m. Returned work is kept for review alongside any different local copies.</p>`}<p class="transfer-status" role="alert" hidden></p><div class="actions">${assignment ? '<button type="button" class="primary" data-day-accept="start">Collect &amp; start day</button><button type="button" data-day-accept="save">Save pack only</button>' : '<button type="button" class="primary" data-day-accept="save">Save returned day</button>'}</div><p class="muted">Nothing is received or started until this save succeeds.</p></div>`;
+  let saving = false;
+  dialog.addEventListener("cancel", event => { if (saving) event.preventDefault(); });
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  dialog.querySelector("[data-day-cancel]").onclick = () => dialog.close();
+  dialog.querySelectorAll("[data-day-accept]").forEach(control => { control.onclick = async () => {
+    if (saving) return;
+    const actionRetryKey = retryKey + ":" + control.dataset.dayAccept;
+    saving = true; dialog.querySelectorAll("button,input").forEach(item => { item.disabled = true; });
+    const notice = dialog.querySelector('[role="alert"]'); notice.hidden = true;
+    try {
+      await transferMutation(async () => {
+        if (state !== original) throw Error("Your workspace changed. Choose this pack again so it can be reviewed against the latest work.");
+        const imported = await importDayPack(state, pack);
+        let next = imported.state;
+        if (control.dataset.dayAccept === "start") {
+          const engineer = dialog.querySelector('[name="engineer"]').value.trim();
+          checkDayEngineer(engineer);
+          next = startOfficeDay(next, { packId: pack.packId, parentPackId: pack.parentPackId, engineer, date: pack.date, jobIds: imported.jobIds, officeId: pack.officeId }).state;
+        }
+        const recipientEngineer = activeOfficeDay(next)?.engineer;
+        return persistTransfer(next, assignment ? "Day pack saved." : "Returned day received on this phone.", actionRetryKey, () => {
+        if (control.dataset.dayAccept === "start") rememberEngineer(recipientEngineer);
+        transferOfficeId = pack.officeId;
+        dialog.close(); render();
+        const chest = openQuickTransfer(imported.jobIds[0], null, pack.officeId);
+        if (!assignment) chest.querySelector(".transfer-office-returns")?.setAttribute("open", "");
+        if (assignment && control.dataset.dayAccept === "save") chest.querySelector(".transfer-day-options")?.setAttribute("open", "");
+        chest.setStatus(imported.duplicate ? "This pack is already saved. Your later edits were kept." : assignment ? "Jobs saved. You can share a day pack with your team from here." : `${imported.conflicts.length ? imported.conflicts.length + " conflicting records kept for review. " : ""}Day received. Share its receipt back to the engineer.`);
+        });
+      }, actionRetryKey);
+    } catch (cause) {
+      if (dialog.isConnected) { notice.textContent = cause.message; notice.hidden = false; }
+    } finally {
+      saving = false;
+      const failed = pendingTransferSave?.next === recoverySnapshot && pendingTransferSave?.key === actionRetryKey;
+      dialog.querySelectorAll("button,input").forEach(item => { item.disabled = !!failed && (item.tagName === "INPUT" || (item.dataset.dayAccept && item !== control)); });
+    }
+  }; });
+  document.body.append(dialog); dialog.showModal();
+}
+async function acceptDayReceipt(input) {
+  const receipt = await inspectDayReceipt(input), day = state.officeDays?.find(value => value.id === receipt.dayId);
+  if (!day || day.status === "running") throw Error("This phone has no finished day matching that receipt.");
+  const pack = await returnPack(state, day);
+  if (receipt.packId !== pack.packId) throw Error("This receipt is for a different or earlier copy. Return the latest saved day to get its matching receipt.");
+  const prepared = markOfficeDayPrepared(state, day.id, pack.packId);
+  const result = await acknowledgeOfficeDay(prepared.state, day.id, receipt);
+  return persistTransfer(result.state, "Receipt saved. The receiving phone has a copy of this day.", "receipt:" + receipt.receiptId, () => {
+    render(); openQuickTransfer(day.jobIds[0], null, day.officeId).setStatus("Matching receipt saved. This returned copy was received on the other phone.");
+  });
+}
+function openTapSetup() {
+  const dialog = document.createElement("dialog");
+  dialog.className = "toolbox-chest transfer-chest transfer-review"; dialog.setAttribute("aria-label", "NFC sticker setup");
+  const url = buildTapLink({ kind: "office", officeId: transferOfficeId });
+  dialog.innerHTML = `<header class="toolbox-chest-lid"><div class="toolbox-chest-title-row"><h2>Office sticker</h2><button type="button" data-tap-close aria-label="Close sticker setup">×</button></div></header><div class="toolbox-chest-tray"><p>This sticker opens Quick Transfer. Collect in the morning; review and finish your day when you return.</p><label>Sticker link<input readonly value="${esc(url)}"></label><div class="actions"><button type="button" data-tap-copy>Copy sticker link</button><button type="button" data-tap-write ${typeof globalThis.NDEFReader === "function" ? "" : "disabled"}>Write NFC sticker</button></div><p>${typeof globalThis.NDEFReader === "function" ? "Tap Write, then hold the phone beside your sticker." : "This browser cannot write NFC stickers. Write the copied URL once using an NFC-writing app. You can always open Quick Transfer from a job’s share button."}</p><p>Job files use your phone’s sharing options. The sticker does not hold the pack or upload it. Open Jobs online once and wait for Ready offline before a day without internet.</p><p class="transfer-status" role="status" hidden></p></div>`;
+  const abort = new AbortController();
+  dialog.addEventListener("close", () => { abort.abort(); dialog.remove(); }, { once: true });
+  dialog.querySelector("[data-tap-close]").onclick = () => dialog.close();
+  const status = text => { const node = dialog.querySelector('[role="status"]'); node.textContent = text; node.hidden = false; };
+  dialog.querySelector("[data-tap-copy]").onclick = async () => {
+    try { await navigator.clipboard.writeText(url); status("Sticker link copied."); }
+    catch { const input = dialog.querySelector("input"); input.focus(); input.select(); status("Select and copy the link above."); }
+  };
+  dialog.querySelector("[data-tap-write]").onclick = async event => {
+    event.currentTarget.disabled = true;
+    try { await writeTapSticker(url, { signal: abort.signal }); if (dialog.isConnected) status("Sticker written. Test it by tapping with your phone."); }
+    catch (cause) { if (dialog.isConnected) status(cause.name === "AbortError" ? "Writing cancelled. No success has been recorded." : cause.message); }
+    finally { if (dialog.isConnected) dialog.querySelector("[data-tap-write]").disabled = false; }
+  };
+  document.body.append(dialog); dialog.showModal();
+}
+async function handleTapLink() {
+  try {
+    const target = parseTapLink(location.href);
+    if (!target) return;
+    assertTransferReady();
+    if (target.kind === "site") {
+      if (!state.sites.some(site => site.id === target.siteId)) throw Error("This site is not on this phone yet. Receive its job pack through Quick Transfer first.");
+      await runTask(() => action("site:" + target.siteId));
+    } else {
+      transferOfficeId = target.officeId || "office";
+      openQuickTransfer(null, null, transferOfficeId);
+    }
+    history.replaceState(null, "", target.cleanUrl);
+  } catch (cause) { reportError(cause.message); }
+}
 async function readJob(file) {
   try {
-    const result = await importJobPackage(state, await readText(file));
+    const text = await readText(file);
+    let format;
+    try { format = JSON.parse(text)?.format; } catch { /* The package validator supplies the error. */ }
+    if (format === "JobsDayPack") return reviewDayPack(await inspectDayPack(text));
+    if (format === "JobsDayReceipt") return acceptDayReceipt(text);
+    const result = await importJobPackage(state, text);
     if (await persist(result.state, result.message)) {
       activeJob = result.job.id;
       draftJob = null;
@@ -1364,7 +1581,7 @@ async function action(a, source) {
     const running=activeWork();
     if(a==="start-work"){
       if(running)throw Error("Finish your current work session first.");
-      const engineer=window.prompt("Your name for this timesheet",localStorage.getItem("jobs.work-engineer")||"")?.trim();
+      const engineer=activeOfficeDay(state)?.engineer || window.prompt("Your name for this timesheet",savedEngineer())?.trim();
       if(!engineer)return;
       if(engineer.length>200)throw Error("Use a shorter engineer name.");
       localStorage.setItem("jobs.work-engineer",engineer);
@@ -1380,45 +1597,18 @@ async function action(a, source) {
     }
     localStorage.removeItem(WORK_TIMER_KEY);render();return;
   }
-  if (a.startsWith("transfer-job:")) {
-    if(!storageReady || dirty || recoverySnapshot) throw Error("Save your work before transferring a job.");
-    const job=state.jobs.find(item=>item.id===a.slice("transfer-job:".length));
-    if(!job)throw Error("Job no longer available.");
-    const dialog=document.createElement("dialog");
-    dialog.setAttribute("aria-label","Quick Transfer");
-    dialog.className="toolbox-chest transfer-chest";
-    dialog.innerHTML='<header class="toolbox-chest-lid"><div class="toolbox-chest-handle" aria-hidden="true"></div><div class="toolbox-chest-title-row"><span class="toolbox-chest-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 8h17m-5-5 5 5-5 5M21 16H4m5-5-5 5 5 5"/></svg></span><div><small>ENGINEER TO ENGINEER</small><h2>Quick Transfer</h2></div><button type="button" class="toolbox-chest-close" data-transfer="cancel" aria-label="Close transfer">×</button></div></header><div class="toolbox-chest-tray"><div class="transfer-grid"><button type="button" data-transfer="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V3m-4 4 4-4 4 4M7 10H4v11h16V10h-3"/></svg><strong>Nearby / share job pack</strong><small>AirDrop · Quick Share · Email</small></button><button type="button" data-transfer="receive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v13m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><strong>Receive job pack</strong><small>Open a received file</small></button></div><p class="muted">Job packs may contain confidential site information.</p></div>';
-    const anchor=source?.getBoundingClientRect?.();
-    if(anchor){dialog.style.setProperty("--chest-origin-x","90%");dialog.style.setProperty("--chest-origin-y","0px");}
-    document.body.append(dialog);
-    dialog.addEventListener("close",()=>dialog.remove(),{once:true});
-    const send=dialog.querySelector('[data-transfer="share"]');
-    send.disabled=true;
-    dialog.querySelector('[data-transfer="cancel"]').onclick=()=>dialog.close();
-    dialog.querySelector('[data-transfer="receive"]').onclick=()=>{dialog.close();$("#job-file").click();};
-    dialog.showModal();
-    try {
-      const pack=await createJobPackage(siteOf(job)||null,job);
-      const name="job-"+job.id+".jobs.json";
-      const blob=new Blob([JSON.stringify(pack)],{type:"application/json"});
-      if(!dialog.open)return;
-      send.disabled=false;
-      send.onclick=async()=>{
-        send.disabled=true;
-        try {
-          const native=getNativePlatform();
-          if(native){await native.exportBlob(blob,name,{share:true});dialog.close();return;}
-          const file=new File([blob],name,{type:"application/json"});
-          if(navigator.share && navigator.canShare?.({files:[file]})){
-            try{await navigator.share({files:[file],title:"Jobs pack"});dialog.close();return;}
-            catch(error){if(error.name==="AbortError")return;if(!["NotAllowedError","NotSupportedError","TypeError"].includes(error.name))throw error;}
-          }
-          const url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-          dialog.close();reportNotice("Job pack downloaded. Share it from Files.");
-        }catch(error){reportError(error.message);dialog.close();}finally{send.disabled=false;}
-      };
-    }catch(error){dialog.close();throw error;}
+  if (a.startsWith("transfer-job:") || a === "quick-transfer") {
+    assertTransferReady();
+    openQuickTransfer(a.startsWith("transfer-job:") ? a.slice("transfer-job:".length) : null, source);
     return;
+  }
+  if (a === "tap-setup") { assertTransferReady(); openTapSetup(); return; }
+  if (a === "transfer-retry") {
+    if (!pendingTransferSave || pendingTransferSave.next !== recoverySnapshot) throw Error("There is no transfer save to retry.");
+    const saved = await pendingTransferSave.retry();
+    render();
+    if (saved?.day) openQuickTransfer(saved.day.jobIds[0], null, saved.day.officeId).setStatus(saved.message);
+    return saved;
   }
   if (a === "choose-job-folder") {
     if (!storageReady || dirty || recoverySnapshot) throw Error("Save your current work before choosing a folder.");
@@ -2013,12 +2203,17 @@ async function openRecords() {
 async function init() {
   await openRecords();
   render();
+  await handleTapLink();
   if (import.meta.env.PROD) offlineController = startOffline({
     onStatus: value => { offlineLabel = value; updateReleaseStatus(); },
     onUpdate: value => { updateAvailable = value.available; if (value.blocked && value.message) reportNotice(value.message); updateReleaseStatus(); },
   });
   else { offlineLabel = "Development mode · offline cache unavailable"; updateReleaseStatus(); }
 }
+window.addEventListener("hashchange", () => {
+  if (busy || operationPending) return;
+  void handleTapLink();
+});
 window.matchMedia("(max-width: 700px), (max-width: 1440px) and (any-pointer: coarse)").addEventListener("change", () => {
   syncToolboxTrigger();
   if (dirty || busy || operationPending) return;

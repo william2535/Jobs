@@ -1,0 +1,57 @@
+/* Keep the existing card-share chest; additional day actions unfold inside its tray. */
+.toolbox-chest.transfer-chest.quick-transfer { max-height: min(74dvh, 690px); height: auto; color: var(--ink, #193455); }
+.quick-transfer [hidden] { display: none !important; }
+.quick-transfer .toolbox-chest-tray { min-height: 0; overflow-y: auto; background: var(--surface, #f1f5fb); color: var(--ink, #193455); }
+.quick-transfer button, .quick-transfer summary { min-height: 44px; touch-action: manipulation; }
+.quick-transfer .transfer-job-title { margin: 0 0 12px; font-size: 13px; font-weight: 650; color: var(--ink, #193455); overflow-wrap: anywhere; }
+.quick-transfer .transfer-grid button { min-height: 122px; color: var(--ink, #193455); background: var(--surface, #fff); border-color: var(--line, #c3d4e8); }
+.quick-transfer .transfer-grid small { color: var(--muted, #536d88); line-height: 1.5; }
+.quick-transfer .transfer-status, .quick-transfer .transfer-day-error { font-size: 12px; line-height: 1.5; padding: 10px; border: 1px solid var(--line, #c3d4e8); border-radius: 7px; background: var(--subtle, #edf3fa); color: var(--ink, #193455); overflow-wrap: anywhere; }
+.quick-transfer .transfer-status.is-error, .quick-transfer .transfer-day-error { border-left: 3px solid var(--appearance-danger, #b83b4d); }
+.quick-transfer .transfer-retry { margin-top: 10px; font-size: 12px; }
+.quick-transfer :is(.transfer-day-options, .transfer-more, .transfer-office-returns) { padding: 0; margin-top: 13px; border: 1px solid var(--line, #c3d4e8); border-radius: 8px; background: var(--surface, #fff); }
+.quick-transfer :is(.transfer-day-options, .transfer-more, .transfer-office-returns) > summary { padding: 12px; color: var(--ink, #193455); font-size: 13px; font-weight: 650; cursor: pointer; }
+.quick-transfer summary > span { display: block; margin: 4px 0 0 17px; color: var(--muted, #536d88); font-size: 11px; font-weight: 400; }
+.quick-transfer .transfer-day-form, .quick-transfer .transfer-return-list { padding: 0 12px 12px; }
+.quick-transfer .transfer-day-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr); gap: 10px; }
+.quick-transfer .transfer-day-form label { font-size: 12px; line-height: 1.4; color: var(--ink-soft, #3f5772); margin: 0 0 11px; min-width: 0; }
+.quick-transfer :is(input:not([type="checkbox"]),select) { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; margin-top: 5px; padding: 8px; color: var(--ink, #193455); background: var(--surface, #fff); border: 1px solid var(--line, #c3d4e8); border-radius: 6px; }
+.quick-transfer .transfer-job-picker { margin: 0 0 12px; padding: 4px 0; max-height: 180px; overflow: auto; border: 0; }
+.quick-transfer .transfer-job-picker legend { color: var(--ink, #193455); font-size: 12px; font-weight: 650; padding-bottom: 6px; }
+.quick-transfer .transfer-job-picker label { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 7px 0; margin: 0; border-bottom: 1px solid var(--soft-line, #e0e7f0); }
+.quick-transfer .transfer-job-picker label span { overflow-wrap: anywhere; }
+.quick-transfer .transfer-job-picker input { width: 20px; height: 20px; min-width: 20px; margin: 0; accent-color: var(--accent-dark, #174574); }
+.quick-transfer .transfer-job-picker p { font-size: 12px; color: var(--muted, #536d88); }
+.quick-transfer .transfer-day-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-transfer .transfer-day-actions button { flex: 1; min-width: 100px; padding: 9px; font-size: 12px; }
+.quick-transfer .transfer-share-prepared { width: 100%; margin-top: 12px; }
+.quick-transfer .transfer-day-card { padding: 13px; margin-top: 13px; border: 1px solid var(--line, #c3d4e8); border-radius: 8px; background: var(--subtle, #edf3fa); }
+.quick-transfer .transfer-day-card-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 10px; }
+.quick-transfer .transfer-day-card-heading strong { font-size: 14px; }
+.quick-transfer .transfer-day-card-heading span { font-size: 12px; color: var(--muted, #536d88); overflow-wrap: anywhere; }
+.quick-transfer .transfer-day-card p, .quick-transfer .transfer-finish-review p { margin: 8px 0; font-size: 12px; line-height: 1.6; }
+.quick-transfer .transfer-day-card small { display: block; color: var(--muted, #536d88); font-size: 11px; line-height: 1.5; }
+.quick-transfer .transfer-day-card > button { width: 100%; margin-top: 12px; font-size: 13px; }
+.quick-transfer .transfer-day-card .transfer-delivery { margin-top: 8px; }
+.quick-transfer .transfer-return { border-top: 1px solid var(--soft-line, #e0e7f0); padding: 12px 0 4px; }
+.quick-transfer .transfer-return > strong { font-size: 13px; overflow-wrap: anywhere; }
+.quick-transfer .transfer-return > small { display: block; margin-top: 4px; color: var(--muted, #536d88); font-size: 11px; }
+.quick-transfer .transfer-return p { margin: 7px 0; font-size: 12px; overflow-wrap: anywhere; }
+.quick-transfer .transfer-return-attendance { margin: 9px 0; font-size: 11px; line-height: 1.5; }
+.quick-transfer .transfer-return-attendance > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; margin-top: 3px; }
+.quick-transfer .transfer-return-attendance dt { color: var(--muted, #536d88); }
+.quick-transfer .transfer-return-attendance dd { margin: 0; color: var(--ink, #193455); }
+.quick-transfer .transfer-return-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+.quick-transfer .transfer-return-actions button { max-width: 100%; padding: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.quick-transfer .transfer-time-review { border: 1px solid var(--line, #c3d4e8); border-radius: 7px; margin-top: 10px; padding: 0 8px; }
+.quick-transfer .transfer-time-review > summary { padding: 10px 0; font-size: 12px; cursor: pointer; }
+.quick-transfer .transfer-time-review ul { padding-left: 18px; font-size: 12px; }
+.quick-transfer .transfer-time-review li { margin: 8px 0; overflow-wrap: anywhere; }
+.quick-transfer .transfer-time-review li span { display: block; color: var(--muted, #536d88); font-size: 11px; margin-top: 4px; }
+.quick-transfer .transfer-more > button { margin: 0 12px 10px; width: calc(100% - 24px); font-size: 13px; }
+.quick-transfer .transfer-more > p { margin: 0; padding: 0 12px 12px; font-size: 11px; line-height: 1.6; color: var(--muted, #536d88); }
+.quick-transfer :is(button,input,summary):focus-visible { outline: 3px solid var(--focus, #4b89c9); outline-offset: 2px; }
+@media (max-width: 360px) {
+  .quick-transfer .transfer-day-fields { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .quick-transfer .transfer-grid button { padding: 10px 8px; font-size: 12px; }
+}

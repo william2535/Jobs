@@ -2,6 +2,16 @@
 
 Original milestone verified on 13 November 2026; daily timesheets update verified on 14 November 2026 with Node 24.22.1 and Chromium 156.0.8078.79. Automated fixtures and committed screenshots are synthetic. Physical iPhone/Android testing remains outstanding.
 
+## Quick Transfer 1.2.0 — 27 November 2026
+
+The existing job-card share chest now supports multi-job day packs, manager save-only redistribution, explicit day start/finish, returned work and matching receiving-phone receipts. The Android share bridge accepts editable JSON packs as well as PDFs. NFC office links open the same chest without changing timers.
+
+- All **387 unit/DOM/service-worker tests passed**. Focused coverage includes bounded/checksummed packs, unchanged reimports, conflicting time retention, moved/deleted attendance, exact failed-save retries, backup persistence and native share cancellation.
+- All **9 new browser checks passed** across iPhone WebKit, desktop Chromium and mobile Chromium with real file downloads/imports and offline browser contexts. A three-workspace office → manager → engineer → office handover retains conflicting office work and only marks the returned copy received after its matching receipt is imported.
+- Real IndexedDB failures during collection and finishing leave saved records unchanged; retry saves the original candidate, including its original start/finish times. Share cancellation and offline office-link navigation do not acknowledge a return or stop a day.
+- The production build and release verification pass with 30 distributable files. Existing complete browser regression checks also run in GitHub CI before merge.
+- Physical NFC routing, installed-phone storage context and actual AirDrop/Quick Share delivery still require hardware testing. Browser automation does not prove mixed iPhone/Android transport interoperability. Receipts match content; they are not authenticated identities or payroll approval.
+
 ## Public release 1.0.0 — 16 November 2026
 
 This release targets independent engineers using their own local workspace. The release source is [`8bf0eab03dcdd75443c0d68c2f54f9ac523df030`](https://github.com/william2535/Jobs/commit/8bf0eab03dcdd75443c0d68c2f54f9ac523df030), version **1.0.0**, application build **`4feb87501bab15ae2b3c`**. Earlier counts and limitations below describe their named development releases; this section records the public-release checks.

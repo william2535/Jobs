@@ -220,7 +220,7 @@ final class ExportStore {
     File shareFile(Session session) throws ExportException {
         if (!session.prepared || !sessions.containsKey(session.token)
                 || session.file.length() != session.expectedBytes) {
-            throw new ExportException("The prepared PDF is unavailable. Export the certificate again.");
+            throw new ExportException("The prepared file is unavailable. Export it again.");
         }
         File folder = new File(shareDirectory, session.token);
         try {
@@ -246,7 +246,7 @@ final class ExportStore {
             if (target.length() != session.expectedBytes) throw new IOException("Incomplete share copy");
             return target;
         } catch (IOException | SecurityException error) {
-            throw new ExportException("The PDF could not be prepared for sharing. Try saving it to a folder instead.");
+            throw new ExportException("The file could not be prepared for sharing. Try saving it to a folder instead.");
         }
     }
 

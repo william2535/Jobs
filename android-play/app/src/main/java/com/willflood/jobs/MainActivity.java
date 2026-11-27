@@ -329,12 +329,13 @@ public final class MainActivity extends Activity {
                     io.execute(() -> {
                         try {
                             ExportStore.Session session = exports.prepare(token);
-                            if (!"application/pdf".equals(session.mime)) {
-                                reply.failure("Only certificate PDF files can be shared through this action.");
+                            if (!"application/pdf".equals(session.mime)
+                                    && !"application/json".equals(session.mime)) {
+                                reply.failure("Only Jobs JSON files and PDF reports can be shared through this action.");
                                 return;
                             }
                             File file = exports.shareFile(session);
-                            runOnUiThread(() -> sharePdf(session, file, reply));
+                            runOnUiThread(() -> shareFile(session, file, reply));
                         } catch (ExportStore.ExportException error) { reply.failure(error.getMessage()); }
                     });
                     break;
@@ -389,12 +390,12 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void sharePdf(ExportStore.Session session, File file, Reply reply) {
+    private void shareFile(ExportStore.Session session, File file, Reply reply) {
         if (destroyed) return; // Durable prepared export is recoverable after recreation.
         try {
             Uri uri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".files", file);
             Intent send = new Intent(Intent.ACTION_SEND)
-                    .setType("application/pdf")
+                    .setType(session.mime)
                     .putExtra(Intent.EXTRA_STREAM, uri)
                     .putExtra(Intent.EXTRA_SUBJECT, session.name)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -403,7 +404,8 @@ public final class MainActivity extends Activity {
                 showSavePicker(session, reply);
                 return;
             }
-            Intent chooser = Intent.createChooser(send, "Share certificate PDF")
+            Intent chooser = Intent.createChooser(send,
+                    "application/pdf".equals(session.mime) ? "Share PDF report" : "Share Jobs file")
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(chooser);
             io.execute(() -> {
@@ -414,10 +416,10 @@ public final class MainActivity extends Activity {
             });
         } catch (ActivityNotFoundException | SecurityException error) {
             // No share handler: offer Android's ordinary save picker using the same
-            // complete staged PDF, without transferring or generating it a second time.
+            // complete staged file, without transferring or generating it a second time.
             showSavePicker(session, reply);
         } catch (IllegalArgumentException error) {
-            reply.failure("Android could not open this PDF for sharing. Save it to a folder instead.");
+            reply.failure("Android could not open this file for sharing. Save it to a folder instead.");
         }
     }
 

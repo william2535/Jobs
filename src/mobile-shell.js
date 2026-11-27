@@ -522,6 +522,7 @@ export function renderMobileWorkspace({
     );
     section.append(
       card,
+      control("Quick Transfer / office day", () => onAction("quick-transfer"), "mw-blue-button"),
       node("h3", "Settings"),
       control("Choose folder"+(folderName()?" · "+folderName():""), () => onAction("choose-job-folder"), "mw-blue-button"),
       node("p", "Job pack storage · loads editable job packs, not PDFs."),

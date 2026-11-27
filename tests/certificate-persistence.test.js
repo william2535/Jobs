@@ -12,7 +12,7 @@ import { saveState, loadState } from '../src/storage.js';
 
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN9sAAAAASUVORK5CYII=';
 const AT = '2026-11-24T10:00:00.000Z';
-const empty = () => ({ sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [], assetTemplates: [] });
+const empty = () => ({ sites: [], jobs: [], quickDefects: [], unassignedTimesheets: [], assetTemplates: [], officeDays: [], officeReceipts: [] });
 function fixture(discipline = 'Fire', standalone = false) {
   const site = standalone ? null : newSite('Synthetic certificate premises', '1 Example Road');
   if (site) site.drawings[0].assets.push({

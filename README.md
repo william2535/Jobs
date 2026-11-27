@@ -2,7 +2,7 @@
 
 **[Open the Jobs website](https://william2535.github.io/Jobs/)** · [Hosting and access details](docs/deployment.md)
 
-An independent, local-first job workspace for fire and security engineers. Public release 1.1.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, issue a reviewed visit certificate, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
+An independent, local-first job workspace for fire and security engineers. Release 1.2.0: import a Zone Sketch drawing, review equipment, create a visit, record evidence, issue a reviewed visit certificate, save locally, export a complete package and reopen it on another prepared device. No account, backend, paid API or AI service is required.
 
 [Desktop notes](docs/screenshots/desktop-notes-job.png) · [Mobile notes](docs/screenshots/mobile-notes-job.png) · [Mobile dashboard](docs/screenshots/mobile-dashboard.png) · [Mobile plans](docs/screenshots/mobile-png-plan.png) · [Verification results](docs/VERIFICATION.md)
 
@@ -35,6 +35,21 @@ Use **Export workspace backup** to preserve all saved sites, jobs, drawings, pho
 Updates wait until you choose **Apply update** after saving. Other Jobs windows must be closed before activation. When upgrading from the earlier prototype, open Jobs online to download the update, then close all Jobs tabs/installed windows and reopen online so the waiting release can activate. Check the displayed version and wait for **Ready offline** before going to site; the app verifies its included shell files instead of assuming a controller is sufficient.
 
 Create a distributable build with `npm run release`; this validates and packages only compiled public files, with a file manifest and SHA-256 checksum. It excludes repository history and the supplied customer example. See [release build instructions](docs/release-build.md), [public release guide](docs/public-release.md) and [verification results](docs/VERIFICATION.md). Draft service reports and reviewed visit certificates are separate outputs. The FINDR job adapter and automatic Zone Sketch receiver remain separate future/deployment work.
+
+## Quick Transfer and offline office days
+
+Use the existing **Share** button on a saved job card. Quick Transfer keeps its two main choices: **Nearby / share job pack** and **Receive job pack**. Mobile **About** and the desktop sidebar also open Quick Transfer, including on an empty phone.
+
+- To send several jobs, expand **Day pack**, select the jobs and optionally enter the engineer/date, then **Prepare day pack → Share day pack**. The second tap opens the phone's available sharing options with the prepared file.
+- On the receiving phone, save the shared file in Files and choose **Receive job pack**. **Collect & start day** saves the pack and starts that engineer's day. Managers can choose **Save pack only**, then prepare and share selected jobs onward without starting their own timer.
+- Continue working normally in Jobs. **Review & finish day → Finish day** closes the day and any running job timer. Recorded work, travel and breaks are retained; uncovered intervals become clearly labelled unallocated Work sessions, editable in Timesheets.
+- **Share finished day** sends the saved work and time back. The office phone chooses **Save returned day**, reviews **Office returns**, and shares its receipt back. Importing that matching receipt confirms that particular returned copy was saved on the receiving phone. Cancelling a share or merely opening a share sheet never confirms delivery. Changed work needs a new return and matching receipt.
+
+A repeated pack does not duplicate jobs/time or overwrite later local edits. Differing job versions remain separate for review; conflicting unassigned time is retained in Office returns without being added twice to the calendar. Failed saves retain the exact attempted records for retry or recovery export. Workspace backups include office days and receipts.
+
+Under **Sticker & sharing help → Set up an NFC sticker**, copy an office URL or write it on supported Android browsers. The sticker opens this same chest; it does not contain job files or silently start/stop a timer. Prepare each phone online until **Ready offline** first. Transfer files using an available offline phone-sharing method, then import them. iPhone and Android browsers do not provide universal browser-to-browser NFC file transfer; AirDrop and Quick Share availability depends on the devices, and mixed-platform offline delivery needs a compatible method. Physical NFC routing (including Safari versus an installed iPhone app) and real phone share sheets still require device testing.
+
+Day packs are self-contained `.jobsday.json` files (up to 100 jobs / 100 MiB); receipts are `.jobsreceipt.json`. Ordinary `.jobs.json` sharing remains supported. Receipts use content checksums for matching, not identity authentication or a digital signature. Nothing is automatically uploaded, emailed to customers or approved for payroll.
 
 ## Workflow
 
