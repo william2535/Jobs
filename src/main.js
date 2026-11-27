@@ -793,7 +793,7 @@ function render() {
     }
   });
   const appHeader = document.querySelector(".workspace > header");
-  if (appHeader) appHeader.append(createAppearanceControl({ compact: true, toggle: mobileHome }));
+  if (appHeader && page !== "job") appHeader.append(createAppearanceControl({ compact: true, toggle: mobileHome }));
   document.body.dataset.page = page;
   document.body.dataset.jobTab = page === "job" ? tab : "";
   if (page === "home" && $("#mobile-workspace-root")) {

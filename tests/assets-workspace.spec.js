@@ -108,11 +108,9 @@ test('standalone assets duplicate with fresh results and favourites can be reuse
   if (testInfo.project.name === 'mobile-chromium') {
     await page.setViewportSize({ width: 375, height: 812 });
     for (const theme of ['light', 'dark']) {
-      const appearance = page.getByRole('combobox', { name: 'Appearance', exact: true });
-      if (await appearance.count()) await appearance.selectOption(theme);
-      else if (await page.locator('html').getAttribute('data-theme') !== theme)
-        await page.getByRole('button', { name: `Switch to ${theme} mode`, exact: true }).click();
+      await page.emulateMedia({ colorScheme: theme });
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+      await expect(page.locator('.appearance-control')).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: testInfo.outputPath(`assets-375-${theme}.png`) });

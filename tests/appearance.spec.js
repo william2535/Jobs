@@ -19,9 +19,13 @@ async function chooseAppearance(page, preference) {
 async function expectTheme(page, preference, resolved) {
   await expect(page.locator('html')).toHaveAttribute('data-appearance', preference);
   await expect(page.locator('html')).toHaveAttribute('data-theme', resolved);
-  await expect(appearance(page)).toBeVisible();
-  if (await appearanceSelect(page).count()) await expect(appearanceSelect(page)).toHaveValue(preference);
-  else await expect(appearanceToggle(page)).toHaveAttribute('aria-label', `Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`);
+  if (await page.locator('body').getAttribute('data-page') === 'job') {
+    await expect(appearance(page)).toHaveCount(0);
+  } else {
+    await expect(appearance(page)).toBeVisible();
+    if (await appearanceSelect(page).count()) await expect(appearanceSelect(page)).toHaveValue(preference);
+    else await expect(appearanceToggle(page)).toHaveAttribute('aria-label', `Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`);
+  }
   expect(await page.locator('html').evaluate(node => node.style.colorScheme)).toBe(resolved);
 }
 
@@ -113,11 +117,11 @@ test('System follows the device and an explicit appearance survives reload witho
   await page.emulateMedia({ colorScheme: 'dark' });
   await expectTheme(page, 'light', 'light');
 
-  // The mobile home has a single quick toggle. Jobs retain the full selector
-  // so an engineer can explicitly return to following the system appearance.
+  // Mobile Home keeps its quick toggle. The workspace's Help & data page
+  // provides the full selector without adding controls to an open job.
   if (!await appearanceSelect(page).count()) {
-    await page.locator('[data-action="create"]:visible').first().click();
-    await expect(page.locator('.job-notes')).toBeVisible();
+    await page.getByRole('navigation', { name: 'Mobile workspace', exact: true }).getByRole('button', { name: 'About', exact: true }).click();
+    await page.getByRole('button', { name: 'Help & data', exact: true }).click();
   }
   await appearanceSelect(page).selectOption('system');
   await expectTheme(page, 'system', 'dark');
@@ -128,9 +132,10 @@ test('System follows the device and an explicit appearance survives reload witho
   await assertNoOverflow(page);
 });
 
-test('changing appearance preserves an unsaved notebook and the saved theme and note reopen offline', async ({ page, context }) => {
+test('System changes preserve an unsaved notebook and Home appearance choices carry into jobs offline', async ({ page, context }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
+  await expectTheme(page, 'system', 'light');
   await page.locator('[data-action="create"]:visible').first().click();
   const notes = page.locator('.job-notes');
   const editor = notes.getByRole('textbox', { name: 'Job notes', exact: true });
@@ -139,9 +144,9 @@ test('changing appearance preserves an unsaved notebook and the saved theme and 
   const originalEditor = await editor.elementHandle();
   await expect(page.getByTestId('save-status')).toContainText('Unsaved');
 
-  for (const preference of ['dark', 'light', 'dark']) {
-    await chooseAppearance(page, preference);
-    await expectTheme(page, preference, preference);
+  for (const resolved of ['dark', 'light', 'dark']) {
+    await page.emulateMedia({ colorScheme: resolved });
+    await expectTheme(page, 'system', resolved);
     expect(await originalEditor.evaluate(node => node.isConnected)).toBe(true);
     await expect(editor).toContainText('Unfinished observations must survive an appearance change.');
     await expect(page.getByTestId('save-status')).toContainText('Unsaved');
@@ -153,14 +158,27 @@ test('changing appearance preserves an unsaved notebook and the saved theme and 
   await notes.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByTestId('save-status')).toContainText('Saved');
   await expect(page.locator('#offline-status')).toContainText('Ready offline');
+  await home(page);
+  // Choose an explicit preference on Home, then check it in the saved job.
+  if (await appearanceSelect(page).count()) await chooseAppearance(page, 'dark');
+  else {
+    await chooseAppearance(page, 'light');
+    await chooseAppearance(page, 'dark');
+  }
+  await expectTheme(page, 'dark', 'dark');
 
   await context.setOffline(true);
   await page.reload();
   await expectTheme(page, 'dark', 'dark');
   await page.getByTestId('job-card').click();
+  await expectTheme(page, 'dark', 'dark');
   await expect(editor).toContainText('Further work can still be recorded.');
+  await home(page);
   await chooseAppearance(page, 'light');
   await expectTheme(page, 'light', 'light');
+  await page.getByTestId('job-card').click();
+  await expectTheme(page, 'light', 'light');
+  await expect(editor).toContainText('Further work can still be recorded.');
   await expect(page.getByTestId('save-status')).toContainText('Saved');
 });
 
@@ -203,6 +221,7 @@ test('dark tools, timesheets and plan results remain readable while drawings and
   const pack = await createJobPackage(site, job);
   await page.locator('#job-file').setInputFiles({ name: 'synthetic-dark-plan.jobs.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
   await expect(page.locator('.job-notes')).toBeVisible();
+  await expectTheme(page, 'dark', 'dark');
   await openJobSection(page, 'Plan');
   await expect(page.getByTestId('plan-png')).toBeVisible();
   await expect(page.locator('.plan-preview-stage')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
@@ -219,10 +238,12 @@ test('dark tools, timesheets and plan results remain readable while drawings and
   expect(await pass.evaluate(node => getComputedStyle(node).backgroundColor)).not.toBe(await fail.evaluate(node => getComputedStyle(node).backgroundColor));
   if (testInfo.project.use.isMobile) await page.setViewportSize({ width: 320, height: 844 });
   await assertNoOverflow(page);
-  await appearance(page).scrollIntoViewIfNeeded();
+  await expectTheme(page, 'dark', 'dark');
+  await page.getByRole('button', { name: '‹ Home', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('dark-plan.png'), fullPage: true });
 
   await openJobSection(page, 'Finalisation');
+  await expectTheme(page, 'dark', 'dark');
   await page.evaluate(() => { window.print = () => {}; });
   await page.getByRole('button', { name: 'Print report', exact: true }).click();
   await expect(page.locator('body')).toHaveAttribute('data-print-report', 'ready');
